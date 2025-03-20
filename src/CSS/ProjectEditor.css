@@ -1,0 +1,217 @@
+.project-editor {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 250px;
+  min-width: 250px; /* Ensure it doesn't shrink */
+  height: 100%;
+  background-color: #252525;
+  padding: 15px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #fff;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.upload-button {
+  padding: 8px 16px;
+  background-color: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 15px;
+  display: block;
+}
+
+.upload-button:hover {
+  background-color: #3367d6;
+}
+
+.video-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.video-item {
+  width: 120px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.video-item:hover {
+  transform: scale(1.05);
+}
+
+.video-item.selected {
+  box-shadow: 0 0 0 2px #4285f4;
+}
+
+.video-thumbnail {
+  width: 100%;
+  background-color: #333;
+}
+
+.video-thumbnail-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 12px;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Controls panel for save and export */
+.controls-panel {
+  display: flex;
+  justify-content: center;
+  padding: 15px;
+  background-color: #252525;
+  border-bottom: 1px solid #444;
+}
+
+.control-button {
+  padding: 8px 20px;
+  margin: 0 10px;
+  background-color: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.control-button:hover {
+  background-color: #3367d6;
+}
+
+/* Ensure timeline takes remaining space */
+.timeline-wrapper {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #444; /* Add border for separation */
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .project-editor {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: 200px;
+  }
+}
+
+.auto-save-indicator {
+  font-size: 0.8rem;
+  color: #666;
+  margin-left: 10px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.preview-panel {
+  width: 100%;
+  height: 320px;
+  background-color: #1a1a1a;
+  margin-bottom: 0; /* Remove margin bottom */
+  border-radius: 4px 4px 0 0; /* Round only top corners */
+  overflow: hidden;
+  position: relative;
+  resize: vertical; /* Enable vertical resizing */
+  min-height: 150px; /* Minimum acceptable height */
+  max-height: 70vh; /* Maximum height */
+}
+
+.video-preview-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.preview-area {
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #888;
+  font-size: 14px;
+}
+
+.preview-time {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 12px;
+}
+
+/* Resizable handle */
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background-color: #333;
+  cursor: ns-resize;
+  transition: background-color 0.2s;
+  z-index: 10;
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+  background-color: #4285f4;
+}

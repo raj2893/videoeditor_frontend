@@ -1,0 +1,525 @@
+/* Timeline Component Styles */
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #2a2a2a;
+  border-bottom: 1px solid #444;
+}
+
+.timeline-controls button {
+  margin-right: 10px;
+  padding: 5px 10px;
+  background-color: #444;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.timeline-controls button:hover {
+  background-color: #555;
+}
+
+.time-display {
+  margin: 0 15px;
+  color: #fff;
+  font-family: monospace;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.zoom-controls button {
+  width: 30px;
+  height: 30px;
+  margin: 0 5px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.zoom-controls span {
+  margin: 0 10px;
+  color: #fff;
+}
+
+/* Make the timeline scrollable */
+.timeline-scroll-container {
+  position: relative;
+  flex-grow: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.timeline-ruler {
+  position: sticky;
+  top: 0;
+  height: 30px;
+  background-color: #333;
+  border-bottom: 1px solid #444;
+  z-index: 5;
+}
+
+.time-marker {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+
+.marker-line {
+  width: 1px;
+  height: 15px;
+  background-color: #666;
+}
+
+.marker-label {
+  font-size: 10px;
+  color: #aaa;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.timeline {
+  position: relative;
+  min-height: 250px;
+  background-color: #2a2a2a;
+  min-width: max-content;
+}
+
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #ff0000;
+  z-index: 10;
+}
+
+.timeline-layer {
+  position: relative;
+  height: 80px;
+  border-bottom: 1px solid #444;
+  background-color: #333;
+  transition: background-color 0.2s;
+}
+
+.layer-label {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  font-size: 12px;
+  color: #aaa;
+  pointer-events: none;
+}
+
+.timeline-clip {
+  position: absolute;
+  height: 70px;
+  top: 5px;
+  background-color: #4285f4;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: move;
+}
+
+.timeline-clip:hover {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+
+.clip-title {
+  padding: 3px;
+  font-size: 11px;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dragging {
+  opacity: 0.7;
+  z-index: 1000;
+}
+
+/* Add this to your Timeline.css */
+.timeline-clip.selected {
+  border: 2px solid #ff9800 !important;
+  box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
+}
+
+/* Add this to show a potential new layer when dragging */
+.timeline.showing-new-layer:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background-color: rgba(100, 100, 255, 0.2);
+  border: 2px dashed #6464ff;
+  pointer-events: none;
+}
+
+.new-layer-drop-area {
+  border: 2px dashed #ccc;
+  background-color: rgba(200, 200, 200, 0.1);
+  min-height: 40px; /* Make it a bit smaller than regular layers */
+  display: flex;
+  align-items: center;
+}
+
+.new-layer-drop-area:hover,
+.new-layer-drop-area.drag-over {
+  background-color: rgba(200, 200, 200, 0.2);
+  border-color: #999;
+}
+
+.new-layer-drop-area .layer-label {
+  color: #999;
+  font-style: italic;
+}
+/* Add this to your Timeline.css file */
+.timeline.showing-new-layer-top::before {
+  content: "Drop to create new layer";
+  position: absolute;
+  top: -40px;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background-color: rgba(0, 128, 255, 0.2);
+  border: 2px dashed #0080ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.timeline-layer.drag-over {
+  background-color: rgba(100, 149, 237, 0.2);
+}
+
+
+.video-title {
+  font-size: 12px;
+  margin-top: 4px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* History controls styling */
+.history-controls {
+  display: flex;
+  align-items: center;
+  margin: 0 10px;
+}
+
+.history-controls button {
+  margin: 0 5px;
+  padding: 5px 10px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.history-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.saving-indicator {
+  margin-left: 10px;
+  font-size: 0.8em;
+  color: #777;
+  animation: pulsate 1.5s infinite;
+}
+
+@keyframes pulsate {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+/* Enhanced snap indicator styles */
+.snap-indicator {
+  position: absolute;
+  width: 3px;
+  background-color: #ff9800;
+  z-index: 9;
+  pointer-events: none;
+  animation: pulse 0.6s infinite alternate;
+}
+
+/* Add this to show which edge is snapping */
+.snap-indicator::before {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #ff9800;
+  border-radius: 50%;
+  left: -2.5px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Improve the visual feedback when snapping is active */
+.timeline-clip.dragging.snapping {
+  outline: 2px solid #ff9800;
+  outline-offset: 2px;
+}
+
+.timeline-clip.dragging {
+  opacity: 0.8;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Add this to your Timeline.css file */
+.snap-indicator.snap-timeline-start {
+  background-color: #4CAF50; /* Green color for timeline start */
+  width: 4px; /* Make it slightly wider for better visibility */
+}
+
+.snap-indicator.snap-timeline-start::before {
+  background-color: #4CAF50;
+  width: 10px;
+  height: 10px;
+}
+
+/* Text segment styles */
+.text-clip {
+  position: relative;
+  overflow: hidden;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.text-preview {
+  padding: 2px 4px;
+  border-radius: 2px;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.text-clip .clip-title {
+  padding: 2px 4px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0px 0px 2px rgba(0, 0, 0, 0.8);
+}
+
+.text-icon {
+  display: inline-block;
+  margin-right: 4px;
+  font-weight: bold;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+/* Text dialog styles */
+.text-segment-dialog {
+  position: fixed;
+  width: 320px;
+  background-color: #252525;
+  border: 1px solid #444;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  transform: translate(-50%, -50%);
+  color: #e0e0e0;
+  display: none;
+}
+
+.text-segment-dialog.show {
+  display: block;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid #444;
+}
+
+.dialog-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.close-button:hover {
+  color: #fff;
+}
+
+.dialog-content {
+  padding: 16px;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  color: #bbb;
+  font-size: 12px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 6px 8px;
+  background-color: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.form-group input[type="range"] {
+  width: 80%;
+  vertical-align: middle;
+}
+
+.form-group span {
+  display: inline-block;
+  margin-left: 8px;
+  width: 36px;
+  text-align: right;
+}
+
+.form-group input[type="color"] {
+  width: 32px;
+  height: 32px;
+  border: none;
+  cursor: pointer;
+}
+
+.form-group input[type="checkbox"] {
+  margin-right: 5px;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.cancel-button,
+.save-button {
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  border: none;
+}
+
+.cancel-button {
+  background-color: #555;
+  color: #fff;
+}
+
+.save-button {
+  background-color: #4a6ddf;
+  color: #fff;
+}
+
+.add-text-control {
+  margin-left: 10px;
+}
+
+.add-text-control button {
+  background-color: #4a6ddf;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.add-text-control button:before {
+  content: "T";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  color: #4a6ddf;
+  font-weight: bold;
+  text-align: center;
+  line-height: 16px;
+  border-radius: 2px;
+}
+
+/* Add to your Timeline.css file */
+.timeline-scroll-container {
+  position: relative;
+  flex-grow: 1;
+  overflow-x: auto;
+  overflow-y: auto; /* Change from 'hidden' to 'auto' */
+  max-height: calc(100vh - 400px); /* Adjust based on your layout */
+  scrollbar-width: thin; /* For Firefox */
+}
+
+.timeline-scroll-container::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-track {
+  background: #222;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}

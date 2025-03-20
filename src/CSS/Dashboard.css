@@ -1,0 +1,34 @@
+/* Dashboard.css */
+.dashboard {
+ padding: 20px;
+}
+
+
+.new-project {
+ margin-bottom: 20px;
+}
+
+
+.project-list {
+ display: flex;
+ flex-direction: column;
+}
+
+
+.project-item {
+ background-color: #f0f0f0;
+ padding: 10px;
+ margin-bottom: 10px;
+ cursor: pointer;
+}
+
+
+.project-item:hover {
+ background-color: #e0e0e0;
+}
+
+.new-project input[type="number"] {
+  width: 100px;
+  margin-right: 10px;
+  padding: 5px;
+}

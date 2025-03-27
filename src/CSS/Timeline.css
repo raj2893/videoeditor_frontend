@@ -59,7 +59,27 @@
   position: relative;
   flex-grow: 1;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
+  min-height: 150px; /* Ensure a minimum height */
+  scrollbar-width: thin;
+}
+
+.timeline-scroll-container::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-track {
+  background: #222;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #777;
 }
 
 .timeline-ruler {
@@ -92,7 +112,7 @@
 
 .timeline {
   position: relative;
-  min-height: 250px;
+  min-height: 120px; /* Ensure the timeline has a minimum height */
   background-color: #2a2a2a;
   min-width: max-content;
 }
@@ -108,7 +128,7 @@
 
 .timeline-layer {
   position: relative;
-  height: 80px;
+  height: 40px;
   border-bottom: 1px solid #444;
   background-color: #333;
   transition: background-color 0.2s;
@@ -123,29 +143,147 @@
   pointer-events: none;
 }
 
-.timeline-clip {
-  position: absolute;
-  height: 70px;
-  top: 5px;
-  background-color: #4285f4;
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  cursor: move;
+/* Ensure items in the same layer are positioned correctly */
+.layer-items {
+  position: relative;
+  height: 100%;
 }
 
-.timeline-clip:hover {
+.timeline-item {
+  position: absolute;
+  height: 30px;
+  top: 5px; /* Consistent top offset */
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: move;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  overflow: visible;
+  background-size: cover;
+  background-position: center;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.timeline-item:hover {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 
-.clip-title {
+.timeline-item.selected {
+  border: 2px solid #ff9800;
+  box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
+}
+
+/* Resize Handles */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.5);
+  cursor: ew-resize;
+  z-index: 12;
+  transition: background-color 0.2s ease;
+}
+
+.resize-handle.resize-left {
+  left: -4px; /* Align the center of the handle with the left edge */
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.resize-handle.resize-right {
+  right: -4px; /* Align the center of the handle with the right edge */
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.timeline-item .resize-handle {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.timeline-item:hover .resize-handle,
+.timeline-item.playing .resize-handle {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.timeline-item .resize-handle:hover,
+.timeline-item .resize-handle:active {
+  background-color: #ff9800;
+}
+
+.timeline-item.video-segment {
+  background-color: #4285f4;
+}
+
+.timeline-item.text-segment {
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.text-segment-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 3px;
-  font-size: 11px;
-  color: white;
-  background-color: rgba(0, 0, 0, 0.5);
-  white-space: nowrap;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.text-segment-icon {
+  display: inline-block;
+  margin-right: 4px;
+  font-weight: bold;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 0 2px;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.text-segment-content {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.video-title {
+  font-size: 12px;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 3px;
+  width: 100%;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Timeline Item Resize Handles */
+.timeline-item .resize-handle.resize-right {
+  right: -4px; /* Precisely align with the right edge of the item */
+  width: 8px;
+}
+
+.timeline-item .resize-handle.resize-left {
+  left: -4px; /* Precisely align with the left edge of the item */
+  width: 8px;
 }
 
 .dragging {
@@ -153,20 +291,13 @@
   z-index: 1000;
 }
 
-/* Add this to your Timeline.css */
-.timeline-clip.selected {
-  border: 2px solid #ff9800 !important;
-  box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
-}
-
-/* Add this to show a potential new layer when dragging */
 .timeline.showing-new-layer:after {
   content: '';
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 80px;
+  height: 40px;
   background-color: rgba(100, 100, 255, 0.2);
   border: 2px dashed #6464ff;
   pointer-events: none;
@@ -175,7 +306,7 @@
 .new-layer-drop-area {
   border: 2px dashed #ccc;
   background-color: rgba(200, 200, 200, 0.1);
-  min-height: 40px; /* Make it a bit smaller than regular layers */
+  min-height: 20px;
   display: flex;
   align-items: center;
 }
@@ -190,7 +321,7 @@
   color: #999;
   font-style: italic;
 }
-/* Add this to your Timeline.css file */
+
 .timeline.showing-new-layer-top::before {
   content: "Drop to create new layer";
   position: absolute;
@@ -210,17 +341,6 @@
   background-color: rgba(100, 149, 237, 0.2);
 }
 
-
-.video-title {
-  font-size: 12px;
-  margin-top: 4px;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* History controls styling */
 .history-controls {
   display: flex;
   align-items: center;
@@ -254,17 +374,16 @@
   100% { opacity: 0.5; }
 }
 
-/* Enhanced snap indicator styles */
 .snap-indicator {
   position: absolute;
   width: 3px;
+  height: 40px;
   background-color: #ff9800;
   z-index: 9;
   pointer-events: none;
   animation: pulse 0.6s infinite alternate;
 }
 
-/* Add this to show which edge is snapping */
 .snap-indicator::before {
   content: '';
   position: absolute;
@@ -277,27 +396,34 @@
   transform: translateY(-50%);
 }
 
+.video-clip .clip-content {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
 @keyframes pulse {
   0% { opacity: 0.7; }
   100% { opacity: 1; }
 }
 
-/* Improve the visual feedback when snapping is active */
-.timeline-clip.dragging.snapping {
+.timeline-item.dragging.snapping {
   outline: 2px solid #ff9800;
   outline-offset: 2px;
 }
 
-.timeline-clip.dragging {
+.timeline-item.dragging {
   opacity: 0.8;
   z-index: 1000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Add this to your Timeline.css file */
+.timeline-item.playing {
+  border: 2px solid #ff9800 !important;
+  box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
+}
+
 .snap-indicator.snap-timeline-start {
-  background-color: #4CAF50; /* Green color for timeline start */
-  width: 4px; /* Make it slightly wider for better visibility */
+  background-color: #4CAF50;
+  width: 4px;
 }
 
 .snap-indicator.snap-timeline-start::before {
@@ -306,43 +432,6 @@
   height: 10px;
 }
 
-/* Text segment styles */
-.text-clip {
-  position: relative;
-  overflow: hidden;
-  border-radius: 3px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
-
-.text-preview {
-  padding: 2px 4px;
-  border-radius: 2px;
-  height: 100%;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.text-clip .clip-title {
-  padding: 2px 4px;
-  font-weight: bold;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0px 0px 2px rgba(0, 0, 0, 0.8);
-}
-
-.text-icon {
-  display: inline-block;
-  margin-right: 4px;
-  font-weight: bold;
-  border: 1px solid currentColor;
-  border-radius: 3px;
-  padding: 0 2px;
-}
-
-/* Text dialog styles */
 .text-segment-dialog {
   position: fixed;
   width: 320px;
@@ -496,30 +585,98 @@
   border-radius: 2px;
 }
 
-/* Add to your Timeline.css file */
-.timeline-scroll-container {
-  position: relative;
-  flex-grow: 1;
-  overflow-x: auto;
-  overflow-y: auto; /* Change from 'hidden' to 'auto' */
-  max-height: calc(100vh - 400px); /* Adjust based on your layout */
-  scrollbar-width: thin; /* For Firefox */
-}
+/* Add these to the existing Timeline.css */
 
-.timeline-scroll-container::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
-}
-
-.timeline-scroll-container::-webkit-scrollbar-track {
-  background: #222;
-}
-
-.timeline-scroll-container::-webkit-scrollbar-thumb {
-  background: #555;
+.split-control button {
+  margin-left: 10px;
+  padding: 6px;
+  background-color: #444;
+  color: #fff;
+  border: none;
   border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
 }
 
-.timeline-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: #777;
+.split-control button:hover {
+  background-color: #555;
+}
+
+.split-control button.active {
+  background-color: #ff9800;
+  color: #fff;
+}
+
+.timeline.split-mode {
+  cursor: crosshair;
+}
+
+.timeline.split-mode .timeline-item {
+  cursor: crosshair;
+}
+
+.timeline.split-mode .timeline-item:hover {
+  border: 2px dashed #ff9800;
+}
+
+/* Add these styles to the existing Timeline.css */
+
+/* Style for audio layers (negative indices) */
+.audio-layer {
+  background-color: #2a2a2a; /* Slightly darker background for audio layers */
+  border-bottom: 1px solid #555;
+}
+
+.audio-layer .layer-label {
+  color: #66bb6a; /* Green label to indicate audio layer */
+}
+
+.audio-layer .timeline-item.audio-segment {
+  background-color: #66bb6a; /* Green background for audio segments */
+  border: 1px solid #4caf50;
+}
+
+.audio-segment-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  color: #fff;
+}
+
+.audio-segment-icon {
+  display: inline-block;
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.audio-segment-content {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Timeline.css */
+.timeline-separator {
+  height: 20px;
+  background-color: #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid #555;
+  border-bottom: 1px solid #555;
+}
+
+.separator-label {
+  color: #aaa;
+  font-size: 12px;
+  font-weight: bold;
 }

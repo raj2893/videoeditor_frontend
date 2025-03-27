@@ -9,7 +9,7 @@
 /* Sidebar */
 .sidebar {
   width: 250px;
-  min-width: 250px; /* Ensure it doesn't shrink */
+  min-width: 250px;
   height: 100%;
   background-color: #252525;
   padding: 15px;
@@ -24,6 +24,36 @@
   margin-bottom: 15px;
   font-size: 18px;
   color: #fff;
+}
+
+.media-section {
+  margin-bottom: 10px;
+}
+
+.section-button {
+  width: 100%;
+  padding: 8px;
+  background-color: #333;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.section-button:hover {
+  background-color: #555;
+}
+
+.section-content {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #2a2a2a;
+  border-radius: 4px;
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 .hidden-input {
@@ -47,15 +77,19 @@
   background-color: #3367d6;
 }
 
-.video-list {
+.video-list,
+.photo-list,
+.audio-list {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  max-height: 450px;
   overflow-y: auto;
-  flex-grow: 1;
 }
 
-.video-item {
+.video-item,
+.photo-item,
+.audio-item {
   width: 120px;
   cursor: pointer;
   transition: transform 0.2s;
@@ -63,7 +97,9 @@
   overflow: hidden;
 }
 
-.video-item:hover {
+.video-item:hover,
+.photo-item:hover,
+.audio-item:hover {
   transform: scale(1.05);
 }
 
@@ -71,9 +107,14 @@
   box-shadow: 0 0 0 2px #4285f4;
 }
 
-.video-thumbnail {
+.video-thumbnail,
+.photo-thumbnail,
+.audio-waveform {
   width: 100%;
+  height: 80px;
   background-color: #333;
+  object-fit: cover;
+  border-radius: 4px;
 }
 
 .video-thumbnail-placeholder {
@@ -82,8 +123,44 @@
   justify-content: center;
   color: #999;
   font-size: 12px;
+  width: 120px;
+  height: 80px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
 }
 
+.video-title,
+.photo-title,
+.audio-title {
+  font-size: 12px;
+  margin-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.audio-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: transparent;
+  padding: 0;
+}
+
+.audio-icon {
+  font-size: 20px;
+  margin-right: 5px;
+}
+
+.empty-state {
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+  margin-top: 20px;
+}
+
+/* Main content */
 .main-content {
   flex: 1;
   display: flex;
@@ -92,13 +169,101 @@
   position: relative;
 }
 
-/* Controls panel for save and export */
+.preview-and-tools {
+  display: flex;
+  flex-direction: row;
+  height: calc(100% - 60px);
+}
+
+.preview-panel {
+  flex: 3;
+  background-color: #1a1a1a;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.tools-panel {
+  flex: 1;
+  background-color: #252525;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #444;
+  overflow-y: auto;
+}
+
+.tools-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.tool-button {
+  padding: 8px 16px;
+  background-color: #333;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.tool-button:hover {
+  background-color: #555;
+}
+
+.tool-button.active {
+  background-color: #4285f4;
+}
+
+.transform-panel {
+  background-color: #2a2a2a;
+  padding: 15px;
+  border-radius: 4px;
+}
+
+.transform-panel h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.control-group {
+  margin-bottom: 15px;
+}
+
+.control-group label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slider-container input[type="range"] {
+  flex: 1;
+}
+
+.slider-container span {
+  font-size: 14px;
+  color: #e0e0e0;
+}
+
 .controls-panel {
   display: flex;
   justify-content: center;
   padding: 15px;
   background-color: #252525;
   border-bottom: 1px solid #444;
+  height: 60px;
+  box-sizing: border-box;
 }
 
 .control-button {
@@ -117,91 +282,19 @@
   background-color: #3367d6;
 }
 
-/* Ensure timeline takes remaining space */
 .timeline-wrapper {
   flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid #444; /* Add border for separation */
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .project-editor {
-    flex-direction: column;
-  }
-  
-  .sidebar {
-    width: 100%;
-    min-width: unset;
-    max-height: 200px;
-  }
-}
-
-.auto-save-indicator {
-  font-size: 0.8rem;
-  color: #666;
-  margin-left: 10px;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
-}
-
-.preview-panel {
-  width: 100%;
-  height: 320px;
-  background-color: #1a1a1a;
-  margin-bottom: 0; /* Remove margin bottom */
-  border-radius: 4px 4px 0 0; /* Round only top corners */
-  overflow: hidden;
+  border-top: 1px solid #444;
+  min-height: 200px;
   position: relative;
-  resize: vertical; /* Enable vertical resizing */
-  min-height: 150px; /* Minimum acceptable height */
-  max-height: 70vh; /* Maximum height */
 }
 
-.video-preview-container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.preview-area {
-  position: relative;
-  overflow: hidden;
-}
-
-.preview-empty-state {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #888;
-  font-size: 14px;
-}
-
-.preview-time {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 2px;
-  font-size: 12px;
-}
-
-/* Resizable handle */
 .resize-handle {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
   height: 6px;
@@ -214,4 +307,51 @@
 .resize-handle:hover,
 .resize-handle:active {
   background-color: #4285f4;
+}
+
+.loading-message {
+  color: #e0e0e0;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .project-editor {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: 200px;
+  }
+
+  .section-content {
+    max-height: 450px;
+  }
+
+  .video-list,
+  .photo-list,
+  .audio-list {
+    max-height: 300px;
+  }
+
+  .preview-and-tools {
+    flex-direction: column;
+  }
+
+  .tools-panel {
+    flex: none;
+    border-left: none;
+    border-top: 1px solid #444;
+  }
+
+  .timeline-wrapper {
+    min-height: 150px;
+  }
+
+  .resize-handle {
+    left: 0;
+  }
 }

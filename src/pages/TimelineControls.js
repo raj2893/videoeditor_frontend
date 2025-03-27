@@ -14,7 +14,9 @@ const TimelineControls = ({
   isSaving,
   timeScale,
   setTimeScale,
-  openAddTextDialog
+  openAddTextDialog,
+  toggleSplitMode,
+  isSplitMode,
 }) => {
   return (
     <div className="timeline-controls">
@@ -35,6 +37,15 @@ const TimelineControls = ({
       </div>
       <div className="add-text-control">
         <button onClick={openAddTextDialog}>Add Text</button>
+      </div>
+      <div className="split-control">
+        <button
+          onClick={toggleSplitMode}
+          className={isSplitMode ? 'active' : ''}
+          title="Split Segment"
+        >
+          ✂️
+        </button>
       </div>
       <div className="zoom-controls">
         <button onClick={() => setTimeScale(prev => Math.max(20, prev - 10))}>-</button>

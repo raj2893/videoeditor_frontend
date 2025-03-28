@@ -407,13 +407,13 @@ const ProjectEditor = () => {
     const mediaId = media.id || `media-${media.filePath || media.fileName || media.filename || media.imageFileName}-${Date.now()}`;
     const dragData = {
       type: type,
-      [type]: {
+      [type === 'media' ? 'video' : type === 'photo' ? 'photo' : 'audio']: {
         id: mediaId,
-        filePath: type === 'media' ? (media.filePath || media.filename) : (type === 'photo' ? media.fileName : undefined),
-        fileName: type === 'audio' ? media.fileName : (type === 'photo' ? media.fileName : undefined),
+        filePath: type === 'media' ? (media.filePath || media.filename) : type === 'photo' ? media.fileName : media.fileName,
+        fileName: type === 'audio' ? media.fileName : type === 'photo' ? media.fileName : undefined,
         displayPath: media.displayPath || media.displayName || (media.filePath || media.fileName || media.filename || media.imageFileName).split('/').pop(),
-        duration: media.duration || 5, // Default duration for photos (e.g., 5 seconds)
-        thumbnail: media.thumbnail || '',
+        duration: media.duration || 5, // Default duration for photos and videos if not specified
+        thumbnail: media.thumbnail || (type === 'photo' ? media.filePath : ''),
       },
     };
     const jsonString = JSON.stringify(dragData);
@@ -696,19 +696,49 @@ const ProjectEditor = () => {
           imageFiles = [];
         }
         if (Array.isArray(imageFiles)) {
-          const updatedPhotos = imageFiles.map(image => {
-            const fullFilename = image.imagePath.split('/').pop(); // Extracts "39_1742999450401_WhatsApp Image 2025-03-26 at 11.35.19 AM.jpeg"
+          const updatedPhotos = await Promise.all(imageFiles.map(async (image) => {
+            const fullFileName = image.imagePath.split('/').pop();
+            const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
+            const thumbnail = await new Promise((resolve) => {
+              const img = new Image();
+              img.crossOrigin = 'anonymous';
+              img.src = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(fullFileName)}`;
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const maxWidth = 120;
+                const maxHeight = 80;
+                let width = img.width;
+                let height = img.height;
+                if (width > height) {
+                  if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                  }
+                } else {
+                  if (height > maxHeight) {
+                    width = (width * maxHeight) / height;
+                    height = maxHeight;
+                  }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg'));
+              };
+              img.onerror = () => resolve(null);
+            });
             return {
-              id: image.imagePath || `image-${image.imageFileName}-${Date.now()}`,
-              fileName: image.imageFileName,
-              displayName: image.imageFileName.split('/').pop(),
-              filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(fullFilename)}`,
+              id: image.imagePath || `image-${fullFileName}-${Date.now()}`,
+              fileName: originalFileName,
+              displayName: originalFileName.split('/').pop(),
+              filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(fullFileName)}`,
+              thumbnail,
             };
-          });
+          }));
           setPhotos(updatedPhotos);
           console.log('Fetched photos:', updatedPhotos);
-        }
-        else {
+        } else {
           setPhotos([]);
           console.log('image_json is not an array:', imageFiles);
         }
@@ -736,12 +766,16 @@ const ProjectEditor = () => {
         ? typeof response.data.timelineState === 'string'
           ? JSON.parse(response.data.timelineState)
           : response.data.timelineState
-        : { segments: [] };
+        : { segments: [], textSegments: [] };
+
       let endTime = 0;
-      if (timelineState.segments && timelineState.segments.length > 0) {
-        const layer0Segments = timelineState.segments.filter(seg => seg.layer === 0);
-        layer0Segments.forEach(segment => {
-          const segmentEndTime = segment.timelineStartTime + (segment.timelineEndTime - segment.timelineStartTime);
+      const layer0Items = [
+        ...(timelineState.segments || []).filter(seg => seg.layer === 0),
+        ...(timelineState.textSegments || []).filter(seg => seg.layer === 0),
+      ];
+      if (layer0Items.length > 0) {
+        layer0Items.forEach(item => {
+          const segmentEndTime = item.timelineStartTime + (item.timelineEndTime - item.timelineStartTime);
           if (segmentEndTime > endTime) endTime = segmentEndTime;
         });
       }
@@ -751,13 +785,75 @@ const ProjectEditor = () => {
           imageFileName: photo.fileName,
           layer: 0,
           timelineStartTime: endTime,
-          timelineEndTime: endTime + 5, // Default 5-second duration
+          timelineEndTime: endTime + 5,
         },
         {
           params: { sessionId },
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      const updatedResponse = await axios.get(
+        `${API_BASE_URL}/projects/${projectId}`,
+        {
+          params: { sessionId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const updatedTimelineState = typeof updatedResponse.data.timelineState === 'string'
+        ? JSON.parse(updatedResponse.data.timelineState)
+        : updatedResponse.data.timelineState;
+      const newImageSegment = updatedTimelineState.segments.find(
+        seg => seg.imagePath && seg.timelineStartTime === endTime && seg.layer === 0
+      );
+      if (newImageSegment) {
+        const filename = newImageSegment.imagePath.split('/').pop();
+        const thumbnail = await new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const maxWidth = 120;
+            const maxHeight = 80;
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > maxWidth) {
+                height = (height * maxWidth) / width;
+                width = maxWidth;
+              }
+            } else {
+              if (height > maxHeight) {
+                width = (width * maxHeight) / height;
+                height = maxHeight;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg'));
+          };
+          img.onerror = () => resolve(null);
+        });
+        setLayers(prevLayers => {
+          const newLayers = [...prevLayers];
+          newLayers[0].push({
+            id: newImageSegment.id,
+            type: 'image',
+            fileName: photo.fileName,
+            filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`,
+            thumbnail,
+            startTime: newImageSegment.timelineStartTime,
+            duration: newImageSegment.timelineEndTime - newImageSegment.timelineStartTime,
+            layer: 0,
+            positionX: newImageSegment.positionX || 50,
+            positionY: newImageSegment.positionY || 50,
+            scale: newImageSegment.scale || 1,
+          });
+          return newLayers;
+        });
+      }
     } catch (error) {
       console.error('Error adding photo to timeline:', error);
     }

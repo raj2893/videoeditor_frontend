@@ -700,3 +700,15 @@
   box-sizing: border-box;
   color: #fff;
 }
+
+/* New styles for audio section */
+.audio-section-label {
+  height: 20px;
+  line-height: 20px;
+  text-align: left;
+  padding-left: 10px;
+  background: #333;
+  color: #ccc;
+  font-size: 12px;
+  border-bottom: 1px solid #444;
+}

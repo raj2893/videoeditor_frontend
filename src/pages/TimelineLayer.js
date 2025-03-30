@@ -11,18 +11,20 @@ const TimelineLayer = ({
   handleEditTextSegment,
   selectedSegmentId,
 }) => {
+  const isAudioLayer = layer.some(item => item.type === 'audio');
+
   return (
     <div className="layer">
-      <div className="layer-label">Layer {layerIndex}</div>
+      <div className="layer-label">{isAudioLayer ? `Layer ${layerIndex}` : `Layer ${layerIndex}`}</div>
       <div className="layer-items">
         {layer.map((item, index) => {
           const style = {
             left: `${item.startTime * timeScale}px`,
             width: `${item.duration * timeScale}px`,
-            backgroundImage: item.thumbnail ? `url(${item.thumbnail})` : (item.type === 'image' && item.filePath ? `url(${item.filePath})` : 'none'),
+            backgroundImage: item.thumbnail ? `url(${item.thumbnail})` : (item.type === 'image' && item.filePath ? `url(${item.filePath})` : item.type === 'audio' ? `url(${item.waveformImage})` : 'none'),
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            backgroundColor: item.type === 'video' && !item.thumbnail ? '#4285f4' : item.type === 'image' && !item.thumbnail && !item.filePath ? '#ff5722' : 'transparent',
+            backgroundColor: item.type === 'video' && !item.thumbnail ? '#4285f4' : item.type === 'image' && !item.thumbnail && !item.filePath ? '#ff5722' : item.type === 'audio' ? 'transparent' : 'transparent',
             zIndex: index,
             top: '5px',
           };
@@ -30,7 +32,7 @@ const TimelineLayer = ({
             <div
               key={item.id}
               className={`timeline-item ${
-                item.type === 'text' ? 'text-segment' : item.type === 'image' ? 'image-segment' : 'video-segment'
+                item.type === 'text' ? 'text-segment' : item.type === 'image' ? 'image-segment' : item.type === 'audio' ? 'audio-segment' : 'video-segment'
               } ${item.id === playingVideoId ? 'playing' : ''} ${
                 item.id === selectedSegmentId ? 'selected' : ''
               }`}
@@ -76,11 +78,13 @@ const TimelineLayer = ({
                   </div>
                 </div>
               )}
-              {(item.type === 'video' || item.type === 'image') && (
+              {(item.type === 'video' || item.type === 'image' || item.type === 'audio') && (
                 <div className="video-title">
                   {item.type === 'video'
                     ? (item.title || item.displayPath || item.filePath || item.filename || 'Unnamed Video')
-                    : (item.fileName || 'Unnamed Image')}
+                    : item.type === 'image'
+                    ? (item.fileName || 'Unnamed Image')
+                    : (item.displayName || 'Unnamed Audio')}
                 </div>
               )}
               <div

@@ -1,4 +1,3 @@
-// TimelineControls.js
 import React from 'react';
 
 const TimelineControls = ({
@@ -7,10 +6,10 @@ const TimelineControls = ({
   currentTime,
   totalDuration,
   formatTime,
-  historyIndex,
-  history,
   handleUndo,
   handleRedo,
+  canUndo, // Use the precomputed prop
+  canRedo, // Use the precomputed prop
   isSaving,
   timeScale,
   setTimeScale,
@@ -27,10 +26,10 @@ const TimelineControls = ({
         {formatTime(currentTime)} / {formatTime(totalDuration)}
       </span>
       <div className="history-controls">
-        <button onClick={handleUndo} disabled={historyIndex <= 0}>
+        <button onClick={handleUndo} disabled={!canUndo}>
           ↩️ Undo
         </button>
-        <button onClick={handleRedo} disabled={historyIndex >= history.length - 1}>
+        <button onClick={handleRedo} disabled={!canRedo}>
           ↪️ Redo
         </button>
         {isSaving && <span className="saving-indicator">Saving...</span>}

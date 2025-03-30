@@ -342,3 +342,113 @@ const VideoFilterComponent = ({
 };
 
 export default VideoFilterComponent;
+
+
+const loadProjectTimeline = async () => {
+    if (!projectId || !sessionId) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const project = response.data;
+      if (project && project.timelineState) {
+        const timelineState = typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
+        const newLayers = [[], [], []];
+
+        // Process video segments
+        if (timelineState.segments && timelineState.segments.length > 0) {
+          for (const segment of timelineState.segments) {
+            const layerIndex = segment.layer || 0;
+            while (newLayers.length <= layerIndex) newLayers.push([]);
+            if (segment.sourceVideoPath) {
+              let videoFileName = segment.sourceVideoPath;
+              const normalizedVideoPath = videoFileName.startsWith('videos/') ? videoFileName.substring(7) : videoFileName;
+              let video = videos.find(v => {
+                const vPath = (v.filePath || v.filename);
+                const normalizedVPath = vPath.startsWith('videos/') ? vPath.substring(7) : vPath;
+                return normalizedVPath === normalizedVideoPath;
+              });
+              if (video) {
+                newLayers[layerIndex].push({
+                  ...video,
+                  type: 'video',
+                  id: segment.id,
+                  startTime: segment.timelineStartTime,
+                  duration: segment.timelineEndTime - segment.timelineStartTime,
+                  layer: layerIndex,
+                  filePath: normalizedVideoPath,
+                  positionX: segment.positionX || 50,
+                  positionY: segment.positionY || 50,
+                  scale: segment.scale || 1,
+                  startTimeWithinVideo: segment.startTime,
+                  endTimeWithinVideo: segment.endTime,
+                });
+              }
+            }
+          }
+        }
+
+        // Process image segments
+        if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
+          for (const segment of timelineState.imageSegments) {
+            const layerIndex = segment.layer || 0;
+            while (newLayers.length <= layerIndex) newLayers.push([]);
+            const filename = segment.imagePath.split('/').pop();
+            const filePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+            const thumbnail = await generateImageThumbnail(segment.imagePath);
+            newLayers[layerIndex].push({
+              id: segment.id,
+              type: 'image',
+              fileName: filename,
+              filePath,
+              thumbnail,
+              startTime: segment.timelineStartTime,
+              duration: segment.timelineEndTime - segment.timelineStartTime,
+              layer: layerIndex,
+              positionX: segment.positionX || 50,
+              positionY: segment.positionY || 50,
+              scale: segment.scale || 1,
+            });
+          }
+        }
+
+        // Process text segments
+        if (timelineState.textSegments && timelineState.textSegments.length > 0) {
+          for (const textSegment of timelineState.textSegments) {
+            const layerIndex = textSegment.layer || 0;
+            while (newLayers.length <= layerIndex) newLayers.push([]);
+            newLayers[layerIndex].push({
+              id: textSegment.id,
+              type: 'text',
+              text: textSegment.text,
+              startTime: textSegment.timelineStartTime,
+              duration: textSegment.timelineEndTime - textSegment.timelineStartTime,
+              layer: layerIndex,
+              fontFamily: textSegment.fontFamily || 'Arial',
+              fontSize: textSegment.fontSize || 24,
+              fontColor: textSegment.fontColor || '#FFFFFF',
+              backgroundColor: textSegment.backgroundColor || 'transparent',
+              positionX: textSegment.positionX || 50,
+              positionY: textSegment.positionY || 50,
+            });
+          }
+        }
+
+        setLayers(newLayers);
+        setHistory([]);
+        setHistoryIndex(-1);
+        let maxEndTime = 0;
+        newLayers.forEach(layer => {
+          layer.forEach(item => {
+            const endTime = item.startTime + item.duration;
+            if (endTime > maxEndTime) maxEndTime = endTime;
+          });
+        });
+        setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
+      }
+    } catch (error) {
+      console.error('Error loading project timeline:', error);
+    }
+  };
+

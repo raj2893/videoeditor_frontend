@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import '../CSS/VideoPreview.css';
 
 const API_BASE_URL = 'http://localhost:8080';
@@ -14,7 +14,7 @@ const VideoPreview = ({
 }) => {
   const [loadingVideos, setLoadingVideos] = useState(new Set());
   const [preloadComplete, setPreloadComplete] = useState(false);
-  const [scale, setScale] = useState(1); // Store the container scaling factor
+  const [scale, setScale] = useState(1);
   const previewContainerRef = useRef(null);
   const videoRefs = useRef({});
   const preloadRefs = useRef({});
@@ -28,7 +28,16 @@ const VideoPreview = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
   };
 
-  // Preload all videos when layers change
+  // Create a stable identifier for video content to prevent unnecessary preloading
+  const videoLayerIds = useMemo(() => {
+    return layers
+      .flat()
+      .filter(item => item.type === 'video')
+      .map(item => `${item.id}-${item.filePath}`)
+      .join('|');
+  }, [layers]);
+
+  // Preload videos only when videoLayerIds changes
   useEffect(() => {
     const preloadVideos = () => {
       const allVideoItems = layers.flat().filter(item => item.type === 'video');
@@ -78,7 +87,7 @@ const VideoPreview = ({
       });
       preloadRefs.current = {};
     };
-  }, [layers]);
+  }, [videoLayerIds]); // Depend only on videoLayerIds
 
   // Video playback logic
   useEffect(() => {
@@ -105,7 +114,7 @@ const VideoPreview = ({
           }
 
           const setVideoTime = () => {
-            const targetTime = element.localTime;
+            const targetTime = element.localTime + (element.startTimeWithinVideo || 0);
             if (Math.abs(videoRef.currentTime - targetTime) > 0.05) {
               videoRef.currentTime = targetTime;
             }
@@ -185,14 +194,12 @@ const VideoPreview = ({
 
         const previewArea = document.querySelector('.preview-area');
         if (previewArea) {
-          // Calculate scaling factor to fit the canvas within the container
           const newScale = Math.min(
             containerWidth / canvasDimensions.width,
             containerHeight / canvasDimensions.height
           );
-          setScale(newScale); // Store the scaling factor
+          setScale(newScale);
 
-          // Apply the scale to the canvas-wrapper
           const canvasWrapper = document.querySelector('.canvas-wrapper');
           if (canvasWrapper) {
             canvasWrapper.style.transform = `scale(${newScale})`;
@@ -200,7 +207,6 @@ const VideoPreview = ({
             canvasWrapper.style.height = `${canvasDimensions.height}px`;
           }
 
-          // Center the preview area within the container
           previewArea.style.width = `${canvasDimensions.width * newScale}px`;
           previewArea.style.height = `${canvasDimensions.height * newScale}px`;
         }
@@ -248,27 +254,23 @@ const VideoPreview = ({
         >
           {visibleElements.map(element => {
             if (element.type === 'video') {
-              // Use the video's natural dimensions
-              const videoWidth = 1080; // Example: assuming 1080x1920; ideally fetch dynamically
+              const videoWidth = 1080; // Adjust based on actual video metadata if available
               const videoHeight = 1920;
               const videoAspectRatio = videoWidth / videoHeight;
 
               let displayWidth = videoWidth;
               let displayHeight = videoHeight;
 
-              // If the canvas height is smaller than the video height, scale to exceed vertically
               if (canvasDimensions.height < videoHeight) {
-                displayHeight = videoHeight; // Keep natural height to exceed
-                displayWidth = displayHeight * videoAspectRatio; // Maintain aspect ratio
+                displayHeight = videoHeight;
+                displayWidth = displayHeight * videoAspectRatio;
               }
 
-              // If the canvas width is smaller than the video width, scale to exceed horizontally
               if (canvasDimensions.width < videoWidth) {
-                displayWidth = videoWidth; // Keep natural width to exceed
-                displayHeight = displayWidth / videoAspectRatio; // Maintain aspect ratio
+                displayWidth = videoWidth;
+                displayHeight = displayWidth / videoAspectRatio;
               }
 
-              // Apply the scale factor from the segment
               const scaleFactor = element.scale || 1;
               displayWidth *= scaleFactor;
               displayHeight *= scaleFactor;
@@ -291,6 +293,24 @@ const VideoPreview = ({
                   onError={(e) => console.error(`Error loading video ${element.filePath}:`, e)}
                   onLoadedData={() => console.log(`Video ${element.filePath} loaded`)}
                   preload="auto"
+                />
+              );
+            } else if (element.type === 'image') {
+              return (
+                <img
+                  key={element.id}
+                  src={element.filePath}
+                  alt="Preview"
+                  style={{
+                    position: 'absolute',
+                    width: element.width ? `${element.width}px` : 'auto',
+                    height: element.height ? `${element.height}px` : 'auto',
+                    top: `${element.positionY || 50}%`,
+                    left: `${element.positionX || 50}%`,
+                    transform: `translate(-50%, -50%) scale(${element.scale || 1})`,
+                    opacity: element.opacity || 1,
+                    zIndex: element.layerIndex,
+                  }}
                 />
               );
             } else if (element.type === 'text') {

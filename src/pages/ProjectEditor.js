@@ -26,6 +26,7 @@ const ProjectEditor = () => {
   const [selectedSegment, setSelectedSegment] = useState(null);
   const [tempSegmentValues, setTempSegmentValues] = useState({});
   const [isTransformOpen, setIsTransformOpen] = useState(false);
+  const [thumbnailsGenerated, setThumbnailsGenerated] = useState(false);
 
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -89,9 +90,8 @@ const ProjectEditor = () => {
         displayPath: video.title || (video.filePath || video.filename).split('/').pop(),
       }));
       setVideos(updatedVideos);
-      for (const video of updatedVideos) {
-        await generateVideoThumbnail(video);
-      }
+      await Promise.all(updatedVideos.map(video => generateVideoThumbnail(video)));
+      setThumbnailsGenerated(true); // Set flag when all thumbnails are done
     } catch (error) {
       console.error('Error fetching videos:', error);
     }
@@ -1160,6 +1160,7 @@ const ProjectEditor = () => {
               audioLayers={audioLayers}
               setVideoLayers={setVideoLayers}
               setAudioLayers={setAudioLayers}
+              thumbnailsGenerated={thumbnailsGenerated} // Add this prop
             />
           ) : (
             <div className="loading-message">Loading timeline...</div>

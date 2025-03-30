@@ -13,21 +13,27 @@ const VideoSegmentHandler = ({
   API_BASE_URL,
   timelineRef,
 }) => {
-  const updateSegmentPosition = async (segmentId, newStartTime, newLayer, newDuration) => {
+  const updateSegmentPosition = async (
+    segmentId,
+    newStartTime,
+    newLayer,
+    newDuration,
+    startTimeWithinVideo, // Add parameter
+    endTimeWithinVideo    // Add parameter
+  ) => {
     if (!projectId || !sessionId) return;
     try {
       const token = localStorage.getItem('token');
       const layer = videoLayers[newLayer];
-      const item = layer.find(i => i.id === segmentId);
-      const originalDuration = item.duration;
-      const timelineEndTime = newStartTime + (newDuration || originalDuration);
+      const item = layer.find((i) => i.id === segmentId);
+      const timelineEndTime = newStartTime + newDuration;
       const requestBody = {
         segmentId,
         timelineStartTime: newStartTime,
         timelineEndTime: timelineEndTime,
         layer: newLayer,
-        startTime: item.startTimeWithinVideo || 0,
-        endTime: item.endTimeWithinVideo || newDuration || originalDuration,
+        startTime: startTimeWithinVideo !== undefined ? startTimeWithinVideo : item.startTimeWithinVideo || 0,
+        endTime: endTimeWithinVideo !== undefined ? endTimeWithinVideo : item.endTimeWithinVideo || newDuration,
       };
       await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-segment`,
@@ -37,7 +43,9 @@ const VideoSegmentHandler = ({
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      console.log(`Updated segment ${segmentId} to start at ${newStartTime}s, end at ${timelineEndTime}s, layer ${newLayer}`);
+      console.log(
+        `Updated segment ${segmentId} to start at ${newStartTime}s, end at ${timelineEndTime}s, layer ${newLayer}, startTimeWithinVideo: ${requestBody.startTime}, endTimeWithinVideo: ${requestBody.endTime}`
+      );
     } catch (error) {
       console.error('Error updating segment position:', error);
     }

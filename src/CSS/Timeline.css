@@ -215,7 +215,7 @@
 }
 
 .timeline-item.video-segment {
-  background-color: #4285f4;
+  border: none;
 }
 
 .timeline-item.text-segment {

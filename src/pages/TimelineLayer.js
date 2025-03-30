@@ -24,7 +24,6 @@ const TimelineLayer = ({
             backgroundImage: item.thumbnail ? `url(${item.thumbnail})` : (item.type === 'image' && item.filePath ? `url(${item.filePath})` : item.type === 'audio' ? `url(${item.waveformImage})` : 'none'),
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            backgroundColor: item.type === 'video' && !item.thumbnail ? '#4285f4' : item.type === 'image' && !item.thumbnail && !item.filePath ? '#ff5722' : item.type === 'audio' ? 'transparent' : 'transparent',
             zIndex: index,
             top: '5px',
           };

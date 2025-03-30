@@ -135,41 +135,56 @@ const GeneralSegmentHandler = ({
       let newVideoLayers = [...videoLayers];
       let newAudioLayers = [...audioLayers];
       const layer = isAudioLayer ? newAudioLayers[layerIndex] : newVideoLayers[layerIndex];
-      const itemIndex = layer.findIndex(i => i.id === resizingItem.id);
-      if (itemIndex === -1) return;
+      const itemIndex = layer.findIndex((i) => i.id === resizingItem.id);
+      if (itemIndex === -1) {
+        console.error('Item not found during resize:', resizingItem);
+        return;
+      }
       const item = { ...layer[itemIndex] };
+
+      // Safeguard against invalid startTime
+      if (item.startTime === undefined || item.startTime < 0) {
+        console.warn('Invalid startTime detected, resetting to original:', item);
+        item.startTime = resizingItem.startTime || 0; // Fallback to original resizingItem value
+      }
+
       let newStartTime = item.startTime;
       let newDuration = item.duration;
-      let newStartWithin = item.startTimeWithinAudio || item.startTimeWithinVideo || 0;
-      let newEndWithin = item.endTimeWithinAudio || item.endTimeWithinVideo || item.duration;
+      let newStartWithin = item.type === 'video' ? (item.startTimeWithinVideo || 0) : (item.startTimeWithinAudio || 0);
+      let newEndWithin = item.type === 'video' ? (item.endTimeWithinVideo || item.duration) : (item.endTimeWithinAudio || item.duration);
 
       if (resizeEdge === 'left') {
         const originalEndTime = item.startTime + item.duration;
         newStartTime = Math.min(newTime, originalEndTime - 0.1);
         newDuration = originalEndTime - newStartTime;
         if (item.type === 'video' || item.type === 'audio') {
-          newStartWithin = newStartWithin + (item.startTime - newStartTime);
+          const timeShift = newStartTime - item.startTime;
+          newStartWithin = (item.type === 'video' ? (item.startTimeWithinVideo || 0) : (item.startTimeWithinAudio || 0)) + timeShift;
+          newEndWithin = item.type === 'video' ? (item.endTimeWithinVideo || item.duration) : (item.endTimeWithinAudio || item.duration);
+          newStartWithin = Math.max(0, newStartWithin);
         }
       } else if (resizeEdge === 'right') {
         const newEndTime = Math.max(newTime, item.startTime + 0.1);
         newDuration = newEndTime - item.startTime;
         if (item.type === 'video' || item.type === 'audio') {
+          newStartWithin = item.type === 'video' ? (item.startTimeWithinVideo || 0) : (item.startTimeWithinAudio || 0);
           newEndWithin = newStartWithin + newDuration;
         }
       }
 
       item.startTime = newStartTime;
       item.duration = newDuration;
-      item.timelineStartTime = newStartTime; // Sync timelineStartTime
-      item.timelineEndTime = newStartTime + newDuration; // Sync timelineEndTime
-      if (item.type === 'audio') {
+      item.timelineStartTime = newStartTime;
+      item.timelineEndTime = newStartTime + newDuration;
+      if (item.type === 'video') {
         item.startTimeWithinVideo = newStartWithin;
         item.endTimeWithinVideo = newEndWithin;
-      } else if (item.type === 'video') {
+      } else if (item.type === 'audio') {
         item.startTimeWithinAudio = newStartWithin;
         item.endTimeWithinAudio = newEndWithin;
       }
       layer[itemIndex] = item;
+
       if (isAudioLayer) {
         newAudioLayers[layerIndex] = layer;
         setAudioLayers(newAudioLayers);
@@ -183,38 +198,58 @@ const GeneralSegmentHandler = ({
 
   const handleResizeEnd = async () => {
     if (!resizingItem) return;
+
     const isAudioLayer = resizingItem.layer < 0;
     const layerArray = isAudioLayer ? audioLayers : videoLayers;
     const layerIndex = isAudioLayer ? Math.abs(resizingItem.layer) - 1 : resizingItem.layerIndex;
     const layer = layerArray[layerIndex];
     const item = layer.find(i => i.id === resizingItem.id);
+
     if (item) {
       saveHistory(videoLayers, audioLayers);
       autoSave(videoLayers, audioLayers);
-      const newStartTime = resizeEdge === 'left' ? item.startTime : item.startTime;
+
+      const newStartTime = item.startTime;
       const newDuration = item.duration;
-      const updatedSettings = {
-        positionX: item.positionX,
-        positionY: item.positionY,
-        scale: item.scale,
-        opacity: item.opacity,
-        width: item.width,
-        height: item.height,
-        effectiveWidth: item.effectiveWidth,
-        effectiveHeight: item.effectiveHeight,
-        maintainAspectRatio: item.maintainAspectRatio,
-      };
-      if (item.type === 'text') {
+
+      // Update backend based on which edge was resized
+      if (item.type === 'video') {
+        await updateSegmentPosition(
+          item.id,
+          newStartTime,
+          item.layer,
+          newDuration,
+          item.startTimeWithinVideo,
+          item.endTimeWithinVideo
+        );
+      } else if (item.type === 'text') {
         const updatedTextSettings = { ...item, duration: newDuration };
         await updateTextSegment(item.id, updatedTextSettings, newStartTime, item.layer);
       } else if (item.type === 'image') {
+        const updatedSettings = {
+          positionX: item.positionX,
+          positionY: item.positionY,
+          scale: item.scale,
+          opacity: item.opacity,
+          width: item.width,
+          height: item.height,
+          effectiveWidth: item.effectiveWidth,
+          effectiveHeight: item.effectiveHeight,
+          maintainAspectRatio: item.maintainAspectRatio,
+        };
         await updateImageSegment(item.id, newStartTime, item.layer, newDuration, updatedSettings);
       } else if (item.type === 'audio') {
-        await updateAudioSegment(item.id, newStartTime, item.layer, newDuration);
-      } else {
-        await updateSegmentPosition(item.id, newStartTime, item.layer, newDuration);
+        await updateAudioSegment(
+          item.id,
+          newStartTime,
+          item.layer,
+          newDuration,
+          item.startTimeWithinAudio, // Pass startTimeWithinAudio
+          item.endTimeWithinAudio    // Pass endTimeWithinAudio
+        );
       }
     }
+
     setResizingItem(null);
     setResizeEdge(null);
   };

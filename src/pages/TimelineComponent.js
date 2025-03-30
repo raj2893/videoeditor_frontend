@@ -30,6 +30,7 @@ const TimelineComponent = ({
   audioLayers,
   setVideoLayers,
   setAudioLayers,
+  thumbnailsGenerated
 }) => {
   const [timelineVideos, setTimelineVideos] = useState([]);
   const [timeScale, setTimeScale] = useState(50);
@@ -101,6 +102,53 @@ const TimelineComponent = ({
     return () => clearTimeout(autoSaveTimeout);
   }, [projectId, sessionId]);
 
+  const generateVideoThumbnail = async (videoPath) => {
+    const fullVideoPath = `${API_BASE_URL}/videos/${encodeURIComponent(videoPath.split('/').pop())}`;
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.crossOrigin = 'anonymous';
+      video.src = fullVideoPath;
+      video.muted = true;
+      video.preload = 'metadata';
+
+      video.onloadeddata = () => {
+        video.currentTime = 1; // Capture frame at 1 second
+      };
+
+      video.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const maxWidth = 120;
+        const maxHeight = 80;
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(video, 0, 0, width, height);
+        const thumbnail = canvas.toDataURL('image/jpeg');
+        resolve(thumbnail);
+      };
+
+      video.onerror = () => {
+        console.error(`Failed to load video for thumbnail: ${fullVideoPath}`);
+        resolve(null);
+      };
+    });
+  };
+
   const generateImageThumbnail = async (imagePath) => {
     const filename = imagePath.split('/').pop();
     const fullImagePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
@@ -169,6 +217,7 @@ const TimelineComponent = ({
                 return normalizedVPath === normalizedVideoPath;
               });
               if (video) {
+                const thumbnail = (await generateVideoThumbnail(normalizedVideoPath)); // Use existing or generate
                 newVideoLayers[layerIndex].push({
                   ...video,
                   type: 'video',
@@ -182,6 +231,7 @@ const TimelineComponent = ({
                   scale: segment.scale || 1,
                   startTimeWithinVideo: segment.startTime,
                   endTimeWithinVideo: segment.endTime,
+                  thumbnail,
                 });
               }
             }
@@ -280,7 +330,7 @@ const TimelineComponent = ({
   };
 
   useEffect(() => {
-    if (projectId && sessionId && videos.length > 0) loadProjectTimeline();
+    if (projectId && sessionId && videos.length > 0 && thumbnailsGenerated) loadProjectTimeline();
   }, [projectId, sessionId, videos]);
 
   const videoHandler = VideoSegmentHandler({
@@ -381,6 +431,14 @@ const TimelineComponent = ({
     const dragElements = document.querySelectorAll('.dragging');
     dragElements.forEach(el => el.classList.remove('dragging'));
     if (timelineRef.current) timelineRef.current.classList.remove('showing-new-layer');
+
+    // Reset all drag-related states unconditionally
+    setDraggingItem(null);
+    setDragLayer(null);
+    setDragOffset(0);
+    setSnapIndicators([]);
+
+
     const mouseX = e.clientX;
     const mouseY = e.clientY;
 

@@ -12,7 +12,7 @@ const AudioSegmentHandler = ({
   API_BASE_URL,
   timelineRef,
 }) => {
-  const updateAudioSegment = async (audioSegmentId, newStartTime, newLayer, newDuration, draggingItem) => {
+  const updateAudioSegment = async (audioSegmentId, newStartTime, newLayer, newDuration, startTimeWithinAudio, endTimeWithinAudio,draggingItem) => {
     if (!projectId || !sessionId) return;
     try {
       const token = localStorage.getItem('token');
@@ -32,8 +32,8 @@ const AudioSegmentHandler = ({
         timelineStartTime: newStartTime,
         timelineEndTime: timelineEndTime,
         layer: newLayer,
-        startTime: item.startTimeWithinAudio || 0,
-        endTime: (item.startTimeWithinAudio || 0) + (newDuration || originalDuration),
+        startTime: startTimeWithinAudio !== undefined ? startTimeWithinAudio : item.startTimeWithinAudio || 0,
+        endTime: endTimeWithinAudio !== undefined ? endTimeWithinAudio : item.endTimeWithinAudio || (item.startTimeWithinAudio || 0) + (newDuration || originalDuration),
       };
       await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-audio`,
@@ -43,7 +43,7 @@ const AudioSegmentHandler = ({
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      console.log(`Updated audio segment ${audioSegmentId} to start at ${newStartTime}s, end at ${timelineEndTime}s, layer ${newLayer}`);
+      console.log(`Updated audio segment ${audioSegmentId} to start at ${newStartTime}s, end at ${timelineEndTime}s, layer ${newLayer}, startTimeWithinAudio at ${startTimeWithinAudio}s, endTimeWithinAudio at ${endTimeWithinAudio}s`);
     } catch (error) {
       console.error('Error updating audio segment:', error);
     }
@@ -181,7 +181,14 @@ const AudioSegmentHandler = ({
     setAudioLayers(newAudioLayers);
     saveHistory([], newAudioLayers);
     autoSave([], newAudioLayers);
-    await updateAudioSegment(draggingItem.id, newStartTime, backendLayer, draggingItem.duration, updatedItem);
+    await updateAudioSegment(
+      draggingItem.id,
+      newStartTime,
+      backendLayer,
+      draggingItem.duration,
+      updatedItem.startTimeWithinAudio, // Pass startTimeWithinAudio
+      updatedItem.endTimeWithinAudio    // Pass endTimeWithinAudio
+    );
 
     return updatedItem;
   };
@@ -221,7 +228,14 @@ const AudioSegmentHandler = ({
     setAudioLayers(newAudioLayers);
     saveHistory([], newAudioLayers);
 
-    await updateAudioSegment(item.id, item.startTime, item.layer, firstPartDuration, firstPart);
+    await updateAudioSegment(
+      item.id,
+      item.startTime,
+      item.layer,
+      firstPartDuration,
+      firstPart.startTimeWithinAudio, // Pass startTimeWithinAudio
+      firstPart.endTimeWithinAudio    // Pass endTimeWithinAudio
+    );
     await axios.post(
       `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
       {
@@ -229,8 +243,8 @@ const AudioSegmentHandler = ({
         layer: item.layer,
         timelineStartTime: secondPart.startTime,
         timelineEndTime: secondPart.timelineEndTime,
-        startTime: secondPart.startTimeWithinAudio,
-        endTime: secondPart.endTimeWithinAudio,
+        startTime: secondPart.startTimeWithinAudio, // Use startTimeWithinAudio
+        endTime: secondPart.endTimeWithinAudio,     // Use endTimeWithinAudio
       },
       {
         params: { sessionId },

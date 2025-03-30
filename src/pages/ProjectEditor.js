@@ -16,7 +16,8 @@ const ProjectEditor = () => {
   const [totalDuration, setTotalDuration] = useState(0);
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 1080, height: 1920 });
   const [currentTime, setCurrentTime] = useState(0);
-  const [layers, setLayers] = useState([[], [], []]);
+  const [videoLayers, setVideoLayers] = useState([[], [], []]); // For videos, images, texts
+  const [audioLayers, setAudioLayers] = useState([[], [], []]); // For audio
   const [isPlaying, setIsPlaying] = useState(false);
   const [previewHeight, setPreviewHeight] = useState(60);
   const [isDraggingHandle, setIsDraggingHandle] = useState(false);
@@ -138,7 +139,6 @@ const ProjectEditor = () => {
     }
   };
 
-  // ProjectEditor.js
   useEffect(() => {
     const fetchAndSetLayers = async () => {
       try {
@@ -161,14 +161,16 @@ const ProjectEditor = () => {
             console.error("Failed to parse timeline state:", e);
             timelineState = { segments: [], textSegments: [], audioSegments: [] };
           }
-          const videoLayers = [[], [], []]; // Positive layers for video/text
-          const audioLayers = [[], [], []]; // Negative layers for audio, mapped to 0, 1, 2
-          // Inside the video segments loop in fetchAndSetLayers
+          const newVideoLayers = [[], [], []]; // For videos, images, texts
+          const newAudioLayers = [[], [], []]; // For audio
+
+          // Video Segments
           if (timelineState.segments && timelineState.segments.length > 0) {
             for (const segment of timelineState.segments) {
               const layerIndex = segment.layer || 0;
-              if (layerIndex >= videoLayers.length) {
-                while (videoLayers.length <= layerIndex) videoLayers.push([]);
+              if (layerIndex < 0) continue; // Skip audio segments here
+              if (layerIndex >= newVideoLayers.length) {
+                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
               }
               if (segment.sourceVideoPath) {
                 const video = videos.find(v => {
@@ -180,7 +182,7 @@ const ProjectEditor = () => {
                   return normalizedVPath === normalizedVideoPath;
                 });
                 if (video) {
-                  videoLayers[layerIndex].push({
+                  newVideoLayers[layerIndex].push({
                     id: segment.id,
                     type: 'video',
                     startTime: segment.timelineStartTime || 0,
@@ -195,11 +197,11 @@ const ProjectEditor = () => {
               } else if (segment.imageFileName) {
                 const photo = photos.find(p => p.fileName === segment.imageFileName);
                 if (photo) {
-                  videoLayers[layerIndex].push({
+                  newVideoLayers[layerIndex].push({
                     id: segment.id,
                     type: 'image',
                     startTime: segment.timelineStartTime || 0,
-                    duration: (segment.timelineEndTime - segment.timelineStartTime) || 5, // Default duration
+                    duration: (segment.timelineEndTime - segment.timelineStartTime) || 5,
                     fileName: segment.imageFileName,
                     filePath: photo.filePath,
                     layer: layerIndex,
@@ -211,14 +213,16 @@ const ProjectEditor = () => {
               }
             }
           }
+
           // Text Segments
           if (timelineState.textSegments && timelineState.textSegments.length > 0) {
             for (const textSegment of timelineState.textSegments) {
               const layerIndex = textSegment.layer || 0;
-              if (layerIndex >= videoLayers.length) {
-                while (videoLayers.length <= layerIndex) videoLayers.push([]);
+              if (layerIndex < 0) continue; // Skip if mistakenly in audio layer
+              if (layerIndex >= newVideoLayers.length) {
+                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
               }
-              videoLayers[layerIndex].push({
+              newVideoLayers[layerIndex].push({
                 id: textSegment.id,
                 type: 'text',
                 text: textSegment.text,
@@ -234,15 +238,16 @@ const ProjectEditor = () => {
               });
             }
           }
+
           // Audio Segments
           if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
             for (const audioSegment of timelineState.audioSegments) {
               const backendLayer = audioSegment.layer || -1; // Negative layer from backend
               const layerIndex = Math.abs(backendLayer) - 1; // Map -1 to 0, -2 to 1, etc.
-              if (layerIndex >= audioLayers.length) {
-                while (audioLayers.length <= layerIndex) audioLayers.push([]);
+              if (layerIndex >= newAudioLayers.length) {
+                while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
               }
-              audioLayers[layerIndex].push({
+              newAudioLayers[layerIndex].push({
                 id: audioSegment.id,
                 type: 'audio',
                 fileName: audioSegment.audioFileName || audioSegment.audioPath.split('/').pop(),
@@ -250,12 +255,15 @@ const ProjectEditor = () => {
                 duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
                 layer: backendLayer, // Keep original negative layer for backend
                 displayName: audioSegment.audioFileName ? audioSegment.audioFileName.split('/').pop() : audioSegment.audioPath.split('/').pop(),
+                waveformImage: '/images/audio.jpeg', // Use the same waveform image as in media library
               });
             }
           }
-          setLayers([...videoLayers, ...audioLayers]); // Combine video and audio layers
+
+          setVideoLayers(newVideoLayers);
+          setAudioLayers(newAudioLayers);
           let maxEndTime = 0;
-          [...videoLayers, ...audioLayers].forEach(layer => {
+          [...newVideoLayers, ...newAudioLayers].forEach(layer => {
             layer.forEach(item => {
               const endTime = item.startTime + item.duration;
               if (endTime > maxEndTime) maxEndTime = endTime;
@@ -268,7 +276,7 @@ const ProjectEditor = () => {
       }
     };
     if (projectId && sessionId && videos.length > 0) fetchAndSetLayers();
-  }, [projectId, sessionId, videos]);
+  }, [projectId, sessionId, videos, photos]);
 
   const handleVideoUpload = async (event) => {
     const file = event.target.files[0];
@@ -407,13 +415,14 @@ const ProjectEditor = () => {
     const mediaId = media.id || `media-${media.filePath || media.fileName || media.filename || media.imageFileName}-${Date.now()}`;
     const dragData = {
       type: type,
+      isDragOperation: true,
       [type === 'media' ? 'video' : type === 'photo' ? 'photo' : 'audio']: {
         id: mediaId,
-        filePath: type === 'media' ? (media.filePath || media.filename) : type === 'photo' ? media.fileName : media.fileName,
+        filePath: type === 'media' ? (media.filePath || media.filename) : undefined,
         fileName: type === 'audio' ? media.fileName : type === 'photo' ? media.fileName : undefined,
-        displayPath: media.displayPath || media.displayName || (media.filePath || media.fileName || media.filename || media.imageFileName).split('/').pop(),
+        displayPath: media.displayPath || media.displayName || (media.filePath || media.fileName || media.filename || media.imageFileName)?.split('/').pop(),
         duration: media.duration || 5, // Default duration for photos and videos if not specified
-        thumbnail: media.thumbnail || (type === 'photo' ? media.filePath : ''),
+        thumbnail: media.thumbnail || (type === 'photo' ? media.filePath : undefined),
       },
     };
     const jsonString = JSON.stringify(dragData);
@@ -423,7 +432,8 @@ const ProjectEditor = () => {
     e.dataTransfer.effectAllowed = 'copyMove';
   };
 
-  const handleVideoClick = async (video) => {
+  const handleVideoClick = async (video, isDragEvent=false) => {
+    if (isDragEvent) return; // Skip if this is a drag event
     setSelectedVideo(video);
     if (!sessionId || !projectId) return;
     try {
@@ -476,11 +486,11 @@ const ProjectEditor = () => {
         `${API_BASE_URL}/projects/${projectId}/add-to-timeline`,
         {
           videoPath,
-          layer,
-          timelineStartTime,
-          timelineEndTime,
-          startTime: startTimeWithinVideo,
-          endTime: endTimeWithinVideo,
+          layer: layer || 0,
+          timelineStartTime: timelineStartTime || 0,
+          timelineEndTime: timelineEndTime || null, // Let backend calculate if null
+          startTime: startTimeWithinVideo || 0,
+          endTime: endTimeWithinVideo || null,
         },
         {
           params: { sessionId },
@@ -578,14 +588,23 @@ const ProjectEditor = () => {
       [property]: value,
     }));
 
-    const newLayers = layers.map((layer, layerIndex) =>
-      layer.map(item =>
-        item.id === selectedSegment.id && layerIndex === selectedSegment.layerIndex
-          ? { ...item, [property]: value }
-          : item
-      )
+    const targetLayers = selectedSegment.layer < 0 ? audioLayers : videoLayers;
+    const layerIndex = selectedSegment.layer < 0 ? Math.abs(selectedSegment.layer) - 1 : selectedSegment.layerIndex;
+    const newLayers = targetLayers.map((layer, idx) =>
+      idx === layerIndex
+        ? layer.map(item =>
+            item.id === selectedSegment.id
+              ? { ...item, [property]: value }
+              : item
+          )
+        : layer
     );
-    setLayers(newLayers);
+
+    if (selectedSegment.layer < 0) {
+      setAudioLayers(newLayers);
+    } else {
+      setVideoLayers(newLayers);
+    }
 
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
@@ -599,14 +618,27 @@ const ProjectEditor = () => {
     if (!selectedSegment || !sessionId || !projectId) return;
     try {
       const token = localStorage.getItem('token');
-      const requestBody = {
-        segmentId: selectedSegment.id,
-        positionX: tempSegmentValues.positionX,
-        positionY: tempSegmentValues.positionY,
-      };
-
-      if (selectedSegment.type === 'video') {
-        requestBody.scale = tempSegmentValues.scale;
+      if (selectedSegment.type === 'audio') {
+        await axios.put(
+          `${API_BASE_URL}/projects/${projectId}/update-audio`,
+          {
+            audioSegmentId: selectedSegment.id,
+            positionX: tempSegmentValues.positionX,
+            positionY: tempSegmentValues.positionY,
+          },
+          {
+            params: { sessionId },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        console.log(`Updated audio segment ${selectedSegment.id}`);
+      } else if (selectedSegment.type === 'video') {
+        const requestBody = {
+          segmentId: selectedSegment.id,
+          positionX: tempSegmentValues.positionX,
+          positionY: tempSegmentValues.positionY,
+          scale: tempSegmentValues.scale,
+        };
         await axios.put(
           `${API_BASE_URL}/projects/${projectId}/update-segment`,
           requestBody,
@@ -615,7 +647,7 @@ const ProjectEditor = () => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        console.log(`Updated video segment ${selectedSegment.id} with positionX: ${tempSegmentValues.positionX}, positionY: ${tempSegmentValues.positionY}, scale: ${tempSegmentValues.scale}`);
+        console.log(`Updated video segment ${selectedSegment.id}`);
       } else if (selectedSegment.type === 'text') {
         const updatedTextSettings = {
           ...selectedSegment,
@@ -642,7 +674,7 @@ const ProjectEditor = () => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        console.log(`Updated text segment ${selectedSegment.id} with positionX: ${tempSegmentValues.positionX}, positionY: ${tempSegmentValues.positionY}`);
+        console.log(`Updated text segment ${selectedSegment.id}`);
       }
     } catch (error) {
       console.error('Error saving segment changes:', error);
@@ -752,7 +784,9 @@ const ProjectEditor = () => {
     }
   };
 
-  const handlePhotoClick = async (photo) => {
+  const handlePhotoClick = async (photo, isDragEvent = false) => {
+    if (uploading) return;
+
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
@@ -836,7 +870,7 @@ const ProjectEditor = () => {
           };
           img.onerror = () => resolve(null);
         });
-        setLayers(prevLayers => {
+        setVideoLayers(prevLayers => {
           const newLayers = [...prevLayers];
           newLayers[0].push({
             id: newImageSegment.id,
@@ -894,7 +928,13 @@ const ProjectEditor = () => {
                       }`}
                       draggable={true}
                       onDragStart={(e) => handleMediaDragStart(e, video, 'media')}
-                      onClick={() => handleVideoClick(video)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent bubbling
+                        handleVideoClick(video); // Only trigger on explicit click, not after drag
+                      }}
+                      onDragEnd={(e) => {
+                        e.stopPropagation(); // Prevent click event after drag ends
+                      }}
                     >
                       {video.thumbnail ? (
                         <div
@@ -1010,7 +1050,7 @@ const ProjectEditor = () => {
         <div className="preview-and-tools">
           <div className="preview-panel" style={{ height: `${previewHeight}%` }}>
             <VideoPreview
-              layers={layers}
+              layers={[...videoLayers, ...audioLayers]}
               currentTime={currentTime}
               isPlaying={isPlaying}
               canvasDimensions={canvasDimensions}
@@ -1116,6 +1156,10 @@ const ProjectEditor = () => {
               addVideoToTimeline={addVideoToTimeline}
               onTimeUpdate={handleTimeUpdate}
               onSegmentSelect={handleSegmentSelect}
+              videoLayers={videoLayers}
+              audioLayers={audioLayers}
+              setVideoLayers={setVideoLayers}
+              setAudioLayers={setAudioLayers}
             />
           ) : (
             <div className="loading-message">Loading timeline...</div>

@@ -118,7 +118,13 @@ const GeneralSegmentHandler = ({
   const handleResizeStart = (e, item, layerIndex, edge) => {
     if (isSplitMode) return;
     e.stopPropagation();
-    setResizingItem({ ...item, layerIndex });
+    setResizingItem({
+      ...item,
+      layerIndex,
+      originalStartTime: item.startTime, // Explicitly store original startTime
+      originalStartWithinAudio: item.startTimeWithinAudio,
+      originalEndWithinAudio: item.endTimeWithinAudio,
+    });
     setResizeEdge(edge);
     e.preventDefault();
   };
@@ -142,36 +148,40 @@ const GeneralSegmentHandler = ({
       }
       const item = { ...layer[itemIndex] };
 
-      // Safeguard against invalid startTime
-      if (item.startTime === undefined || item.startTime < 0) {
-        console.warn('Invalid startTime detected, resetting to original:', item);
-        item.startTime = resizingItem.startTime || 0; // Fallback to original resizingItem value
-      }
+      // Ensure startTime and within timings have valid defaults
+      const originalStartTime = item.startTime ?? resizingItem.startTime ?? 0;
+      const originalStartWithin = item.type === 'video'
+        ? (item.startTimeWithinVideo ?? 0)
+        : (item.startTimeWithinAudio ?? 0);
+      const originalEndWithin = item.type === 'video'
+        ? (item.endTimeWithinVideo ?? item.duration)
+        : (item.endTimeWithinAudio ?? item.duration);
 
-      let newStartTime = item.startTime;
+      let newStartTime = originalStartTime;
       let newDuration = item.duration;
-      let newStartWithin = item.type === 'video' ? (item.startTimeWithinVideo || 0) : (item.startTimeWithinAudio || 0);
-      let newEndWithin = item.type === 'video' ? (item.endTimeWithinVideo || item.duration) : (item.endTimeWithinAudio || item.duration);
+      let newStartWithin = originalStartWithin;
+      let newEndWithin = originalEndWithin;
 
       if (resizeEdge === 'left') {
-        const originalEndTime = item.startTime + item.duration;
-        newStartTime = Math.min(newTime, originalEndTime - 0.1);
+        const originalEndTime = originalStartTime + item.duration;
+        newStartTime = Math.min(newTime, originalEndTime - 0.1); // Minimum duration 0.1s
         newDuration = originalEndTime - newStartTime;
         if (item.type === 'video' || item.type === 'audio') {
-          const timeShift = newStartTime - item.startTime;
-          newStartWithin = (item.type === 'video' ? (item.startTimeWithinVideo || 0) : (item.startTimeWithinAudio || 0)) + timeShift;
-          newEndWithin = item.type === 'video' ? (item.endTimeWithinVideo || item.duration) : (item.endTimeWithinAudio || item.duration);
-          newStartWithin = Math.max(0, newStartWithin);
+          const timeShift = newStartTime - originalStartTime;
+          newStartWithin = originalStartWithin + timeShift;
+          newStartWithin = Math.max(0, newStartWithin); // Prevent negative
+          newEndWithin = originalEndWithin; // End stays fixed
         }
       } else if (resizeEdge === 'right') {
-        const newEndTime = Math.max(newTime, item.startTime + 0.1);
-        newDuration = newEndTime - item.startTime;
+        const newEndTime = Math.max(newTime, originalStartTime + 0.1);
+        newDuration = newEndTime - originalStartTime;
         if (item.type === 'video' || item.type === 'audio') {
-          newStartWithin = item.type === 'video' ? (item.startTimeWithinVideo || 0) : (item.startTimeWithinAudio || 0);
-          newEndWithin = newStartWithin + newDuration;
+          newStartWithin = originalStartWithin; // Start stays fixed
+          newEndWithin = originalStartWithin + newDuration;
         }
       }
 
+      // Update item properties
       item.startTime = newStartTime;
       item.duration = newDuration;
       item.timelineStartTime = newStartTime;
@@ -212,7 +222,6 @@ const GeneralSegmentHandler = ({
       const newStartTime = item.startTime;
       const newDuration = item.duration;
 
-      // Update backend based on which edge was resized
       if (item.type === 'video') {
         await updateSegmentPosition(
           item.id,
@@ -244,8 +253,8 @@ const GeneralSegmentHandler = ({
           newStartTime,
           item.layer,
           newDuration,
-          item.startTimeWithinAudio, // Pass startTimeWithinAudio
-          item.endTimeWithinAudio    // Pass endTimeWithinAudio
+          item.startTimeWithinAudio,
+          item.endTimeWithinAudio
         );
       }
     }

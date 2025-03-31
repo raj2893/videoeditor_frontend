@@ -304,7 +304,11 @@ const TimelineComponent = ({
               fileName: audioSegment.audioFileName || audioSegment.audioPath.split('/').pop(),
               startTime: audioSegment.timelineStartTime || 0,
               duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+              timelineStartTime: audioSegment.timelineStartTime || 0,
+              timelineEndTime: audioSegment.timelineEndTime || 0,
               layer: backendLayer,
+              startTimeWithinAudio: audioSegment.startTime || 0, // Map backend startTime
+              endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0, // Map backend endTime
               displayName: audioSegment.audioFileName ? audioSegment.audioFileName.split('/').pop() : audioSegment.audioPath.split('/').pop(),
               waveformImage: '/images/audio.jpeg',
             });

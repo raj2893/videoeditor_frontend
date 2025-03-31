@@ -187,7 +187,8 @@ const AudioSegmentHandler = ({
       backendLayer,
       draggingItem.duration,
       updatedItem.startTimeWithinAudio, // Pass startTimeWithinAudio
-      updatedItem.endTimeWithinAudio    // Pass endTimeWithinAudio
+      updatedItem.endTimeWithinAudio ,   // Pass endTimeWithinAudio
+      updatedItem
     );
 
     return updatedItem;
@@ -234,7 +235,8 @@ const AudioSegmentHandler = ({
       item.layer,
       firstPartDuration,
       firstPart.startTimeWithinAudio, // Pass startTimeWithinAudio
-      firstPart.endTimeWithinAudio    // Pass endTimeWithinAudio
+      firstPart.endTimeWithinAudio,   // Pass endTimeWithinAudio
+      firstPart
     );
     await axios.post(
       `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,

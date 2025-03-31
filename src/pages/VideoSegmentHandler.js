@@ -149,12 +149,26 @@ const VideoSegmentHandler = ({
     } else {
       newVideoLayers[dragLayer] = newVideoLayers[dragLayer].filter(v => v.id !== draggingItem.id);
     }
-    const updatedItem = { ...draggingItem, startTime: adjustedStartTime, layer: actualLayerIndex };
+    const updatedItem = {
+      ...draggingItem,
+      startTime: adjustedStartTime,
+      layer: actualLayerIndex,
+      timelineStartTime: adjustedStartTime,
+      timelineEndTime: adjustedStartTime + draggingItem.duration,
+    };
     newVideoLayers[actualLayerIndex].push(updatedItem);
     setVideoLayers(newVideoLayers);
     saveHistory(newVideoLayers, []);
     autoSave(newVideoLayers, []);
-    await updateSegmentPosition(draggingItem.id, adjustedStartTime, actualLayerIndex);
+    // Call updateSegmentPosition with full data
+    await updateSegmentPosition(
+      draggingItem.id,
+      adjustedStartTime,
+      actualLayerIndex,
+      draggingItem.duration, // Explicitly pass duration
+      updatedItem.startTimeWithinVideo,
+      updatedItem.endTimeWithinVideo
+    );
   };
 
   const handleVideoSplit = async (item, clickTime, layerIndex) => {

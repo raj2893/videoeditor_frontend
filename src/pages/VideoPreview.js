@@ -346,7 +346,6 @@ const VideoPreview = ({
 
         {visibleElements.length === 0 && (
           <div className="preview-empty-state">
-            No media at current playhead position
           </div>
         )}
 

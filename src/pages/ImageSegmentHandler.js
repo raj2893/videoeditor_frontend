@@ -59,22 +59,48 @@ const ImageSegmentHandler = ({
     if (!sessionId || !projectId) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.post(
+      const response = await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-project-image-to-timeline`,
         {
           imageFileName,
           layer,
           timelineStartTime,
           timelineEndTime,
+          positionX: 0, // Default to 0 as per backend
+          positionY: 0, // Default to 0 as per backend
+          scale: 1,
         },
         {
           params: { sessionId },
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      await loadProjectTimeline();
+      const segment = response.data;
+      const thumbnail = await generateImageThumbnail(imageFileName);
+      const newSegment = {
+        id: segment.id,
+        type: 'image',
+        fileName: imageFileName,
+        filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(imageFileName)}`,
+        thumbnail,
+        startTime: timelineStartTime,
+        duration: timelineEndTime - timelineStartTime,
+        layer,
+        positionX: 0, // Match backend default
+        positionY: 0, // Match backend default
+        scale: 1,
+      };
+      setVideoLayers(prev => {
+        const newLayers = [...prev];
+        while (newLayers.length <= layer) newLayers.push([]);
+        newLayers[layer].push(newSegment);
+        return newLayers;
+      });
+      saveHistory([...videoLayers, newSegment], []);
+      autoSave([...videoLayers, newSegment], []);
     } catch (error) {
       console.error('Error adding image to timeline:', error);
+      await loadProjectTimeline();
     }
   };
 
@@ -94,8 +120,8 @@ const ImageSegmentHandler = ({
         timelineStartTime: newStartTime,
         timelineEndTime: newStartTime + duration,
         layer: newLayer,
-        positionX: updatedSettings.positionX || item.positionX || 50,
-        positionY: updatedSettings.positionY || item.positionY || 50,
+        positionX: updatedSettings.positionX || item.positionX || 0,
+        positionY: updatedSettings.positionY || item.positionY || 0,
         scale: updatedSettings.scale || item.scale || 1,
         opacity: updatedSettings.opacity || item.opacity || 1.0,
         width: updatedSettings.width || item.width,

@@ -240,8 +240,8 @@ const ProjectEditor = () => {
                     duration: (segment.timelineEndTime - segment.timelineStartTime) || 0,
                     filePath: segment.sourceVideoPath,
                     layer: layerIndex,
-                    positionX: segment.positionX || 50,
-                    positionY: segment.positionY || 50,
+                    positionX: segment.positionX || 0,
+                    positionY: segment.positionY || 0,
                     scale: segment.scale || 1,
                   });
                 }
@@ -256,8 +256,8 @@ const ProjectEditor = () => {
                     fileName: segment.imageFileName,
                     filePath: photo.filePath,
                     layer: layerIndex,
-                    positionX: segment.positionX || 50,
-                    positionY: segment.positionY || 50,
+                    positionX: segment.positionX || 0,
+                    positionY: segment.positionY || 0,
                     scale: segment.scale || 1,
                   });
                 }
@@ -521,8 +521,8 @@ const ProjectEditor = () => {
           duration: (timelineEndTime || segment.timelineEndTime) - (timelineStartTime || 0),
           filePath: videoPath,
           layer: layer || 0,
-          positionX: segment.positionX || 50,
-          positionY: segment.positionY || 50,
+          positionX: segment.positionX || 0,
+          positionY: segment.positionY || 0,
           scale: segment.scale || 1,
           thumbnail: video.thumbnail,
         };
@@ -613,8 +613,8 @@ const ProjectEditor = () => {
     setSelectedSegment(segment);
     if (segment) {
       setTempSegmentValues({
-        positionX: segment.positionX || 50,
-        positionY: segment.positionY || 50,
+        positionX: segment.positionX || 0,
+        positionY: segment.positionY || 0,
         scale: segment.scale || 1,
       });
     } else {
@@ -656,6 +656,18 @@ const ProjectEditor = () => {
         };
         await axios.put(
           `${API_BASE_URL}/projects/${projectId}/update-segment`,
+          requestBody,
+          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else if (selectedSegment.type === 'image') {
+        const requestBody = {
+          segmentId: selectedSegment.id,
+          positionX: tempSegmentValues.positionX,
+          positionY: tempSegmentValues.positionY,
+          scale: tempSegmentValues.scale,
+        };
+        await axios.put(
+          `${API_BASE_URL}/projects/${projectId}/update-image`,
           requestBody,
           { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
         );
@@ -999,7 +1011,7 @@ const ProjectEditor = () => {
         </div>
         {isToolsPanelOpen && (
           <div className="panel-content">
-           <h2>Tools</h2>
+            <h2>Tools</h2>
             <div className="tools-buttons">
               <button className={`tool-button ${isTransformOpen ? 'active' : ''}`} onClick={toggleTransformPanel}>
                 Transform
@@ -1010,39 +1022,33 @@ const ProjectEditor = () => {
               <div className="transform-panel">
                 <h3>Transform</h3>
                 <div className="control-group">
-                  <label>Position X (%)</label>
-                  <div className="slider-container">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={tempSegmentValues.positionX || 50}
-                      onChange={(e) => updateSegmentProperty('positionX', parseInt(e.target.value))}
-                    />
-                    <span>{tempSegmentValues.positionX || 50}%</span>
-                  </div>
+                  <label>Position X (px)</label>
+                  <input
+                    type="number"
+                    value={tempSegmentValues.positionX || 0}
+                    onChange={(e) => updateSegmentProperty('positionX', parseInt(e.target.value) || 0)}
+                    step="1"
+                    style={{ width: '100px' }}
+                  />
                 </div>
                 <div className="control-group">
-                  <label>Position Y (%)</label>
-                  <div className="slider-container">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={tempSegmentValues.positionY || 50}
-                      onChange={(e) => updateSegmentProperty('positionY', parseInt(e.target.value))}
-                    />
-                    <span>{tempSegmentValues.positionY || 50}%</span>
-                  </div>
+                  <label>Position Y (px)</label>
+                  <input
+                    type="number"
+                    value={tempSegmentValues.positionY || 0}
+                    onChange={(e) => updateSegmentProperty('positionY', parseInt(e.target.value) || 0)}
+                    step="1"
+                    style={{ width: '100px' }}
+                  />
                 </div>
-                {selectedSegment.type === 'video' && (
+                {(selectedSegment.type === 'video' || selectedSegment.type === 'image') && (
                   <div className="control-group">
                     <label>Scale</label>
                     <div className="slider-container">
                       <input
                         type="range"
                         min="0.1"
-                        max="2"
+                        max="5"
                         step="0.1"
                         value={tempSegmentValues.scale || 1}
                         onChange={(e) => updateSegmentProperty('scale', parseFloat(e.target.value))}

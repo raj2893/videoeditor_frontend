@@ -378,8 +378,8 @@ const loadProjectTimeline = async () => {
                   duration: segment.timelineEndTime - segment.timelineStartTime,
                   layer: layerIndex,
                   filePath: normalizedVideoPath,
-                  positionX: segment.positionX || 50,
-                  positionY: segment.positionY || 50,
+                  positionX: segment.positionX || 0,
+                  positionY: segment.positionY || 0,
                   scale: segment.scale || 1,
                   startTimeWithinVideo: segment.startTime,
                   endTimeWithinVideo: segment.endTime,
@@ -406,8 +406,8 @@ const loadProjectTimeline = async () => {
               startTime: segment.timelineStartTime,
               duration: segment.timelineEndTime - segment.timelineStartTime,
               layer: layerIndex,
-              positionX: segment.positionX || 50,
-              positionY: segment.positionY || 50,
+              positionX: segment.positionX || 0,
+              positionY: segment.positionY || 0,
               scale: segment.scale || 1,
             });
           }

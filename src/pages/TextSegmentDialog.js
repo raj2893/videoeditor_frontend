@@ -20,8 +20,8 @@ const TextSegmentDialog = ({
         fontSize: editingTextSegment.fontSize || 24,
         fontColor: editingTextSegment.fontColor || '#FFFFFF',
         backgroundColor: editingTextSegment.backgroundColor || 'transparent',
-        positionX: editingTextSegment.positionX || 50,
-        positionY: editingTextSegment.positionY || 50,
+        positionX: editingTextSegment.positionX || 0,
+        positionY: editingTextSegment.positionY || 0,
         duration: editingTextSegment.duration || 5
       });
     } else {

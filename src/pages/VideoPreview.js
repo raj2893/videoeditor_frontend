@@ -260,6 +260,10 @@ const VideoPreview = ({
           }}
         >
           {visibleElements.map(element => {
+            // Calculate position in pixels relative to center
+            const centerX = canvasDimensions.width / 2;
+            const centerY = canvasDimensions.height / 2;
+
             if (element.type === 'video') {
               const videoWidth = element.width || 1080;
               const videoHeight = element.height || 1920;
@@ -278,6 +282,10 @@ const VideoPreview = ({
               displayWidth *= scaleFactor;
               displayHeight *= scaleFactor;
 
+              // Position in pixels from center
+              const posX = centerX + (element.positionX || 0) - (displayWidth / 2);
+              const posY = centerY + (element.positionY || 0) - (displayHeight / 2);
+
               return (
                 <video
                   key={element.id}
@@ -288,9 +296,8 @@ const VideoPreview = ({
                     position: 'absolute',
                     width: `${displayWidth}px`,
                     height: `${displayHeight}px`,
-                    top: `${element.positionY || 50}%`,
-                    left: `${element.positionX || 50}%`,
-                    transform: 'translate(-50%, -50%)',
+                    left: `${posX}px`,
+                    top: `${posY}px`,
                     zIndex: element.layerIndex,
                   }}
                   onError={(e) => console.error(`Error loading video ${element.filePath}:`, e)}
@@ -299,6 +306,16 @@ const VideoPreview = ({
                 />
               );
             } else if (element.type === 'image') {
+              const imgWidth = element.width || canvasDimensions.width;
+              const imgHeight = element.height || canvasDimensions.height;
+              const scaleFactor = element.scale || 1;
+              const displayWidth = imgWidth * scaleFactor;
+              const displayHeight = imgHeight * scaleFactor;
+
+              // Position in pixels from center
+              const posX = centerX + (element.positionX || 0) - (displayWidth / 2);
+              const posY = centerY + (element.positionY || 0) - (displayHeight / 2);
+
               return (
                 <img
                   key={element.id}
@@ -306,28 +323,35 @@ const VideoPreview = ({
                   alt="Preview"
                   style={{
                     position: 'absolute',
-                    width: element.width ? `${element.width}px` : 'auto',
-                    height: element.height ? `${element.height}px` : 'auto',
-                    top: `${element.positionY || 50}%`,
-                    left: `${element.positionX || 50}%`,
-                    transform: `translate(-50%, -50%) scale(${element.scale || 1})`,
+                    width: `${displayWidth}px`,
+                    height: `${displayHeight}px`,
+                    left: `${posX}px`,
+                    top: `${posY}px`,
                     opacity: element.opacity || 1,
                     zIndex: element.layerIndex,
                   }}
                 />
               );
             } else if (element.type === 'text') {
+              const fontSize = (element.fontSize || 24) * scale;
+              // Approximate text dimensions (this is an estimation)
+              const textWidth = element.text.length * fontSize * 0.6; // Rough estimate
+              const textHeight = fontSize * 1.2;
+
+              // Position in pixels from center
+              const posX = centerX + (element.positionX || 0) - (textWidth / 2);
+              const posY = centerY + (element.positionY || 0) - (textHeight / 2);
+
               return (
                 <div
                   key={element.id}
                   className="preview-text"
                   style={{
                     position: 'absolute',
-                    left: `${element.positionX}%`,
-                    top: `${element.positionY}%`,
-                    transform: 'translate(-50%, -50%)',
+                    left: `${posX}px`,
+                    top: `${posY}px`,
                     fontFamily: element.fontFamily || 'Arial',
-                    fontSize: `${(element.fontSize || 24) * scale}px`,
+                    fontSize: `${fontSize}px`,
                     color: element.fontColor || '#FFFFFF',
                     backgroundColor: element.backgroundColor || 'transparent',
                     padding: `${5 * scale}px`,

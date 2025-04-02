@@ -54,8 +54,8 @@ const TimelineComponent = ({
     fontSize: 24,
     fontColor: '#FFFFFF',
     backgroundColor: 'transparent',
-    positionX: 50,
-    positionY: 50,
+    positionX: 0,
+    positionY: 0,
     duration: 5,
   });
   const [resizingItem, setResizingItem] = useState(null);
@@ -226,8 +226,8 @@ const TimelineComponent = ({
                   duration: segment.timelineEndTime - segment.timelineStartTime,
                   layer: layerIndex,
                   filePath: normalizedVideoPath,
-                  positionX: segment.positionX || 50,
-                  positionY: segment.positionY || 50,
+                  positionX: segment.positionX || 0,
+                  positionY: segment.positionY || 0,
                   scale: segment.scale || 1,
                   startTimeWithinVideo: segment.startTime,
                   endTimeWithinVideo: segment.endTime,
@@ -256,8 +256,8 @@ const TimelineComponent = ({
               startTime: imageSegment.timelineStartTime,
               duration: imageSegment.timelineEndTime - imageSegment.timelineStartTime,
               layer: layerIndex,
-              positionX: imageSegment.positionX || 50,
-              positionY: imageSegment.positionY || 50,
+              positionX: imageSegment.positionX || 0,
+              positionY: imageSegment.positionY || 0,
               scale: imageSegment.scale || 1,
               opacity: imageSegment.opacity || 1.0,
               width: imageSegment.width,
@@ -286,8 +286,8 @@ const TimelineComponent = ({
               fontSize: textSegment.fontSize || 24,
               fontColor: textSegment.fontColor || '#FFFFFF',
               backgroundColor: textSegment.backgroundColor || 'transparent',
-              positionX: textSegment.positionX || 50,
-              positionY: textSegment.positionY || 50,
+              positionX: textSegment.positionX || 0,
+              positionY: textSegment.positionY || 0,
             });
           }
         }

@@ -40,18 +40,33 @@ const ProjectEditor = () => {
     backgroundColor: 'transparent',
     duration: 5,
   });
+  // Added state for Filters functionality from old code
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [filterParams, setFilterParams] = useState({});
+  const [appliedFilters, setAppliedFilters] = useState([]);
 
   const navigate = useNavigate();
   const { projectId } = useParams();
   const updateTimeoutRef = useRef(null);
 
-  const toggleTransformPanel = () => setIsTransformOpen((prev) => !prev);
+  const toggleTransformPanel = () => {
+    setIsTransformOpen((prev) => !prev);
+    setIsFiltersOpen(false); // Close filters when opening transform
+  };
   const toggleMediaPanel = () => setIsMediaPanelOpen((prev) => !prev);
   const toggleToolsPanel = () => setIsToolsPanelOpen((prev) => !prev);
+
+  // Updated toggleFiltersPanel to ensure mutual exclusivity with Transform and Text tools
+  const toggleFiltersPanel = () => {
+    setIsFiltersOpen((prev) => !prev);
+    setIsTransformOpen(false); // Close transform when opening filters
+    setIsTextToolOpen(false); // Close text tool when opening filters
+  };
 
   const toggleTextTool = () => {
     if (selectedSegment && selectedSegment.type === 'text') {
       setIsTextToolOpen((prev) => !prev);
+      setIsFiltersOpen(false); // Close filters when opening text tool
     } else {
       setIsTextToolOpen(false);
     }
@@ -68,7 +83,7 @@ const ProjectEditor = () => {
         backgroundColor: segment.backgroundColor || 'transparent',
         duration: segment.duration || 5,
       });
-      setIsTextToolOpen(true); // Open the text tool when selecting a text segment
+      setIsTextToolOpen(true);
     } else {
       setIsTextToolOpen(false);
     }
@@ -85,15 +100,15 @@ const ProjectEditor = () => {
                 ...item,
                 ...newSettings,
                 duration: newSettings.duration,
-                timelineEndTime: item.startTime + newSettings.duration
+                timelineEndTime: item.startTime + newSettings.duration,
               }
             : item
         );
         return newLayers;
       });
-      setTotalDuration(prev => {
+      setTotalDuration((prev) => {
         const layer = videoLayers[editingTextSegment.layer];
-        const updatedSegment = layer.find(item => item.id === editingTextSegment.id);
+        const updatedSegment = layer.find((item) => item.id === editingTextSegment.id);
         return Math.max(prev, updatedSegment.startTime + updatedSegment.duration);
       });
     }
@@ -134,7 +149,6 @@ const ProjectEditor = () => {
     if (!sessionId || !projectId) return;
     try {
       const token = localStorage.getItem('token');
-      // Determine the start time for the new text segment (e.g., at current time or end of timeline)
       let startTime = currentTime;
       if (videoLayers[0].length > 0) {
         const lastSegment = videoLayers[0][videoLayers[0].length - 1];
@@ -145,7 +159,7 @@ const ProjectEditor = () => {
         `${API_BASE_URL}/projects/${projectId}/add-text`,
         {
           text: textSettings.text,
-          layer: 0, // Default to layer 0
+          layer: 0,
           timelineStartTime: startTime,
           timelineEndTime: startTime + duration,
           fontFamily: textSettings.fontFamily,
@@ -172,12 +186,12 @@ const ProjectEditor = () => {
         positionX: 0,
         positionY: 0,
       };
-      setVideoLayers(prevLayers => {
+      setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         newLayers[0].push(newSegment);
         return newLayers;
       });
-      setTotalDuration(prev => Math.max(prev, startTime + duration));
+      setTotalDuration((prev) => Math.max(prev, startTime + duration));
       setSelectedSegment(newSegment);
       setEditingTextSegment(newSegment);
       setTextSettings({
@@ -188,7 +202,7 @@ const ProjectEditor = () => {
         backgroundColor: newSegment.backgroundColor,
         duration: newSegment.duration,
       });
-      setIsTextToolOpen(true); // Open the text editing panel
+      setIsTextToolOpen(true);
     } catch (error) {
       console.error('Error adding text to timeline:', error);
     }
@@ -236,13 +250,13 @@ const ProjectEditor = () => {
       const response = await axios.get(`${API_BASE_URL}/videos/my-videos`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const updatedVideos = response.data.map(video => ({
+      const updatedVideos = response.data.map((video) => ({
         ...video,
         filePath: video.filePath || video.filename,
         displayPath: video.title || (video.filePath || video.filename).split('/').pop(),
       }));
       setVideos(updatedVideos);
-      await Promise.all(updatedVideos.map(video => generateVideoThumbnail(video)));
+      await Promise.all(updatedVideos.map((video) => generateVideoThumbnail(video)));
       setThumbnailsGenerated(true);
     } catch (error) {
       console.error('Error fetching videos:', error);
@@ -265,7 +279,7 @@ const ProjectEditor = () => {
           audioFiles = [];
         }
         if (Array.isArray(audioFiles)) {
-          const updatedAudios = audioFiles.map(audio => ({
+          const updatedAudios = audioFiles.map((audio) => ({
             id: audio.audioPath || `audio-${audio.audioFileName}-${Date.now()}`,
             fileName: audio.audioFileName,
             displayName: audio.audioFileName.split('/').pop(),
@@ -291,7 +305,7 @@ const ProjectEditor = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const project = response.data;
-      if (project.imagesJson) { // Note: You used 'imagesJson' here, not 'imageJson'
+      if (project.imagesJson) {
         let imageFiles;
         try {
           imageFiles = typeof project.imagesJson === 'string' ? JSON.parse(project.imagesJson) : project.imagesJson;
@@ -300,48 +314,50 @@ const ProjectEditor = () => {
           imageFiles = [];
         }
         if (Array.isArray(imageFiles)) {
-          const updatedPhotos = await Promise.all(imageFiles.map(async (image) => {
-            const fullFileName = image.imagePath.split('/').pop(); // e.g., "60_1743673221228_WhatsApp Image 2025-02-17 at 10.43.28 AM.jpeg"
-            const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, ''); // For display only
-            const thumbnail = await new Promise((resolve) => {
-              const img = new Image();
-              img.crossOrigin = 'anonymous';
-              img.src = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(fullFileName)}`;
-              img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const maxWidth = 120;
-                const maxHeight = 80;
-                let width = img.width;
-                let height = img.height;
-                if (width > height) {
-                  if (width > maxWidth) {
-                    height = (height * maxWidth) / width;
-                    width = maxWidth;
+          const updatedPhotos = await Promise.all(
+            imageFiles.map(async (image) => {
+              const fullFileName = image.imagePath.split('/').pop();
+              const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
+              const thumbnail = await new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.src = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(fullFileName)}`;
+                img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  const ctx = canvas.getContext('2d');
+                  const maxWidth = 120;
+                  const maxHeight = 80;
+                  let width = img.width;
+                  let height = img.height;
+                  if (width > height) {
+                    if (width > maxWidth) {
+                      height = (height * maxWidth) / width;
+                      width = maxWidth;
+                    }
+                  } else {
+                    if (height > maxHeight) {
+                      width = (width * maxHeight) / height;
+                      height = maxHeight;
+                    }
                   }
-                } else {
-                  if (height > maxHeight) {
-                    width = (width * maxHeight) / height;
-                    height = maxHeight;
-                  }
-                }
-                canvas.width = width;
-                canvas.height = height;
-                ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg'));
+                  canvas.width = width;
+                  canvas.height = height;
+                  ctx.drawImage(img, 0, 0, width, height);
+                  resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => resolve(null);
+              });
+              return {
+                id: image.imagePath || `image-${fullFileName}-${Date.now()}`,
+                fileName: fullFileName,
+                displayName: originalFileName,
+                filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(fullFileName)}`,
+                thumbnail,
               };
-              img.onerror = () => resolve(null);
-            });
-            return {
-              id: image.imagePath || `image-${fullFileName}-${Date.now()}`,
-              fileName: fullFileName, // Use the full unique name
-              displayName: originalFileName, // Use original name for display
-              filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(fullFileName)}`,
-              thumbnail,
-            };
-          }));
+            })
+          );
           setPhotos(updatedPhotos);
-          console.log('Fetched photos:', updatedPhotos); // Debug log
+          console.log('Fetched photos:', updatedPhotos);
         } else {
           setPhotos([]);
         }
@@ -358,17 +374,17 @@ const ProjectEditor = () => {
     const fetchAndSetLayers = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(
-          `${API_BASE_URL}/projects/${projectId}`,
-          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-        );
+        const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+          params: { sessionId },
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const project = response.data;
         if (project && project.timelineState) {
           let timelineState;
           try {
             timelineState = typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
           } catch (e) {
-            console.error("Failed to parse timeline state:", e);
+            console.error('Failed to parse timeline state:', e);
             timelineState = { segments: [], textSegments: [], audioSegments: [] };
           }
           const newVideoLayers = [[], [], []];
@@ -382,10 +398,12 @@ const ProjectEditor = () => {
                 while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
               }
               if (segment.sourceVideoPath) {
-                const video = videos.find(v => {
-                  const vPath = (v.filePath || v.filename);
+                const video = videos.find((v) => {
+                  const vPath = v.filePath || v.filename;
                   const normalizedVPath = vPath.startsWith('videos/') ? vPath.substring(7) : vPath;
-                  const normalizedVideoPath = segment.sourceVideoPath.startsWith('videos/') ? segment.sourceVideoPath.substring(7) : segment.sourceVideoPath;
+                  const normalizedVideoPath = segment.sourceVideoPath.startsWith('videos/')
+                    ? segment.sourceVideoPath.substring(7)
+                    : segment.sourceVideoPath;
                   return normalizedVPath === normalizedVideoPath;
                 });
                 if (video) {
@@ -402,7 +420,7 @@ const ProjectEditor = () => {
                   });
                 }
               } else if (segment.imageFileName) {
-                const photo = photos.find(p => p.fileName === segment.imageFileName);
+                const photo = photos.find((p) => p.fileName === segment.imageFileName);
                 if (photo) {
                   newVideoLayers[layerIndex].push({
                     id: segment.id,
@@ -457,7 +475,9 @@ const ProjectEditor = () => {
                 startTime: audioSegment.timelineStartTime || 0,
                 duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
                 layer: backendLayer,
-                displayName: audioSegment.audioFileName ? audioSegment.audioFileName.split('/').pop() : audioSegment.audioPath.split('/').pop(),
+                displayName: audioSegment.audioFileName
+                  ? audioSegment.audioFileName.split('/').pop()
+                  : audioSegment.audioPath.split('/').pop(),
                 waveformImage: '/images/audio.jpeg',
               });
             }
@@ -466,8 +486,8 @@ const ProjectEditor = () => {
           setVideoLayers(newVideoLayers);
           setAudioLayers(newAudioLayers);
           let maxEndTime = 0;
-          [...newVideoLayers, ...newAudioLayers].forEach(layer => {
-            layer.forEach(item => {
+          [...newVideoLayers, ...newAudioLayers].forEach((layer) => {
+            layer.forEach((item) => {
               const endTime = item.startTime + item.duration;
               if (endTime > maxEndTime) maxEndTime = endTime;
             });
@@ -531,7 +551,7 @@ const ProjectEditor = () => {
     const videoUrl = `${API_BASE_URL}/videos/${encodeURIComponent(path)}`;
     try {
       const videoElement = document.createElement('video');
-      videoElement.crossOrigin = "anonymous";
+      videoElement.crossOrigin = 'anonymous';
       videoElement.src = videoUrl;
       await new Promise((resolve, reject) => {
         videoElement.onloadeddata = resolve;
@@ -540,7 +560,7 @@ const ProjectEditor = () => {
       });
       const seekTime = Math.min(1, (video.duration || 0) * 0.25);
       videoElement.currentTime = seekTime;
-      await new Promise(resolve => {
+      await new Promise((resolve) => {
         videoElement.onseeked = resolve;
         setTimeout(resolve, 2000);
       });
@@ -551,13 +571,13 @@ const ProjectEditor = () => {
       ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
       const thumbnail = canvas.toDataURL('image/jpeg');
       video.thumbnail = thumbnail;
-      setVideos(prevVideos =>
-        prevVideos.map(v =>
+      setVideos((prevVideos) =>
+        prevVideos.map((v) =>
           (v.filePath || v.filename) === (video.filePath || video.filename) ? { ...v, thumbnail } : v
         )
       );
     } catch (error) {
-      console.error("Error creating thumbnail for video:", path, error);
+      console.error('Error creating thumbnail for video:', path, error);
     }
   };
 
@@ -621,16 +641,16 @@ const ProjectEditor = () => {
     if (!sessionId || !projectId) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_BASE_URL}/projects/${projectId}`,
-        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+        params: { sessionId },
+        headers: { Authorization: `Bearer ${token}` },
+      });
       let timelineState;
       if (response.data && response.data.timelineState) {
         try {
           timelineState = typeof response.data.timelineState === 'string' ? JSON.parse(response.data.timelineState) : response.data.timelineState;
         } catch (e) {
-          console.error("Failed to parse timeline state:", e);
+          console.error('Failed to parse timeline state:', e);
           timelineState = { segments: [] };
         }
       } else {
@@ -638,8 +658,8 @@ const ProjectEditor = () => {
       }
       let endTime = 0;
       if (timelineState.segments && timelineState.segments.length > 0) {
-        const layer0Segments = timelineState.segments.filter(seg => seg.layer === 0);
-        layer0Segments.forEach(segment => {
+        const layer0Segments = timelineState.segments.filter((seg) => seg.layer === 0);
+        layer0Segments.forEach((segment) => {
           const segmentEndTime = segment.timelineStartTime + (segment.endTime - segment.startTime);
           if (segmentEndTime > endTime) endTime = segmentEndTime;
         });
@@ -666,7 +686,7 @@ const ProjectEditor = () => {
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
       const segment = response.data;
-      const video = videos.find(v => (v.filePath || v.filename) === videoPath);
+      const video = videos.find((v) => (v.filePath || v.filename) === videoPath);
       if (video && segment) {
         const newSegment = {
           id: segment.id || `${videoPath}-${Date.now()}`,
@@ -680,13 +700,13 @@ const ProjectEditor = () => {
           scale: segment.scale || 1,
           thumbnail: video.thumbnail,
         };
-        setVideoLayers(prevLayers => {
+        setVideoLayers((prevLayers) => {
           const newLayers = [...prevLayers];
           while (newLayers.length <= layer) newLayers.push([]);
           newLayers[layer] = [...newLayers[layer], newSegment];
           return newLayers;
         });
-        setTotalDuration(prev => Math.max(prev, newSegment.startTime + newSegment.duration));
+        setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
       }
     } catch (error) {
       console.error('Error adding video to timeline:', error);
@@ -700,11 +720,11 @@ const ProjectEditor = () => {
     const handleKeyDown = (e) => {
       if (e.key === ' ' || e.code === 'Space') {
         e.preventDefault();
-        setIsPlaying(prev => !prev);
+        setIsPlaying((prev) => !prev);
       }
       if (!isPlaying) {
-        if (e.key === 'ArrowLeft') setCurrentTime(time => Math.max(0, time - 1/30));
-        else if (e.key === 'ArrowRight') setCurrentTime(time => Math.min(totalDuration, time + 1/30));
+        if (e.key === 'ArrowLeft') setCurrentTime((time) => Math.max(0, time - 1 / 30));
+        else if (e.key === 'ArrowRight') setCurrentTime((time) => Math.min(totalDuration, time + 1 / 30));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -769,19 +789,24 @@ const ProjectEditor = () => {
         positionY: segment.positionY || 0,
         scale: segment.scale || 1,
       });
+      // Added call to fetch filters when a segment is selected
+      fetchFilters(segment.id);
     } else {
       setTempSegmentValues({});
+      // Reset filters when no segment is selected
+      setAppliedFilters([]);
+      setFilterParams({});
     }
     handleTextSegmentSelect(segment);
   };
 
   const updateSegmentProperty = (property, value) => {
-    setTempSegmentValues(prev => ({ ...prev, [property]: value }));
+    setTempSegmentValues((prev) => ({ ...prev, [property]: value }));
     const targetLayers = selectedSegment.layer < 0 ? audioLayers : videoLayers;
     const layerIndex = selectedSegment.layer < 0 ? Math.abs(selectedSegment.layer) - 1 : selectedSegment.layer;
     const newLayers = targetLayers.map((layer, idx) =>
       idx === layerIndex
-        ? layer.map(item => item.id === selectedSegment.id ? { ...item, [property]: value } : item)
+        ? layer.map((item) => (item.id === selectedSegment.id ? { ...item, [property]: value } : item))
         : layer
     );
     if (selectedSegment.layer < 0) setAudioLayers(newLayers);
@@ -876,20 +901,22 @@ const ProjectEditor = () => {
     if (uploading) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_BASE_URL}/projects/${projectId}`,
-        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+        params: { sessionId },
+        headers: { Authorization: `Bearer ${token}` },
+      });
       let timelineState = response.data.timelineState
-        ? typeof response.data.timelineState === 'string' ? JSON.parse(response.data.timelineState) : response.data.timelineState
+        ? typeof response.data.timelineState === 'string'
+          ? JSON.parse(response.data.timelineState)
+          : response.data.timelineState
         : { segments: [], textSegments: [] };
       let endTime = 0;
       const layer0Items = [
-        ...(timelineState.segments || []).filter(seg => seg.layer === 0),
-        ...(timelineState.textSegments || []).filter(seg => seg.layer === 0),
+        ...(timelineState.segments || []).filter((seg) => seg.layer === 0),
+        ...(timelineState.textSegments || []).filter((seg) => seg.layer === 0),
       ];
       if (layer0Items.length > 0) {
-        layer0Items.forEach(item => {
+        layer0Items.forEach((item) => {
           const segmentEndTime = item.timelineStartTime + (item.timelineEndTime - item.timelineStartTime);
           if (segmentEndTime > endTime) endTime = segmentEndTime;
         });
@@ -899,12 +926,12 @@ const ProjectEditor = () => {
         { imageFileName: photo.fileName, layer: 0, timelineStartTime: endTime, timelineEndTime: endTime + 5 },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
-      const updatedResponse = await axios.get(
-        `${API_BASE_URL}/projects/${projectId}`,
-        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-      );
+      const updatedResponse = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+        params: { sessionId },
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const updatedTimelineState = typeof updatedResponse.data.timelineState === 'string' ? JSON.parse(updatedResponse.data.timelineState) : updatedResponse.data.timelineState;
-      const newImageSegment = updatedTimelineState.segments.find(seg => seg.imagePath && seg.timelineStartTime === endTime && seg.layer === 0);
+      const newImageSegment = updatedTimelineState.segments.find((seg) => seg.imagePath && seg.timelineStartTime === endTime && seg.layer === 0);
       if (newImageSegment) {
         const filename = newImageSegment.imagePath.split('/').pop();
         const thumbnail = await new Promise((resolve) => {
@@ -936,7 +963,7 @@ const ProjectEditor = () => {
           };
           img.onerror = () => resolve(null);
         });
-        setVideoLayers(prevLayers => {
+        setVideoLayers((prevLayers) => {
           const newLayers = [...prevLayers];
           newLayers[0].push({
             id: newImageSegment.id,
@@ -959,9 +986,235 @@ const ProjectEditor = () => {
     }
   };
 
+  // Added fetchFilters function from old code
+  const fetchFilters = async (segmentId) => {
+    if (!segmentId || !sessionId) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${API_BASE_URL}/projects/${projectId}/sessions/${sessionId}/segments/${segmentId}/filters`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAppliedFilters(response.data || []);
+    } catch (error) {
+      console.error('Error fetching filters:', error);
+      setAppliedFilters([]);
+    }
+  };
+
+  // Added applyFilter function from old code
+  const applyFilter = async (filterType, params) => {
+    if (!selectedSegment || !sessionId) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/sessions/${sessionId}/segments/${selectedSegment.id}/filters`,
+        { filterType, filterParams: params },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await fetchFilters(selectedSegment.id);
+    } catch (error) {
+      console.error('Error applying filter:', error);
+    }
+  };
+
+  // Added removeFilter function from old code
+  const removeFilter = async (filterId) => {
+    if (!selectedSegment || !sessionId) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(
+        `${API_BASE_URL}/projects/${projectId}/sessions/${sessionId}/filters/${filterId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await fetchFilters(selectedSegment.id);
+    } catch (error) {
+      console.error('Error removing filter:', error);
+    }
+  };
+
+  // Added renderFilterControls function from old code
+  const renderFilterControls = () => {
+    const filterDefinitions = [
+      {
+        name: 'Brightness',
+        type: 'brightness',
+        params: [
+          { key: 'value', label: 'Value', type: 'range', min: -1, max: 1, step: 0.1, default: 0 },
+        ],
+      },
+      {
+        name: 'Contrast',
+        type: 'contrast',
+        params: [
+          { key: 'value', label: 'Value', type: 'range', min: 0, max: 3, step: 0.1, default: 1 },
+        ],
+      },
+      {
+        name: 'Saturation',
+        type: 'saturation',
+        params: [
+          { key: 'value', label: 'Value', type: 'range', min: 0, max: 3, step: 0.1, default: 1 },
+        ],
+      },
+      {
+        name: 'Blur',
+        type: 'blur',
+        params: [
+          { key: 'sigma', label: 'Sigma', type: 'range', min: 1, max: 10, step: 1, default: 5 },
+        ],
+      },
+      {
+        name: 'Sharpen',
+        type: 'sharpen',
+        params: [],
+      },
+      {
+        name: 'Grayscale',
+        type: 'grayscale',
+        params: [],
+      },
+      {
+        name: 'Sepia',
+        type: 'sepia',
+        params: [],
+      },
+      {
+        name: 'Mirror',
+        type: 'mirror',
+        params: [],
+      },
+      {
+        name: 'Rotate',
+        type: 'rotate',
+        params: [
+          { key: 'angle', label: 'Angle (degrees)', type: 'number', default: 90 },
+        ],
+      },
+      {
+        name: 'Color Balance',
+        type: 'colorbalance',
+        params: [
+          { key: 'red', label: 'Red', type: 'range', min: -1, max: 1, step: 0.1, default: 0 },
+          { key: 'green', label: 'Green', type: 'range', min: -1, max: 1, step: 0.1, default: 0 },
+          { key: 'blue', label: 'Blue', type: 'range', min: -1, max: 1, step: 0.1, default: 0 },
+        ],
+      },
+      {
+        name: 'Vignette',
+        type: 'vignette',
+        params: [],
+      },
+      {
+        name: 'Film Grain',
+        type: 'filmgrain',
+        params: [],
+      },
+      {
+        name: 'Cinematic',
+        type: 'cinematic',
+        params: [],
+      },
+      {
+        name: 'Glow',
+        type: 'glow',
+        params: [],
+      },
+    ];
+
+    return (
+      <div className="filter-panel">
+        <h3>Filters</h3>
+        {!selectedSegment ? (
+          <p>Select a segment to apply filters</p>
+        ) : (
+          <>
+            <div className="filter-list">
+              {filterDefinitions.map((filter) => (
+                <div key={filter.type} className="filter-option">
+                  <div className="filter-header">
+                    <span>{filter.name}</span>
+                    <button
+                      className="apply-filter-btn"
+                      onClick={() => {
+                        const params = {};
+                        filter.params.forEach((param) => {
+                          params[param.key] = filterParams[`${filter.type}_${param.key}`] || param.default;
+                        });
+                        applyFilter(filter.type, params);
+                      }}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  {filter.params.length > 0 && (
+                    <div className="filter-params">
+                      {filter.params.map((param) => (
+                        <div key={param.key} className="control-group">
+                          <label>{param.label}</label>
+                          {param.type === 'range' ? (
+                            <div className="slider-container">
+                              <input
+                                type="range"
+                                min={param.min}
+                                max={param.max}
+                                step={param.step}
+                                value={filterParams[`${filter.type}_${param.key}`] || param.default}
+                                onChange={(e) =>
+                                  setFilterParams((prev) => ({
+                                    ...prev,
+                                    [`${filter.type}_${param.key}`]: parseFloat(e.target.value),
+                                  }))
+                                }
+                              />
+                              <span>{filterParams[`${filter.type}_${param.key}`] || param.default}</span>
+                            </div>
+                          ) : param.type === 'number' ? (
+                            <input
+                              type="number"
+                              value={filterParams[`${filter.type}_${param.key}`] || param.default}
+                              onChange={(e) =>
+                                setFilterParams((prev) => ({
+                                  ...prev,
+                                  [`${filter.type}_${param.key}`]: parseInt(e.target.value),
+                                }))
+                              }
+                              className="filter-input"
+                            />
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="applied-filters">
+              <h4>Applied Filters</h4>
+              {appliedFilters.length > 0 ? (
+                appliedFilters.map((filter) => (
+                  <div key={filter.filterId} className="filter-item">
+                    <span>{filter.filterType}</span>
+                    <button
+                      onClick={() => removeFilter(filter.filterId)}
+                      className="remove-filter-btn"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p>No filters applied</p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="project-editor">
-      {/* Media Library Panel */}
       <aside className={`media-panel ${isMediaPanelOpen ? 'open' : 'closed'}`}>
         <div className="panel-header">
           <button className="toggle-button" onClick={toggleMediaPanel}>
@@ -1039,8 +1292,7 @@ const ProjectEditor = () => {
                     className="hidden-input"
                   />
                   <label htmlFor="upload-photo" className="upload-button">
-                    {uploading ? 'Uploading...' :
-                  'Upload Photo'}
+                    {uploading ? 'Uploading...' : 'Upload Photo'}
                   </label>
                   {photos.length === 0 ? (
                     <div className="empty-state">Pour it in, I am waiting!</div>
@@ -1103,7 +1355,6 @@ const ProjectEditor = () => {
         )}
       </aside>
 
-      {/* Main Content */}
       <div className="main-content">
         <div className="content-wrapper">
           <div className="preview-section">
@@ -1142,7 +1393,7 @@ const ProjectEditor = () => {
                 setVideoLayers={setVideoLayers}
                 setAudioLayers={setAudioLayers}
                 thumbnailsGenerated={thumbnailsGenerated}
-                openTextTool={openTextTool} // Pass the callback to TimelineComponent
+                openTextTool={openTextTool}
               />
             ) : (
               <div className="loading-message">Loading timeline...</div>
@@ -1151,7 +1402,6 @@ const ProjectEditor = () => {
         </div>
       </div>
 
-      {/* Tools Panel */}
       <aside className={`tools-panel ${isToolsPanelOpen ? 'open' : 'closed'}`}>
         <div className="panel-header">
           <button className="toggle-button" onClick={toggleToolsPanel}>
@@ -1165,7 +1415,10 @@ const ProjectEditor = () => {
               <button className={`tool-button ${isTransformOpen ? 'active' : ''}`} onClick={toggleTransformPanel}>
                 Transform
               </button>
-              <button className="tool-button">Filters</button>
+              {/* Added Filters button with active state */}
+              <button className={`tool-button ${isFiltersOpen ? 'active' : ''}`} onClick={toggleFiltersPanel}>
+                Filters
+              </button>
               <button
                 className={`tool-button ${isTextToolOpen ? 'active' : ''}`}
                 onClick={toggleTextTool}
@@ -1215,6 +1468,8 @@ const ProjectEditor = () => {
                 )}
               </div>
             )}
+            {/* Added Filters panel rendering when isFiltersOpen is true */}
+            {isFiltersOpen && renderFilterControls()}
             {selectedSegment && selectedSegment.type === 'text' && isTextToolOpen && (
               <div className="text-panel">
                 <h3>Edit Text</h3>

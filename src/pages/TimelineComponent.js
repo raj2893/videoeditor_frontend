@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import '../CSS/Timeline.css';
 import { useCallback } from 'react';
-import TextSegmentDialog from './TextSegmentDialog';
 import TimelineControls from './TimelineControls';
 import TimelineRuler from './TimelineRuler';
 import TimelineLayer from './TimelineLayer';
@@ -30,7 +29,8 @@ const TimelineComponent = ({
   audioLayers,
   setVideoLayers,
   setAudioLayers,
-  thumbnailsGenerated
+  thumbnailsGenerated,
+  openTextTool,
 }) => {
   const [timelineVideos, setTimelineVideos] = useState([]);
   const [timeScale, setTimeScale] = useState(50);
@@ -45,19 +45,6 @@ const TimelineComponent = ({
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isSaving, setIsSaving] = useState(false);
   const [snapIndicators, setSnapIndicators] = useState([]);
-  const [showTextDialog, setShowTextDialog] = useState(false);
-  const [textDialogPosition, setTextDialogPosition] = useState({ x: 0, y: 0 });
-  const [editingTextSegment, setEditingTextSegment] = useState(null);
-  const [textSettings, setTextSettings] = useState({
-    text: 'New Text',
-    fontFamily: 'Arial',
-    fontSize: 24,
-    fontColor: '#FFFFFF',
-    backgroundColor: 'transparent',
-    positionX: 0,
-    positionY: 0,
-    duration: 5,
-  });
   const [resizingItem, setResizingItem] = useState(null);
   const [resizeEdge, setResizeEdge] = useState(null);
   const [selectedSegment, setSelectedSegment] = useState(null);
@@ -494,9 +481,6 @@ const TimelineComponent = ({
     // Handle text drop
     const textDropResult = await textHandler.handleTextDrop(e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators);
     if (textDropResult) {
-      setTextDialogPosition({ x: e.clientX, y: e.clientY });
-      setShowTextDialog(true);
-      setEditingTextSegment(textDropResult);
       setDraggingItem(null);
       setDragLayer(null);
       setDragOffset(0);
@@ -520,20 +504,18 @@ const TimelineComponent = ({
     const layerHeight = 40;
     const totalVideoLayers = videoLayers.length;
     const totalAudioLayers = audioLayers.length;
-    const totalLayers = totalVideoLayers + totalAudioLayers + 2; // +2 for the two "Drop to create new layer" areas
+    const totalLayers = totalVideoLayers + totalAudioLayers + 2; // +2 for drop areas
     const reversedIndex = Math.floor(clickY / layerHeight);
     let clickedLayerIndex;
     let isAudioLayer = false;
 
     if (reversedIndex <= totalVideoLayers) {
-      // Clicked in video layers or the "Drop to create new layer" for video
       clickedLayerIndex = totalVideoLayers - reversedIndex;
     } else if (reversedIndex >= totalVideoLayers + 1 && reversedIndex < totalLayers - 1) {
-      // Clicked in audio layers
       clickedLayerIndex = (totalLayers - 2 - reversedIndex);
       isAudioLayer = true;
     } else {
-      clickedLayerIndex = -1; // Clicked in "Drop to create new layer" for audio
+      clickedLayerIndex = -1;
     }
 
     if (!isSplitMode) {
@@ -557,21 +539,23 @@ const TimelineComponent = ({
       });
 
       if (foundItem) {
-        if (isSplitMode && (foundItem.type === 'video' || foundItem.type === 'audio')) {
+        if (isSplitMode) {
           if (foundItem.type === 'video') {
             await videoHandler.handleVideoSplit(foundItem, clickTime, adjustedLayerIndex);
-          } else {
+          } else if (foundItem.type === 'audio') {
             await audioHandler.handleAudioSplit(foundItem, clickTime, adjustedLayerIndex);
+          } else if (foundItem.type === 'text') {
+            await textHandler.handleTextSplit(foundItem, clickTime, adjustedLayerIndex);
+          } else if (foundItem.type === 'image') {
+            await imageHandler.handleImageSplit(foundItem, clickTime, adjustedLayerIndex);
           }
-          setIsSplitMode(false);
+          setIsSplitMode(false); // Exit split mode after splitting
+          setSelectedSegment(null); // Reset selection
+          setPlayingVideoId(null); // Reset playing state
           return;
-        }
-
-        if (!isSplitMode) {
+        } else {
           if (foundItem.type === 'text') {
-            setEditingTextSegment(foundItem);
-            setTextDialogPosition({ x: e.clientX, y: e.clientY });
-            setShowTextDialog(true);
+            handleVideoSelect(foundItem.id); // For text editing
           } else {
             setPlayingVideoId(foundItem.id);
             if (onVideoSelect) onVideoSelect(clickTime, foundItem);
@@ -733,35 +717,15 @@ const TimelineComponent = ({
     }
   }, [videoLayers, audioLayers, history.length, saveHistory]);
 
-  const openAddTextDialog = () => {
-    const startTime = currentTime || 0;
-    const duration = textSettings.duration || 5;
-    const endTime = startTime + duration;
-    const hasSpaceInLayer = (layer) => {
-      return !layer.some(item => {
-        const itemStart = item.startTime;
-        const itemEnd = itemStart + item.duration;
-        return (startTime < itemEnd && endTime > itemStart);
-      });
-    };
-    let targetLayer = -1;
-    for (let layerIndex = 0; layerIndex < videoLayers.length; layerIndex++) {
-      if (hasSpaceInLayer(videoLayers[layerIndex])) {
-        targetLayer = layerIndex;
-        break;
-      }
-    }
-    if (targetLayer === -1) targetLayer = videoLayers.length;
-    setTextDialogPosition({ x: window.innerWidth / 3, y: window.innerHeight / 3 });
-    setShowTextDialog(true);
-    setEditingTextSegment({ isNew: true, layer: targetLayer, startTime });
-  };
-
   const toggleSplitMode = () => {
     setIsSplitMode(prev => !prev);
     setDraggingItem(null);
     setResizingItem(null);
   };
+
+  // In TimelineComponent.js
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
 
   return (
     <div className="timeline-container">
@@ -775,10 +739,12 @@ const TimelineComponent = ({
         history={history}
         handleUndo={handleUndo}
         handleRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
         isSaving={isSaving}
         timeScale={timeScale}
         setTimeScale={setTimeScale}
-        openAddTextDialog={openAddTextDialog}
+        onAddTextClick={openTextTool}
         toggleSplitMode={toggleSplitMode}
         isSplitMode={isSplitMode}
       />
@@ -812,10 +778,7 @@ const TimelineComponent = ({
                   handleResizeStart={generalHandler.handleResizeStart}
                   playingVideoId={playingVideoId}
                   handleVideoSelect={handleVideoSelect}
-                  handleEditTextSegment={(item, e) => {
-                    setEditingTextSegment(item);
-                    setTextDialogPosition({ x: e.clientX, y: e.clientY });
-                    setShowTextDialog(true);
+                  handleEditTextSegment={(item) => {
                     setSelectedSegment({ ...item, layerIndex: item.layer });
                     if (onSegmentSelect) onSegmentSelect({ ...item, layerIndex: item.layer });
                   }}
@@ -853,20 +816,6 @@ const TimelineComponent = ({
           <DraggingGhost draggingItem={draggingItem} snapIndicators={snapIndicators} timeScale={timeScale} dragLayer={dragLayer} layers={[...videoLayers, ...audioLayers]} />
         </div>
       </div>
-      {showTextDialog && (
-        <TextSegmentDialog
-          showTextDialog={showTextDialog}
-          textDialogPosition={textDialogPosition}
-          editingTextSegment={editingTextSegment}
-          textSettings={textSettings}
-          onClose={() => {
-            setShowTextDialog(false);
-            setEditingTextSegment(null);
-          }}
-          onSave={(updatedSettings) => textHandler.handleSaveTextSegment(updatedSettings, editingTextSegment)}
-          onTextSettingsChange={setTextSettings}
-        />
-      )}
     </div>
   );
 };

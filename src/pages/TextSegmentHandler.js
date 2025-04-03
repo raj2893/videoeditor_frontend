@@ -192,7 +192,43 @@ const TextSegmentHandler = ({
     }
   };
 
-  return { addTextToTimeline, updateTextSegment, handleTextDrop, handleSaveTextSegment };
+    const handleTextSplit = async (item, clickTime, layerIndex) => {
+      const splitTime = clickTime - item.startTime;
+      if (splitTime <= 0.1 || splitTime >= item.duration - 0.1) return;
+
+      const firstPartDuration = splitTime;
+      const secondPartDuration = item.duration - splitTime;
+      let newVideoLayers = [...videoLayers];
+      const layer = newVideoLayers[layerIndex];
+      const itemIndex = layer.findIndex(i => i.id === item.id);
+
+      const firstPart = { ...item, duration: firstPartDuration, timelineEndTime: item.startTime + firstPartDuration };
+      layer[itemIndex] = firstPart;
+
+      const secondPart = {
+        ...item,
+        id: `${item.id}-split-${Date.now()}`,
+        startTime: item.startTime + splitTime,
+        duration: secondPartDuration,
+        timelineStartTime: item.startTime + splitTime,
+        timelineEndTime: item.startTime + item.duration,
+      };
+      layer.push(secondPart);
+
+      newVideoLayers[layerIndex] = layer;
+      setVideoLayers(newVideoLayers);
+      saveHistory(newVideoLayers, []);
+
+      await updateTextSegment(item.id, firstPart, item.startTime, layerIndex);
+      await addTextToTimeline(layerIndex, secondPart.startTime, {
+        ...secondPart,
+        duration: secondPartDuration,
+      });
+      autoSave(newVideoLayers, []);
+      await loadProjectTimeline();
+    };
+
+  return { addTextToTimeline, updateTextSegment, handleTextDrop, handleSaveTextSegment, handleTextSplit };
 };
 
 export default TextSegmentHandler;

@@ -12,11 +12,10 @@ const AudioSegmentHandler = ({
   API_BASE_URL,
   timelineRef,
 }) => {
-  const updateAudioSegment = async (audioSegmentId, newStartTime, newLayer, newDuration, startTimeWithinAudio, endTimeWithinAudio,draggingItem) => {
+  const updateAudioSegment = async (audioSegmentId, newStartTime, newLayer, newDuration, startTimeWithinAudio, endTimeWithinAudio, draggingItem) => {
     if (!projectId || !sessionId) return;
     try {
       const token = localStorage.getItem('token');
-      // Use draggingItem directly if provided, otherwise search in audioLayers
       let item = draggingItem;
       if (!item) {
         const layer = audioLayers[Math.abs(newLayer) - 1];
@@ -61,26 +60,23 @@ const AudioSegmentHandler = ({
     const totalVideoLayers = timelineRef.current.querySelectorAll('.timeline-layer').length - audioLayers.length - 2;
     const reversedIndex = Math.floor(relativeMouseY / layerHeight);
 
-    // Total layers include video layers, audio layers, and two "Drop to create new layer" areas
-    const audioLayerStartIndex = totalVideoLayers + 1; // After video layers and top drop area
-    const audioLayerEndIndex = totalVideoLayers + 1 + audioLayers.length; // Before bottom drop area
+    const audioLayerStartIndex = totalVideoLayers + 1;
+    const audioLayerEndIndex = totalVideoLayers + 1 + audioLayers.length;
 
     let targetLayerIndex;
     if (reversedIndex < audioLayerStartIndex) {
       console.log('Cannot drop audio in video layers or top drop area');
       return undefined;
     } else if (reversedIndex >= audioLayerStartIndex && reversedIndex < audioLayerEndIndex) {
-      // Map directly to audio layer index (top-down order)
       targetLayerIndex = reversedIndex - audioLayerStartIndex;
     } else {
-      // Dropped in bottom "Drop to create new layer" area
-      targetLayerIndex = audioLayers.length; // New audio layer
+      targetLayerIndex = audioLayers.length;
     }
 
     targetLayerIndex = Math.max(0, targetLayerIndex);
     const backendLayer = -(targetLayerIndex + 1);
 
-    let newAudioLayers = audioLayers.map(layer => [...layer]); // Deep copy
+    let newAudioLayers = audioLayers.map(layer => [...layer]);
 
     if (!draggingItem) {
       const dataString = e.dataTransfer.getData('application/json');
@@ -111,6 +107,7 @@ const AudioSegmentHandler = ({
             }
           }
 
+          console.log('Dropping audio with fileName:', audio.fileName); // Debug log
           await axios.post(
             `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
             {
@@ -139,7 +136,7 @@ const AudioSegmentHandler = ({
       ? snapIndicators[0].time - (snapIndicators[0].edge === 'end' ? draggingItem.duration : 0)
       : Math.max(0, (mouseX - timelineRect.left) / timeScale - dragOffset);
 
-    console.log('Calculated newStartTime:', newStartTime); // Debug log
+    console.log('Calculated newStartTime:', newStartTime);
 
     while (newAudioLayers.length <= targetLayerIndex) newAudioLayers.push([]);
 
@@ -186,8 +183,8 @@ const AudioSegmentHandler = ({
       newStartTime,
       backendLayer,
       draggingItem.duration,
-      updatedItem.startTimeWithinAudio, // Pass startTimeWithinAudio
-      updatedItem.endTimeWithinAudio ,   // Pass endTimeWithinAudio
+      updatedItem.startTimeWithinAudio,
+      updatedItem.endTimeWithinAudio,
       updatedItem
     );
 
@@ -234,25 +231,38 @@ const AudioSegmentHandler = ({
       item.startTime,
       item.layer,
       firstPartDuration,
-      firstPart.startTimeWithinAudio, // Pass startTimeWithinAudio
-      firstPart.endTimeWithinAudio,   // Pass endTimeWithinAudio
+      firstPart.startTimeWithinAudio,
+      firstPart.endTimeWithinAudio,
       firstPart
     );
-    await axios.post(
-      `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
-      {
-        audioFileName: item.fileName,
-        layer: item.layer,
-        timelineStartTime: secondPart.startTime,
-        timelineEndTime: secondPart.timelineEndTime,
-        startTime: secondPart.startTimeWithinAudio, // Use startTimeWithinAudio
-        endTime: secondPart.endTimeWithinAudio,     // Use endTimeWithinAudio
-      },
-      {
-        params: { sessionId },
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      }
-    );
+
+    // Use the full item.fileName as it matches the updated audioJson
+    const audioFileName = item.fileName.split('/').pop(); // Remove any path, keep full unique name
+    console.log('Original item.fileName:', item.fileName);
+    console.log('Sending audioFileName to backend:', audioFileName);
+
+    try {
+      await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
+        {
+          audioFileName: audioFileName, // e.g., "58_1743668985141_38_1743166762719_Suniyan Suniyan - Juss 320 Kbps.mp3"
+          layer: item.layer,
+          timelineStartTime: secondPart.startTime,
+          timelineEndTime: secondPart.timelineEndTime,
+          startTime: secondPart.startTimeWithinAudio,
+          endTime: secondPart.endTimeWithinAudio,
+        },
+        {
+          params: { sessionId },
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        }
+      );
+      console.log('Successfully added split audio to timeline');
+    } catch (error) {
+      console.error('Error adding split audio:', error.response?.data || error.message);
+      throw error;
+    }
+
     autoSave([], newAudioLayers);
     await loadProjectTimeline();
   };

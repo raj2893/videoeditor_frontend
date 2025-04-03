@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
 
 const TextSegmentDialog = ({
-  showTextDialog,
-  textDialogPosition,
+  showTextDialog, // Keep this prop to control visibility
+  // Remove textDialogPosition prop as it's no longer needed
   editingTextSegment,
   textSettings,
   onClose,
   onSave,
-  onTextSettingsChange
+  onTextSettingsChange,
 }) => {
   const [localTextSettings, setLocalTextSettings] = useState({ ...textSettings });
 
   useEffect(() => {
     if (editingTextSegment && !editingTextSegment.isNew) {
-      // Load existing text settings
       setLocalTextSettings({
         text: editingTextSegment.text || 'Text',
         fontFamily: editingTextSegment.fontFamily || 'Arial',
@@ -22,10 +21,9 @@ const TextSegmentDialog = ({
         backgroundColor: editingTextSegment.backgroundColor || 'transparent',
         positionX: editingTextSegment.positionX || 0,
         positionY: editingTextSegment.positionY || 0,
-        duration: editingTextSegment.duration || 5
+        duration: editingTextSegment.duration || 5,
       });
     } else {
-      // Reset to defaults for new text
       setLocalTextSettings({ ...textSettings });
     }
   }, [editingTextSegment, textSettings]);
@@ -39,13 +37,7 @@ const TextSegmentDialog = ({
   };
 
   return (
-    <div
-      className={`text-segment-dialog ${showTextDialog ? 'show' : ''}`}
-      style={{
-        left: textDialogPosition.x,
-        top: textDialogPosition.y
-      }}
-    >
+    <div className={`text-segment-dialog ${showTextDialog ? 'show' : ''}`}>
       <div className="dialog-header">
         <h3>{editingTextSegment?.isNew ? 'Add Text' : 'Edit Text'}</h3>
         <button className="close-button" onClick={handleClose}>×</button>
@@ -56,7 +48,7 @@ const TextSegmentDialog = ({
           <label>Text</label>
           <textarea
             value={localTextSettings.text}
-            onChange={(e) => setLocalTextSettings({...localTextSettings, text: e.target.value})}
+            onChange={(e) => setLocalTextSettings({ ...localTextSettings, text: e.target.value })}
             rows={3}
           ></textarea>
         </div>
@@ -66,7 +58,7 @@ const TextSegmentDialog = ({
             <label>Font</label>
             <select
               value={localTextSettings.fontFamily}
-              onChange={(e) => setLocalTextSettings({...localTextSettings, fontFamily: e.target.value})}
+              onChange={(e) => setLocalTextSettings({ ...localTextSettings, fontFamily: e.target.value })}
             >
               <option value="Arial">Arial</option>
               <option value="Verdana">Verdana</option>
@@ -81,7 +73,7 @@ const TextSegmentDialog = ({
             <input
               type="number"
               value={localTextSettings.fontSize}
-              onChange={(e) => setLocalTextSettings({...localTextSettings, fontSize: parseInt(e.target.value)})}
+              onChange={(e) => setLocalTextSettings({ ...localTextSettings, fontSize: parseInt(e.target.value) })}
               min="8"
               max="72"
             />
@@ -94,7 +86,7 @@ const TextSegmentDialog = ({
             <input
               type="color"
               value={localTextSettings.fontColor}
-              onChange={(e) => setLocalTextSettings({...localTextSettings, fontColor: e.target.value})}
+              onChange={(e) => setLocalTextSettings({ ...localTextSettings, fontColor: e.target.value })}
             />
           </div>
 
@@ -103,16 +95,18 @@ const TextSegmentDialog = ({
             <input
               type="color"
               value={localTextSettings.backgroundColor === 'transparent' ? '#000000' : localTextSettings.backgroundColor}
-              onChange={(e) => setLocalTextSettings({...localTextSettings, backgroundColor: e.target.value})}
+              onChange={(e) => setLocalTextSettings({ ...localTextSettings, backgroundColor: e.target.value })}
             />
             <label>
               <input
                 type="checkbox"
                 checked={localTextSettings.backgroundColor === 'transparent'}
-                onChange={(e) => setLocalTextSettings({
-                  ...localTextSettings,
-                  backgroundColor: e.target.checked ? 'transparent' : '#000000'
-                })}
+                onChange={(e) =>
+                  setLocalTextSettings({
+                    ...localTextSettings,
+                    backgroundColor: e.target.checked ? 'transparent' : '#000000',
+                  })
+                }
               />
               Transparent
             </label>
@@ -127,7 +121,7 @@ const TextSegmentDialog = ({
               min="0"
               max="100"
               value={localTextSettings.positionX}
-              onChange={(e) => setLocalTextSettings({...localTextSettings, positionX: parseInt(e.target.value)})}
+              onChange={(e) => setLocalTextSettings({ ...localTextSettings, positionX: parseInt(e.target.value) })}
             />
             <span>{localTextSettings.positionX}%</span>
           </div>
@@ -141,7 +135,7 @@ const TextSegmentDialog = ({
               min="0"
               max="100"
               value={localTextSettings.positionY}
-              onChange={(e) => setLocalTextSettings({...localTextSettings, positionY: parseInt(e.target.value)})}
+              onChange={(e) => setLocalTextSettings({ ...localTextSettings, positionY: parseInt(e.target.value) })}
             />
             <span>{localTextSettings.positionY}%</span>
           </div>
@@ -152,7 +146,7 @@ const TextSegmentDialog = ({
           <input
             type="number"
             value={localTextSettings.duration}
-            onChange={(e) => setLocalTextSettings({...localTextSettings, duration: parseFloat(e.target.value)})}
+            onChange={(e) => setLocalTextSettings({ ...localTextSettings, duration: parseFloat(e.target.value) })}
             min="0.1"
             step="0.1"
           />

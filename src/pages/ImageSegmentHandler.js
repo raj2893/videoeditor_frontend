@@ -66,8 +66,8 @@ const ImageSegmentHandler = ({
           layer,
           timelineStartTime,
           timelineEndTime,
-          positionX: 0, // Default to 0 as per backend
-          positionY: 0, // Default to 0 as per backend
+          positionX: 0,
+          positionY: 0,
           scale: 1,
         },
         {
@@ -86,8 +86,8 @@ const ImageSegmentHandler = ({
         startTime: timelineStartTime,
         duration: timelineEndTime - timelineStartTime,
         layer,
-        positionX: 0, // Match backend default
-        positionY: 0, // Match backend default
+        positionX: 0,
+        positionY: 0,
         scale: 1,
       };
       setVideoLayers(prev => {
@@ -99,7 +99,7 @@ const ImageSegmentHandler = ({
       saveHistory([...videoLayers, newSegment], []);
       autoSave([...videoLayers, newSegment], []);
     } catch (error) {
-      console.error('Error adding image to timeline:', error);
+      console.error('Error adding image to timeline:', error.response?.data || error.message);
       await loadProjectTimeline();
     }
   };
@@ -139,10 +139,8 @@ const ImageSegmentHandler = ({
         }
       );
       console.log(`Updated image segment ${segmentId}`);
-      // Removed loadProjectTimeline() to prevent overwriting local state
     } catch (error) {
-      console.error('Error updating image segment:', error);
-      // Optionally, reload the timeline if the update fails to ensure consistency
+      console.error('Error updating image segment:', error.response?.data || error.message);
       await loadProjectTimeline();
     }
   };
@@ -205,8 +203,10 @@ const ImageSegmentHandler = ({
               } else break;
             }
           }
-          console.log(`Dropping photo: ${photo.fileName} at layer ${targetLayer}, time ${adjustedStartTime}`);
-          await addImageToTimeline(photo.fileName, targetLayer, adjustedStartTime, adjustedStartTime + duration);
+          const imageFileName = photo.fileName; // Must be the full unique name (e.g., "60_1743673221228_WhatsApp Image 2025-02-17 at 10.43.28 AM.jpeg")
+          console.log('Drag data photo:', JSON.stringify(photo));
+          console.log('Sending imageFileName to backend:', imageFileName);
+          await addImageToTimeline(imageFileName, targetLayer, adjustedStartTime, adjustedStartTime + duration);
         }
       }
       return;
@@ -238,7 +238,7 @@ const ImageSegmentHandler = ({
     }
     const updatedItem = { ...draggingItem, startTime: adjustedStartTime, layer: actualLayerIndex };
     newVideoLayers[actualLayerIndex].push(updatedItem);
-    setVideoLayers(newVideoLayers); // Update state immediately
+    setVideoLayers(newVideoLayers);
     saveHistory(newVideoLayers, []);
     autoSave(newVideoLayers, []);
     await updateImageSegment(draggingItem.id, adjustedStartTime, actualLayerIndex, draggingItem.duration, {
@@ -254,7 +254,57 @@ const ImageSegmentHandler = ({
     });
   };
 
-  return { addImageToTimeline, updateImageSegment, handleImageDrop };
+  const handleImageSplit = async (item, clickTime, layerIndex) => {
+    const splitTime = clickTime - item.startTime;
+    if (splitTime <= 0.1 || splitTime >= item.duration - 0.1) return;
+
+    const firstPartDuration = splitTime;
+    const secondPartDuration = item.duration - splitTime;
+    let newVideoLayers = [...videoLayers];
+    const layer = newVideoLayers[layerIndex];
+    const itemIndex = layer.findIndex(i => i.id === item.id);
+
+    const firstPart = { ...item, duration: firstPartDuration, timelineEndTime: item.startTime + firstPartDuration };
+    layer[itemIndex] = firstPart;
+
+    const secondPart = {
+      ...item,
+      id: `${item.id}-split-${Date.now()}`,
+      startTime: item.startTime + splitTime,
+      duration: secondPartDuration,
+      timelineStartTime: item.startTime + splitTime,
+      timelineEndTime: item.startTime + item.duration,
+    };
+    layer.push(secondPart);
+
+    newVideoLayers[layerIndex] = layer;
+    setVideoLayers(newVideoLayers);
+    saveHistory(newVideoLayers, []);
+
+    await updateImageSegment(item.id, item.startTime, layerIndex, firstPartDuration);
+
+    const imageFileName = item.fileName.split('/').pop();
+    console.log('Original item.fileName:', item.fileName);
+    console.log('Sending imageFileName to backend:', imageFileName);
+
+    try {
+      await addImageToTimeline(
+        imageFileName,
+        layerIndex,
+        secondPart.startTime,
+        secondPart.startTime + secondPartDuration
+      );
+      console.log('Successfully added split image to timeline');
+    } catch (error) {
+      console.error('Error adding split image:', error.response?.data || error.message);
+      throw error;
+    }
+
+    autoSave(newVideoLayers, []);
+    await loadProjectTimeline();
+  };
+
+  return { addImageToTimeline, updateImageSegment, handleImageDrop, handleImageSplit };
 };
 
 export default ImageSegmentHandler;

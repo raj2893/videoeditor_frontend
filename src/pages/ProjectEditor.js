@@ -29,7 +29,17 @@ const ProjectEditor = () => {
   const [thumbnailsGenerated, setThumbnailsGenerated] = useState(false);
   const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(true);
   const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(true);
-  const [previewHeight, setPreviewHeight] = useState('auto'); // Add this state
+  const [previewHeight, setPreviewHeight] = useState('auto');
+  const [isTextToolOpen, setIsTextToolOpen] = useState(false);
+  const [editingTextSegment, setEditingTextSegment] = useState(null);
+  const [textSettings, setTextSettings] = useState({
+    text: 'New Text',
+    fontFamily: 'Arial',
+    fontSize: 24,
+    fontColor: '#FFFFFF',
+    backgroundColor: 'transparent',
+    duration: 5,
+  });
 
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -38,6 +48,151 @@ const ProjectEditor = () => {
   const toggleTransformPanel = () => setIsTransformOpen((prev) => !prev);
   const toggleMediaPanel = () => setIsMediaPanelOpen((prev) => !prev);
   const toggleToolsPanel = () => setIsToolsPanelOpen((prev) => !prev);
+
+  const toggleTextTool = () => {
+    if (selectedSegment && selectedSegment.type === 'text') {
+      setIsTextToolOpen((prev) => !prev);
+    } else {
+      setIsTextToolOpen(false);
+    }
+  };
+
+  const handleTextSegmentSelect = (segment) => {
+    setEditingTextSegment(segment);
+    if (segment && segment.type === 'text') {
+      setTextSettings({
+        text: segment.text || 'New Text',
+        fontFamily: segment.fontFamily || 'Arial',
+        fontSize: segment.fontSize || 24,
+        fontColor: segment.fontColor || '#FFFFFF',
+        backgroundColor: segment.backgroundColor || 'transparent',
+        duration: segment.duration || 5,
+      });
+      setIsTextToolOpen(true); // Open the text tool when selecting a text segment
+    } else {
+      setIsTextToolOpen(false);
+    }
+  };
+
+  const updateTextSettings = (newSettings) => {
+    setTextSettings(newSettings);
+    if (editingTextSegment) {
+      setVideoLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        newLayers[editingTextSegment.layer] = newLayers[editingTextSegment.layer].map((item) =>
+          item.id === editingTextSegment.id
+            ? {
+                ...item,
+                ...newSettings,
+                duration: newSettings.duration,
+                timelineEndTime: item.startTime + newSettings.duration
+              }
+            : item
+        );
+        return newLayers;
+      });
+      setTotalDuration(prev => {
+        const layer = videoLayers[editingTextSegment.layer];
+        const updatedSegment = layer.find(item => item.id === editingTextSegment.id);
+        return Math.max(prev, updatedSegment.startTime + updatedSegment.duration);
+      });
+    }
+  };
+
+  const handleSaveTextSegment = async () => {
+    if (!editingTextSegment || !sessionId || !projectId) return;
+    try {
+      const token = localStorage.getItem('token');
+      const updatedTextSegment = {
+        ...editingTextSegment,
+        ...textSettings,
+        timelineStartTime: editingTextSegment.startTime,
+        timelineEndTime: editingTextSegment.startTime + textSettings.duration,
+      };
+      await axios.put(
+        `${API_BASE_URL}/projects/${projectId}/update-text`,
+        {
+          segmentId: editingTextSegment.id,
+          text: updatedTextSegment.text,
+          fontFamily: updatedTextSegment.fontFamily,
+          fontSize: updatedTextSegment.fontSize,
+          fontColor: updatedTextSegment.fontColor,
+          backgroundColor: updatedTextSegment.backgroundColor,
+          timelineStartTime: updatedTextSegment.timelineStartTime,
+          timelineEndTime: updatedTextSegment.timelineEndTime,
+          layer: updatedTextSegment.layer,
+        },
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+      );
+      setIsTextToolOpen(false);
+    } catch (error) {
+      console.error('Error saving text segment:', error);
+    }
+  };
+
+  const openTextTool = async () => {
+    if (!sessionId || !projectId) return;
+    try {
+      const token = localStorage.getItem('token');
+      // Determine the start time for the new text segment (e.g., at current time or end of timeline)
+      let startTime = currentTime;
+      if (videoLayers[0].length > 0) {
+        const lastSegment = videoLayers[0][videoLayers[0].length - 1];
+        startTime = Math.max(startTime, lastSegment.startTime + lastSegment.duration);
+      }
+      const duration = textSettings.duration;
+      const response = await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/add-text`,
+        {
+          text: textSettings.text,
+          layer: 0, // Default to layer 0
+          timelineStartTime: startTime,
+          timelineEndTime: startTime + duration,
+          fontFamily: textSettings.fontFamily,
+          fontSize: textSettings.fontSize,
+          fontColor: textSettings.fontColor,
+          backgroundColor: textSettings.backgroundColor,
+          positionX: 0,
+          positionY: 0,
+        },
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+      );
+      const newTextSegment = response.data;
+      const newSegment = {
+        id: newTextSegment.id,
+        type: 'text',
+        text: textSettings.text,
+        startTime: startTime,
+        duration: duration,
+        layer: 0,
+        fontFamily: textSettings.fontFamily,
+        fontSize: textSettings.fontSize,
+        fontColor: textSettings.fontColor,
+        backgroundColor: textSettings.backgroundColor,
+        positionX: 0,
+        positionY: 0,
+      };
+      setVideoLayers(prevLayers => {
+        const newLayers = [...prevLayers];
+        newLayers[0].push(newSegment);
+        return newLayers;
+      });
+      setTotalDuration(prev => Math.max(prev, startTime + duration));
+      setSelectedSegment(newSegment);
+      setEditingTextSegment(newSegment);
+      setTextSettings({
+        text: newSegment.text,
+        fontFamily: newSegment.fontFamily,
+        fontSize: newSegment.fontSize,
+        fontColor: newSegment.fontColor,
+        backgroundColor: newSegment.backgroundColor,
+        duration: newSegment.duration,
+      });
+      setIsTextToolOpen(true); // Open the text editing panel
+    } catch (error) {
+      console.error('Error adding text to timeline:', error);
+    }
+  };
 
   useEffect(() => {
     if (!projectId) {
@@ -136,18 +291,18 @@ const ProjectEditor = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const project = response.data;
-      if (project.imagesJson) {
+      if (project.imagesJson) { // Note: You used 'imagesJson' here, not 'imageJson'
         let imageFiles;
         try {
           imageFiles = typeof project.imagesJson === 'string' ? JSON.parse(project.imagesJson) : project.imagesJson;
         } catch (e) {
-          console.error('Error parsing image_json:', e);
+          console.error('Error parsing imagesJson:', e);
           imageFiles = [];
         }
         if (Array.isArray(imageFiles)) {
           const updatedPhotos = await Promise.all(imageFiles.map(async (image) => {
-            const fullFileName = image.imagePath.split('/').pop();
-            const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
+            const fullFileName = image.imagePath.split('/').pop(); // e.g., "60_1743673221228_WhatsApp Image 2025-02-17 at 10.43.28 AM.jpeg"
+            const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, ''); // For display only
             const thumbnail = await new Promise((resolve) => {
               const img = new Image();
               img.crossOrigin = 'anonymous';
@@ -179,13 +334,14 @@ const ProjectEditor = () => {
             });
             return {
               id: image.imagePath || `image-${fullFileName}-${Date.now()}`,
-              fileName: originalFileName,
-              displayName: originalFileName.split('/').pop(),
+              fileName: fullFileName, // Use the full unique name
+              displayName: originalFileName, // Use original name for display
               filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(fullFileName)}`,
               thumbnail,
             };
           }));
           setPhotos(updatedPhotos);
+          console.log('Fetched photos:', updatedPhotos); // Debug log
         } else {
           setPhotos([]);
         }
@@ -283,8 +439,6 @@ const ProjectEditor = () => {
                 fontSize: textSegment.fontSize || 24,
                 fontColor: textSegment.fontColor || '#FFFFFF',
                 backgroundColor: textSegment.backgroundColor || 'transparent',
-                positionX: textSegment.positionX || 50,
-                positionY: textSegment.positionY || 50,
               });
             }
           }
@@ -573,19 +727,17 @@ const ProjectEditor = () => {
     if (!isDraggingHandle) return;
     const contentWrapper = document.querySelector('.content-wrapper');
     const wrapperHeight = contentWrapper.clientHeight;
-    const controlsPanelHeight = 60; // Fixed height of controls-panel
-    const resizeHandleHeight = 6; // Height of the resize handle
+    const controlsPanelHeight = 60;
+    const resizeHandleHeight = 6;
     const mouseY = e.clientY;
     const wrapperTop = contentWrapper.getBoundingClientRect().top;
     const distanceFromTop = mouseY - wrapperTop;
 
-    // Calculate preview section height (above the resize handle)
     const previewHeightPx = distanceFromTop - resizeHandleHeight;
-    const minPreviewHeight = 100; // Minimum height for the section
+    const minPreviewHeight = 100;
     const maxPreviewHeight = wrapperHeight - controlsPanelHeight - resizeHandleHeight - 150;
     const clampedPreviewHeight = Math.max(minPreviewHeight, Math.min(maxPreviewHeight, previewHeightPx));
 
-    // Calculate timeline height as a percentage of remaining space
     const remainingHeight = wrapperHeight - clampedPreviewHeight - controlsPanelHeight - resizeHandleHeight;
     const timelineHeightPercent = (remainingHeight / (wrapperHeight - controlsPanelHeight)) * 100;
     const minTimelineHeight = 10;
@@ -620,6 +772,7 @@ const ProjectEditor = () => {
     } else {
       setTempSegmentValues({});
     }
+    handleTextSegmentSelect(segment);
   };
 
   const updateSegmentProperty = (property, value) => {
@@ -674,8 +827,7 @@ const ProjectEditor = () => {
       } else if (selectedSegment.type === 'text') {
         const updatedTextSettings = {
           ...selectedSegment,
-          positionX: tempSegmentValues.positionX,
-          positionY: tempSegmentValues.positionY,
+          ...textSettings,
         };
         await axios.put(
           `${API_BASE_URL}/projects/${projectId}/update-text`,
@@ -686,8 +838,6 @@ const ProjectEditor = () => {
             fontSize: updatedTextSettings.fontSize,
             fontColor: updatedTextSettings.fontColor,
             backgroundColor: updatedTextSettings.backgroundColor,
-            positionX: updatedTextSettings.positionX,
-            positionY: updatedTextSettings.positionY,
             timelineStartTime: updatedTextSettings.startTime,
             timelineEndTime: updatedTextSettings.startTime + updatedTextSettings.duration,
             layer: updatedTextSettings.layer,
@@ -820,7 +970,7 @@ const ProjectEditor = () => {
         </div>
         {isMediaPanelOpen && (
           <div className="panel-content">
-           <h2 onClick={() => setExpandedSection(null)}>Media Library</h2>
+            <h2 onClick={() => setExpandedSection(null)}>Media Library</h2>
             <div className="media-section">
               <button className="section-button" onClick={() => toggleSection('videos')}>
                 Videos
@@ -889,7 +1039,8 @@ const ProjectEditor = () => {
                     className="hidden-input"
                   />
                   <label htmlFor="upload-photo" className="upload-button">
-                    {uploading ? 'Uploading...' : 'Upload Photo'}
+                    {uploading ? 'Uploading...' :
+                  'Upload Photo'}
                   </label>
                   {photos.length === 0 ? (
                     <div className="empty-state">Pour it in, I am waiting!</div>
@@ -971,9 +1122,6 @@ const ProjectEditor = () => {
           <div className="controls-panel">
             <button className="control-button" onClick={handleSaveProject}>Save Project</button>
             <button className="control-button" onClick={handleExportProject}>Export Video</button>
-            <button className="control-button" onClick={() => setIsPlaying(prev => !prev)}>
-              {isPlaying ? 'Pause' : 'Play'}
-            </button>
           </div>
           <div className="timeline-section" style={{ height: `${timelineHeight}%` }}>
             {sessionId ? (
@@ -994,6 +1142,7 @@ const ProjectEditor = () => {
                 setVideoLayers={setVideoLayers}
                 setAudioLayers={setAudioLayers}
                 thumbnailsGenerated={thumbnailsGenerated}
+                openTextTool={openTextTool} // Pass the callback to TimelineComponent
               />
             ) : (
               <div className="loading-message">Loading timeline...</div>
@@ -1017,6 +1166,13 @@ const ProjectEditor = () => {
                 Transform
               </button>
               <button className="tool-button">Filters</button>
+              <button
+                className={`tool-button ${isTextToolOpen ? 'active' : ''}`}
+                onClick={toggleTextTool}
+                disabled={!selectedSegment || selectedSegment.type !== 'text'}
+              >
+                Text
+              </button>
             </div>
             {selectedSegment && isTransformOpen && (
               <div className="transform-panel">
@@ -1057,6 +1213,85 @@ const ProjectEditor = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+            {selectedSegment && selectedSegment.type === 'text' && isTextToolOpen && (
+              <div className="text-panel">
+                <h3>Edit Text</h3>
+                <div className="control-group">
+                  <label>Text</label>
+                  <textarea
+                    value={textSettings.text}
+                    onChange={(e) => updateTextSettings({ ...textSettings, text: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className="control-group">
+                  <label>Font</label>
+                  <select
+                    value={textSettings.fontFamily}
+                    onChange={(e) => updateTextSettings({ ...textSettings, fontFamily: e.target.value })}
+                  >
+                    <option value="Arial">Arial</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Courier New">Courier New</option>
+                  </select>
+                </div>
+                <div className="control-group">
+                  <label>Size</label>
+                  <input
+                    type="number"
+                    value={textSettings.fontSize}
+                    onChange={(e) => updateTextSettings({ ...textSettings, fontSize: parseInt(e.target.value) })}
+                    min="8"
+                    max="72"
+                  />
+                </div>
+                <div className="control-group">
+                  <label>Text Color</label>
+                  <input
+                    type="color"
+                    value={textSettings.fontColor}
+                    onChange={(e) => updateTextSettings({ ...textSettings, fontColor: e.target.value })}
+                  />
+                </div>
+                <div className="control-group">
+                  <label>Background</label>
+                  <input
+                    type="color"
+                    value={textSettings.backgroundColor === 'transparent' ? '#000000' : textSettings.backgroundColor}
+                    onChange={(e) => updateTextSettings({ ...textSettings, backgroundColor: e.target.value })}
+                  />
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={textSettings.backgroundColor === 'transparent'}
+                      onChange={(e) =>
+                        updateTextSettings({
+                          ...textSettings,
+                          backgroundColor: e.target.checked ? 'transparent' : '#000000',
+                        })
+                      }
+                    />
+                    Transparent
+                  </label>
+                </div>
+                <div className="control-group">
+                  <label>Duration (seconds)</label>
+                  <input
+                    type="number"
+                    value={textSettings.duration}
+                    onChange={(e) => updateTextSettings({ ...textSettings, duration: parseFloat(e.target.value) })}
+                    min="0.1"
+                    step="0.1"
+                  />
+                </div>
+                <div className="dialog-buttons">
+                  <button className="cancel-button" onClick={() => setIsTextToolOpen(false)}>Cancel</button>
+                  <button className="save-button" onClick={handleSaveTextSegment}>Save</button>
+                </div>
               </div>
             )}
           </div>

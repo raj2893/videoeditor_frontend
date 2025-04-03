@@ -1,3 +1,4 @@
+/* ProjectEditor.css */
 .project-editor {
   display: flex;
   height: 100vh;
@@ -24,7 +25,7 @@
 
 .media-panel.closed .toggle-button,
 .tools-panel.closed .toggle-button {
-  font-size: 24px; /* Larger arrow when closed for visibility */
+  font-size: 24px;
 }
 
 .tools-panel {
@@ -37,37 +38,35 @@
   overflow-y: auto;
 }
 
+.panel-content {
+  overflow-y: auto;
+  height: calc(100% - 40px);
+}
+
 .tools-panel.closed {
   width: 50px;
   padding: 0;
 }
 
-.controls-and-timeline {
-  display: flex;
-  flex-direction: column;
-  height: calc(100% - 6px); /* Subtract resize bar height from total height */
-  overflow: hidden;
-}
-
 .panel-header {
   display: flex;
-  justify-content: flex-end; /* Right-align for media panel, adjusted below for tools */
+  justify-content: flex-end;
   align-items: center;
-  height: 40px; /* Fixed height to match when open */
+  height: 40px;
 }
 
 .media-panel .panel-header {
-  justify-content: flex-end; /* Arrow on the right for media panel */
+  justify-content: flex-end;
 }
 
 .tools-panel .panel-header {
-  justify-content: flex-start; /* Arrow on the left for tools panel */
+  justify-content: flex-start;
 }
 
 .media-panel.closed .panel-header,
 .tools-panel.closed .panel-header {
-  justify-content: center; /* Center the arrow when closed */
-  height: 100%; /* Full height when closed to center vertically */
+  justify-content: center;
+  height: 100%;
 }
 
 .panel-header h2 {
@@ -84,11 +83,6 @@
   font-size: 18px;
   cursor: pointer;
   padding: 0 5px;
-}
-
-.panel-content {
-  overflow-y: auto;
-  height: calc(100% - 40px);
 }
 
 .media-section {
@@ -244,14 +238,14 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  flex: 1; /* Allow it to take available space */
-  min-height: 20px; /* Minimum height */
+  flex: 1;
+  min-height: 20px;
   position: relative;
 }
 
 .preview-section > *:not(.resize-preview-section) {
   max-width: 100%;
-  max-height: calc(100% - 6px); /* Account for resize handle height */
+  max-height: calc(100% - 6px);
   object-fit: contain;
 }
 
@@ -269,7 +263,7 @@
   border-bottom: 1px solid #444;
   height: 60px;
   box-sizing: border-box;
-  flex-shrink: 0; /* Prevent shrinking */
+  flex-shrink: 0;
 }
 
 .control-button {
@@ -338,13 +332,15 @@
   background-color: #4285f4;
 }
 
-.transform-panel {
+.transform-panel,
+.text-panel {
   background-color: #2a2a2a;
   padding: 15px;
   border-radius: 4px;
 }
 
-.transform-panel h3 {
+.transform-panel h3,
+.text-panel h3 {
   margin-top: 0;
   margin-bottom: 15px;
   font-size: 16px;
@@ -361,6 +357,18 @@
   margin-bottom: 5px;
 }
 
+.control-group textarea,
+.control-group input,
+.control-group select {
+  width: 100%;
+  padding: 5px;
+  background-color: #333;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
 .slider-container {
   display: flex;
   align-items: center;
@@ -374,6 +382,40 @@
 .slider-container span {
   font-size: 14px;
   color: #e0e0e0;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.cancel-button,
+.save-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cancel-button {
+  background-color: #555;
+  color: #e0e0e0;
+}
+
+.cancel-button:hover {
+  background-color: #666;
+}
+
+.save-button {
+  background-color: #4285f4;
+  color: white;
+}
+
+.save-button:hover {
+  background-color: #3367d6;
 }
 
 /* Responsive Design */

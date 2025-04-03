@@ -1,3 +1,4 @@
+// In TimelineControls.js
 import React from 'react';
 
 const TimelineControls = ({
@@ -8,12 +9,12 @@ const TimelineControls = ({
   formatTime,
   handleUndo,
   handleRedo,
-  canUndo, // Use the precomputed prop
-  canRedo, // Use the precomputed prop
+  canUndo, // Precomputed prop
+  canRedo, // Precomputed prop
   isSaving,
   timeScale,
   setTimeScale,
-  openAddTextDialog,
+  onAddTextClick, // Prop to handle adding text
   toggleSplitMode,
   isSplitMode,
 }) => {
@@ -35,7 +36,7 @@ const TimelineControls = ({
         {isSaving && <span className="saving-indicator">Saving...</span>}
       </div>
       <div className="add-text-control">
-        <button onClick={openAddTextDialog}>Add Text</button>
+        <button onClick={onAddTextClick}>Add Text</button>
       </div>
       <div className="split-control">
         <button

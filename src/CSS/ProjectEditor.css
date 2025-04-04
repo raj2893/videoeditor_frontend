@@ -241,11 +241,12 @@
   flex: 1;
   min-height: 20px;
   position: relative;
+  padding: 20px 0; /* Add 20px top and bottom padding */
 }
 
 .preview-section > *:not(.resize-preview-section) {
   max-width: 100%;
-  max-height: calc(100% - 6px);
+  max-height: calc(100% - 40px); /* Adjust for 20px top + 20px bottom padding */
   object-fit: contain;
 }
 
@@ -298,6 +299,8 @@
 .timeline-section {
   overflow: hidden;
   min-height: 150px;
+  max-height: calc(50% - 46px); /* Adjusted for controls panel and zoom slider */
+  flex-shrink: 1;
 }
 
 .loading-message {
@@ -416,6 +419,170 @@
 
 .save-button:hover {
   background-color: #3367d6;
+}
+
+/* Filter Panel Styles (Added from old ProjectEditor.css) */
+.filter-panel {
+  background-color: #2a2a2a;
+  padding: 15px;
+  border-radius: 4px;
+}
+
+.filter-panel h3,
+.filter-panel h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.filter-select {
+  width: 100%;
+  padding: 8px;
+  background-color: #333;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 8px;
+  background-color: #333;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.apply-filter-btn {
+  width: 100%;
+  padding: 8px 16px;
+  background-color: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 15px;
+  transition: background-color 0.2s;
+}
+
+.apply-filter-btn:hover {
+  background-color: #3367d6;
+}
+
+.applied-filters {
+  margin-top: 15px;
+}
+
+.filter-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background-color: #333;
+  border-radius: 4px;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.remove-filter-btn {
+  padding: 4px 8px;
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.remove-filter-btn:hover {
+  background-color: #cc0000;
+}
+
+.filter-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+.filter-option {
+  background-color: #333;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.filter-header span {
+  font-size: 14px;
+  color: #e0e0e0;
+}
+
+.filter-params {
+  padding-left: 10px;
+}
+
+.filter-params .control-group {
+  margin-bottom: 10px;
+}
+
+/* New styles for zoom slider below timeline */
+.zoom-slider-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background-color: #2a2a2a;
+  border-top: 1px solid #444;
+  flex-shrink: 0; /* Prevent it from shrinking */
+}
+
+.zoom-slider {
+  width: 100%; /* Wider for precision */
+  -webkit-appearance: none;
+  height: 5px;
+  background: #444;
+  border-radius: 5px;
+  outline: none;
+  margin-right: 10px;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  background: #ff9800;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.zoom-slider::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  background: #ff9800;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.zoom-slider:hover {
+  background: #555;
+}
+
+.zoom-slider-container span {
+  color: #fff;
+  font-size: 12px;
 }
 
 /* Responsive Design */

@@ -1,4 +1,3 @@
-// In TimelineControls.js
 import React from 'react';
 
 const TimelineControls = ({
@@ -9,12 +8,10 @@ const TimelineControls = ({
   formatTime,
   handleUndo,
   handleRedo,
-  canUndo, // Precomputed prop
-  canRedo, // Precomputed prop
+  canUndo,
+  canRedo,
   isSaving,
-  timeScale,
-  setTimeScale,
-  onAddTextClick, // Prop to handle adding text
+  onAddTextClick,
   toggleSplitMode,
   isSplitMode,
 }) => {
@@ -46,11 +43,6 @@ const TimelineControls = ({
         >
           ✂️
         </button>
-      </div>
-      <div className="zoom-controls">
-        <button onClick={() => setTimeScale(prev => Math.max(20, prev - 10))}>-</button>
-        <span>Zoom: {timeScale}px/s</span>
-        <button onClick={() => setTimeScale(prev => prev + 10)}>+</button>
       </div>
     </div>
   );

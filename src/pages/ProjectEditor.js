@@ -40,14 +40,15 @@ const ProjectEditor = () => {
     backgroundColor: 'transparent',
     duration: 5,
   });
-  // Added state for Filters functionality from old code
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [filterParams, setFilterParams] = useState({});
   const [appliedFilters, setAppliedFilters] = useState([]);
-  const [timeScale, setTimeScale] = useState(20); // Default value matches TimelineComponent
+  const [timeScale, setTimeScale] = useState(20);
 
-  const MIN_TIME_SCALE = 0.1; // Minimum for finer zoom-out control
-  const MAX_TIME_SCALE = 250; // Maximum for smooth zooming
+  let timelineSetPlayhead = null;
+
+  const MIN_TIME_SCALE = 0.1;
+  const MAX_TIME_SCALE = 250;
 
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -55,22 +56,21 @@ const ProjectEditor = () => {
 
   const toggleTransformPanel = () => {
     setIsTransformOpen((prev) => !prev);
-    setIsFiltersOpen(false); // Close filters when opening transform
+    setIsFiltersOpen(false);
   };
   const toggleMediaPanel = () => setIsMediaPanelOpen((prev) => !prev);
   const toggleToolsPanel = () => setIsToolsPanelOpen((prev) => !prev);
 
-  // Updated toggleFiltersPanel to ensure mutual exclusivity with Transform and Text tools
   const toggleFiltersPanel = () => {
     setIsFiltersOpen((prev) => !prev);
-    setIsTransformOpen(false); // Close transform when opening filters
-    setIsTextToolOpen(false); // Close text tool when opening filters
+    setIsTransformOpen(false);
+    setIsTextToolOpen(false);
   };
 
   const toggleTextTool = () => {
     if (selectedSegment && selectedSegment.type === 'text') {
       setIsTextToolOpen((prev) => !prev);
-      setIsFiltersOpen(false); // Close filters when opening text tool
+      setIsFiltersOpen(false);
     } else {
       setIsTextToolOpen(false);
     }
@@ -700,7 +700,7 @@ const ProjectEditor = () => {
           filePath: videoPath,
           layer: layer || 0,
           positionX: segment.positionX || 0,
-          positionY: segment.positionY || 0,
+          positionY: segment.positionX || 0,
           scale: segment.scale || 1,
           thumbnail: video.thumbnail,
         };
@@ -718,22 +718,26 @@ const ProjectEditor = () => {
     }
   };
 
-  const handleTimeUpdate = (newTime) => setCurrentTime(newTime);
+  const handleTimeUpdate = (newTime, updatePlayhead = true) => {
+    setCurrentTime(newTime);
+    if (updatePlayhead && timelineSetPlayhead) {
+      timelineSetPlayhead(newTime, false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === ' ' || e.code === 'Space') {
-        e.preventDefault();
-        setIsPlaying((prev) => !prev);
-      }
       if (!isPlaying) {
-        if (e.key === 'ArrowLeft') setCurrentTime((time) => Math.max(0, time - 1 / 30));
-        else if (e.key === 'ArrowRight') setCurrentTime((time) => Math.min(totalDuration, time + 1 / 30));
+        if (e.key === 'ArrowLeft') {
+          handleTimeUpdate(Math.max(0, currentTime - 1 / 30), true);
+        } else if (e.key === 'ArrowRight') {
+          handleTimeUpdate(Math.min(totalDuration, currentTime + 1 / 30), true);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, totalDuration]);
+  }, [isPlaying, totalDuration, currentTime]);
 
   useEffect(() => {
     if (isPlaying && currentTime >= totalDuration) {
@@ -754,28 +758,24 @@ const ProjectEditor = () => {
     const controlsPanelHeight = 60;
     const resizeHandleHeight = 6;
     const zoomSliderHeight = 40;
-    const previewMarginTotal = 40; // 20px top + 20px bottom
+    const previewMarginTotal = 40;
     const mouseY = e.clientY;
     const wrapperTop = contentWrapper.getBoundingClientRect().top;
     const distanceFromTop = mouseY - wrapperTop;
 
-    // Calculate available height, now accounting for preview margins
     const availableHeight = wrapperHeight - controlsPanelHeight - resizeHandleHeight - zoomSliderHeight - previewMarginTotal;
 
-    // Calculate preview height in pixels
-    const previewHeightPx = distanceFromTop - resizeHandleHeight - 20; // Subtract top margin
-    const minPreviewHeight = 100; // Minimum height excluding margins
-    const maxPreviewHeight = availableHeight - 150; // Leave space for timeline
+    const previewHeightPx = distanceFromTop - resizeHandleHeight - 20;
+    const minPreviewHeight = 100;
+    const maxPreviewHeight = availableHeight - 150;
     const clampedPreviewHeight = Math.max(minPreviewHeight, Math.min(maxPreviewHeight, previewHeightPx));
 
-    // Calculate remaining height for timeline as a percentage
     const remainingHeight = availableHeight - clampedPreviewHeight;
     const timelineHeightPercent = (remainingHeight / availableHeight) * 100;
     const minTimelineHeight = 10;
     const maxTimelineHeight = 50;
     const clampedTimelineHeight = Math.max(minTimelineHeight, Math.min(maxTimelineHeight, timelineHeightPercent));
 
-    // Set preview height including margins for the container
     setPreviewHeight(`${clampedPreviewHeight}px`);
     setTimelineHeight(clampedTimelineHeight);
   };
@@ -801,11 +801,9 @@ const ProjectEditor = () => {
         positionY: segment.positionY || 0,
         scale: segment.scale || 1,
       });
-      // Added call to fetch filters when a segment is selected
       fetchFilters(segment.id);
     } else {
       setTempSegmentValues({});
-      // Reset filters when no segment is selected
       setAppliedFilters([]);
       setFilterParams({});
     }
@@ -998,7 +996,6 @@ const ProjectEditor = () => {
     }
   };
 
-  // Added fetchFilters function from old code
   const fetchFilters = async (segmentId) => {
     if (!segmentId || !sessionId) return;
     try {
@@ -1014,7 +1011,6 @@ const ProjectEditor = () => {
     }
   };
 
-  // Added applyFilter function from old code
   const applyFilter = async (filterType, params) => {
     if (!selectedSegment || !sessionId) return;
     try {
@@ -1030,7 +1026,6 @@ const ProjectEditor = () => {
     }
   };
 
-  // Added removeFilter function from old code
   const removeFilter = async (filterId) => {
     if (!selectedSegment || !sessionId) return;
     try {
@@ -1045,7 +1040,6 @@ const ProjectEditor = () => {
     }
   };
 
-  // Added renderFilterControls function from old code
   const renderFilterControls = () => {
     const filterDefinitions = [
       {
@@ -1207,10 +1201,7 @@ const ProjectEditor = () => {
                 appliedFilters.map((filter) => (
                   <div key={filter.filterId} className="filter-item">
                     <span>{filter.filterType}</span>
-                    <button
-                      onClick={() => removeFilter(filter.filterId)}
-                      className="remove-filter-btn"
-                    >
+                    <button onClick={() => removeFilter(filter.filterId)} className="remove-filter-btn">
                       Remove
                     </button>
                   </div>
@@ -1242,13 +1233,7 @@ const ProjectEditor = () => {
               </button>
               {expandedSection === 'videos' && (
                 <div className="section-content">
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={handleVideoUpload}
-                    id="upload-video"
-                    className="hidden-input"
-                  />
+                  <input type="file" accept="video/*" onChange={handleVideoUpload} id="upload-video" className="hidden-input" />
                   <label htmlFor="upload-video" className="upload-button">
                     {uploading ? 'Uploading...' : 'Upload Video'}
                   </label>
@@ -1296,13 +1281,7 @@ const ProjectEditor = () => {
               </button>
               {expandedSection === 'photos' && (
                 <div className="section-content">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    id="upload-photo"
-                    className="hidden-input"
-                  />
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} id="upload-photo" className="hidden-input" />
                   <label htmlFor="upload-photo" className="upload-button">
                     {uploading ? 'Uploading...' : 'Upload Photo'}
                   </label>
@@ -1333,13 +1312,7 @@ const ProjectEditor = () => {
               </button>
               {expandedSection === 'audios' && (
                 <div className="section-content">
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    onChange={handleAudioUpload}
-                    id="upload-audio"
-                    className="hidden-input"
-                  />
+                  <input type="file" accept="audio/*" onChange={handleAudioUpload} id="upload-audio" className="hidden-input" />
                   <label htmlFor="upload-audio" className="upload-button">
                     {uploading ? 'Uploading...' : 'Upload Audio'}
                   </label>
@@ -1348,12 +1321,7 @@ const ProjectEditor = () => {
                   ) : (
                     <div className="audio-list">
                       {audios.map((audio) => (
-                        <div
-                          key={audio.id}
-                          className="audio-item"
-                          draggable={true}
-                          onDragStart={(e) => handleMediaDragStart(e, audio, 'audio')}
-                        >
+                        <div key={audio.id} className="audio-item" draggable={true} onDragStart={(e) => handleMediaDragStart(e, audio, 'audio')}>
                           <img src={audio.waveformImage || '/images/audio.jpeg'} alt="Audio Waveform" className="audio-waveform" />
                           <div className="audio-title">{audio.displayName}</div>
                         </div>
@@ -1383,8 +1351,12 @@ const ProjectEditor = () => {
           </div>
           <div className={`resize-preview-section ${isDraggingHandle ? 'dragging' : ''}`} onMouseDown={handleMouseDown}></div>
           <div className="controls-panel">
-            <button className="control-button" onClick={handleSaveProject}>Save Project</button>
-            <button className="control-button" onClick={handleExportProject}>Export Video</button>
+            <button className="control-button" onClick={handleSaveProject}>
+              Save Project
+            </button>
+            <button className="control-button" onClick={handleExportProject}>
+              Export Video
+            </button>
           </div>
           <div className="timeline-section" style={{ height: `${timelineHeight}%` }}>
             {sessionId ? (
@@ -1398,7 +1370,7 @@ const ProjectEditor = () => {
                 onVideoSelect={(time, video) => setCurrentTime(time)}
                 canvasDimensions={canvasDimensions}
                 addVideoToTimeline={addVideoToTimeline}
-                onTimeUpdate={handleTimeUpdate}
+                onTimeUpdate={(newTime) => handleTimeUpdate(newTime, false)}
                 onSegmentSelect={handleSegmentSelect}
                 videoLayers={videoLayers}
                 audioLayers={audioLayers}
@@ -1406,14 +1378,14 @@ const ProjectEditor = () => {
                 setAudioLayers={setAudioLayers}
                 thumbnailsGenerated={thumbnailsGenerated}
                 openTextTool={openTextTool}
-                timeScale={timeScale} // Pass timeScale as prop
-                setTimeScale={setTimeScale} // Pass setTimeScale as prop
+                timeScale={timeScale}
+                setTimeScale={setTimeScale}
+                setPlayheadFromParent={(setPlayhead) => (timelineSetPlayhead = setPlayhead)}
               />
             ) : (
               <div className="loading-message">Loading timeline...</div>
             )}
           </div>
-          {/* Zoom slider added here */}
           <div className="zoom-slider-container">
             <input
               type="range"
@@ -1442,7 +1414,6 @@ const ProjectEditor = () => {
               <button className={`tool-button ${isTransformOpen ? 'active' : ''}`} onClick={toggleTransformPanel}>
                 Transform
               </button>
-              {/* Added Filters button with active state */}
               <button className={`tool-button ${isFiltersOpen ? 'active' : ''}`} onClick={toggleFiltersPanel}>
                 Filters
               </button>
@@ -1495,25 +1466,17 @@ const ProjectEditor = () => {
                 )}
               </div>
             )}
-            {/* Added Filters panel rendering when isFiltersOpen is true */}
             {isFiltersOpen && renderFilterControls()}
             {selectedSegment && selectedSegment.type === 'text' && isTextToolOpen && (
               <div className="text-panel">
                 <h3>Edit Text</h3>
                 <div className="control-group">
                   <label>Text</label>
-                  <textarea
-                    value={textSettings.text}
-                    onChange={(e) => updateTextSettings({ ...textSettings, text: e.target.value })}
-                    rows={3}
-                  />
+                  <textarea value={textSettings.text} onChange={(e) => updateTextSettings({ ...textSettings, text: e.target.value })} rows={3} />
                 </div>
                 <div className="control-group">
                   <label>Font</label>
-                  <select
-                    value={textSettings.fontFamily}
-                    onChange={(e) => updateTextSettings({ ...textSettings, fontFamily: e.target.value })}
-                  >
+                  <select value={textSettings.fontFamily} onChange={(e) => updateTextSettings({ ...textSettings, fontFamily: e.target.value })}>
                     <option value="Arial">Arial</option>
                     <option value="Verdana">Verdana</option>
                     <option value="Times New Roman">Times New Roman</option>
@@ -1533,11 +1496,7 @@ const ProjectEditor = () => {
                 </div>
                 <div className="control-group">
                   <label>Text Color</label>
-                  <input
-                    type="color"
-                    value={textSettings.fontColor}
-                    onChange={(e) => updateTextSettings({ ...textSettings, fontColor: e.target.value })}
-                  />
+                  <input type="color" value={textSettings.fontColor} onChange={(e) => updateTextSettings({ ...textSettings, fontColor: e.target.value })} />
                 </div>
                 <div className="control-group">
                   <label>Background</label>
@@ -1550,12 +1509,7 @@ const ProjectEditor = () => {
                     <input
                       type="checkbox"
                       checked={textSettings.backgroundColor === 'transparent'}
-                      onChange={(e) =>
-                        updateTextSettings({
-                          ...textSettings,
-                          backgroundColor: e.target.checked ? 'transparent' : '#000000',
-                        })
-                      }
+                      onChange={(e) => updateTextSettings({ ...textSettings, backgroundColor: e.target.checked ? 'transparent' : '#000000' })}
                     />
                     Transparent
                   </label>
@@ -1571,8 +1525,12 @@ const ProjectEditor = () => {
                   />
                 </div>
                 <div className="dialog-buttons">
-                  <button className="cancel-button" onClick={() => setIsTextToolOpen(false)}>Cancel</button>
-                  <button className="save-button" onClick={handleSaveTextSegment}>Save</button>
+                  <button className="cancel-button" onClick={() => setIsTextToolOpen(false)}>
+                    Cancel
+                  </button>
+                  <button className="save-button" onClick={handleSaveTextSegment}>
+                    Save
+                  </button>
                 </div>
               </div>
             )}

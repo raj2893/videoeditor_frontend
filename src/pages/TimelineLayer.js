@@ -21,20 +21,32 @@ const TimelineLayer = ({
           const style = {
             left: `${item.startTime * timeScale}px`,
             width: `${item.duration * timeScale}px`,
-            backgroundImage: item.thumbnail ? `url(${item.thumbnail})` : (item.type === 'image' && item.filePath ? `url(${item.filePath})` : item.type === 'audio' ? `url(${item.waveformImage})` : 'none'),
+            backgroundImage: item.thumbnail
+              ? `url(${item.thumbnail})`
+              : item.type === 'image' && item.filePath
+              ? `url(${item.filePath})`
+              : item.type === 'audio'
+              ? `url(${item.waveformImage})`
+              : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             zIndex: index,
             top: '5px',
           };
+          const isSelected = item.id === selectedSegmentId;
+
           return (
             <div
               key={item.id}
               className={`timeline-item ${
-                item.type === 'text' ? 'text-segment' : item.type === 'image' ? 'image-segment' : item.type === 'audio' ? 'audio-segment' : 'video-segment'
-              } ${item.id === playingVideoId ? 'playing' : ''} ${
-                item.id === selectedSegmentId ? 'selected' : ''
-              }`}
+                item.type === 'text'
+                  ? 'text-segment'
+                  : item.type === 'image'
+                  ? 'image-segment'
+                  : item.type === 'audio'
+                  ? 'audio-segment'
+                  : 'video-segment'
+              } ${item.id === playingVideoId ? 'playing' : ''} ${isSelected ? 'selected' : ''}`}
               draggable
               onDragStart={(e) => handleDragStart(e, item, layerIndex)}
               style={style}
@@ -47,13 +59,15 @@ const TimelineLayer = ({
                 }
               }}
             >
-              <div
-                className="resize-handle resize-left"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  handleResizeStart(e, item, layerIndex, 'left');
-                }}
-              />
+              {isSelected && (
+                <div
+                  className="resize-handle resize-left"
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    handleResizeStart(e, item, layerIndex, 'left');
+                  }}
+                />
+              )}
               {item.type === 'text' && (
                 <div
                   className="text-segment-preview"
@@ -80,19 +94,21 @@ const TimelineLayer = ({
               {(item.type === 'video' || item.type === 'image' || item.type === 'audio') && (
                 <div className="video-title">
                   {item.type === 'video'
-                    ? (item.title || item.displayPath || item.filePath || item.filename || 'Unnamed Video')
+                    ? item.title || item.displayPath || item.filePath || item.filename || 'Unnamed Video'
                     : item.type === 'image'
-                    ? (item.fileName || 'Unnamed Image')
-                    : (item.displayName || 'Unnamed Audio')}
+                    ? item.fileName || 'Unnamed Image'
+                    : item.displayName || 'Unnamed Audio'}
                 </div>
               )}
-              <div
-                className="resize-handle resize-right"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  handleResizeStart(e, item, layerIndex, 'right');
-                }}
-              />
+              {isSelected && (
+                <div
+                  className="resize-handle resize-right"
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    handleResizeStart(e, item, layerIndex, 'right');
+                  }}
+                />
+              )}
             </div>
           );
         })}

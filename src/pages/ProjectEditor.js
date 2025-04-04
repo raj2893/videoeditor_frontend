@@ -44,6 +44,10 @@ const ProjectEditor = () => {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [filterParams, setFilterParams] = useState({});
   const [appliedFilters, setAppliedFilters] = useState([]);
+  const [timeScale, setTimeScale] = useState(20); // Default value matches TimelineComponent
+
+  const MIN_TIME_SCALE = 0.1; // Minimum for finer zoom-out control
+  const MAX_TIME_SCALE = 250; // Maximum for smooth zooming
 
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -749,21 +753,29 @@ const ProjectEditor = () => {
     const wrapperHeight = contentWrapper.clientHeight;
     const controlsPanelHeight = 60;
     const resizeHandleHeight = 6;
+    const zoomSliderHeight = 40;
+    const previewMarginTotal = 40; // 20px top + 20px bottom
     const mouseY = e.clientY;
     const wrapperTop = contentWrapper.getBoundingClientRect().top;
     const distanceFromTop = mouseY - wrapperTop;
 
-    const previewHeightPx = distanceFromTop - resizeHandleHeight;
-    const minPreviewHeight = 100;
-    const maxPreviewHeight = wrapperHeight - controlsPanelHeight - resizeHandleHeight - 150;
+    // Calculate available height, now accounting for preview margins
+    const availableHeight = wrapperHeight - controlsPanelHeight - resizeHandleHeight - zoomSliderHeight - previewMarginTotal;
+
+    // Calculate preview height in pixels
+    const previewHeightPx = distanceFromTop - resizeHandleHeight - 20; // Subtract top margin
+    const minPreviewHeight = 100; // Minimum height excluding margins
+    const maxPreviewHeight = availableHeight - 150; // Leave space for timeline
     const clampedPreviewHeight = Math.max(minPreviewHeight, Math.min(maxPreviewHeight, previewHeightPx));
 
-    const remainingHeight = wrapperHeight - clampedPreviewHeight - controlsPanelHeight - resizeHandleHeight;
-    const timelineHeightPercent = (remainingHeight / (wrapperHeight - controlsPanelHeight)) * 100;
+    // Calculate remaining height for timeline as a percentage
+    const remainingHeight = availableHeight - clampedPreviewHeight;
+    const timelineHeightPercent = (remainingHeight / availableHeight) * 100;
     const minTimelineHeight = 10;
     const maxTimelineHeight = 50;
     const clampedTimelineHeight = Math.max(minTimelineHeight, Math.min(maxTimelineHeight, timelineHeightPercent));
 
+    // Set preview height including margins for the container
     setPreviewHeight(`${clampedPreviewHeight}px`);
     setTimelineHeight(clampedTimelineHeight);
   };
@@ -1394,10 +1406,25 @@ const ProjectEditor = () => {
                 setAudioLayers={setAudioLayers}
                 thumbnailsGenerated={thumbnailsGenerated}
                 openTextTool={openTextTool}
+                timeScale={timeScale} // Pass timeScale as prop
+                setTimeScale={setTimeScale} // Pass setTimeScale as prop
               />
             ) : (
               <div className="loading-message">Loading timeline...</div>
             )}
+          </div>
+          {/* Zoom slider added here */}
+          <div className="zoom-slider-container">
+            <input
+              type="range"
+              min={MIN_TIME_SCALE}
+              max={MAX_TIME_SCALE}
+              step={0.1}
+              value={timeScale}
+              onChange={(e) => setTimeScale(Number(e.target.value))}
+              className="zoom-slider"
+            />
+            <span>Zoom: {timeScale.toFixed(1)}px/s</span>
           </div>
         </div>
       </div>

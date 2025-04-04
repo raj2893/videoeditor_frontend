@@ -241,11 +241,12 @@
   flex: 1;
   min-height: 20px;
   position: relative;
+  padding: 20px 0; /* Add 20px top and bottom padding */
 }
 
 .preview-section > *:not(.resize-preview-section) {
   max-width: 100%;
-  max-height: calc(100% - 6px);
+  max-height: calc(100% - 40px); /* Adjust for 20px top + 20px bottom padding */
   object-fit: contain;
 }
 
@@ -298,6 +299,8 @@
 .timeline-section {
   overflow: hidden;
   min-height: 150px;
+  max-height: calc(50% - 46px); /* Adjusted for controls panel and zoom slider */
+  flex-shrink: 1;
 }
 
 .loading-message {
@@ -533,6 +536,53 @@
 
 .filter-params .control-group {
   margin-bottom: 10px;
+}
+
+/* New styles for zoom slider below timeline */
+.zoom-slider-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background-color: #2a2a2a;
+  border-top: 1px solid #444;
+  flex-shrink: 0; /* Prevent it from shrinking */
+}
+
+.zoom-slider {
+  width: 100%; /* Wider for precision */
+  -webkit-appearance: none;
+  height: 5px;
+  background: #444;
+  border-radius: 5px;
+  outline: none;
+  margin-right: 10px;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  background: #ff9800;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.zoom-slider::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  background: #ff9800;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.zoom-slider:hover {
+  background: #555;
+}
+
+.zoom-slider-container span {
+  color: #fff;
+  font-size: 12px;
 }
 
 /* Responsive Design */

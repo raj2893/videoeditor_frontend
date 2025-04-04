@@ -35,32 +35,13 @@
   font-family: monospace;
 }
 
-.zoom-controls {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-}
-
-.zoom-controls button {
-  width: 30px;
-  height: 30px;
-  margin: 0 5px;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.zoom-controls span {
-  margin: 0 10px;
-  color: #fff;
-}
-
 /* Make the timeline scrollable */
 .timeline-scroll-container {
   position: relative;
   flex-grow: 1;
   overflow-x: auto;
   overflow-y: auto;
-  min-height: 150px; /* Ensure a minimum height */
+  min-height: 150px;
   scrollbar-width: thin;
 }
 
@@ -112,7 +93,7 @@
 
 .timeline {
   position: relative;
-  min-height: 120px; /* Ensure the timeline has a minimum height */
+  min-height: 120px;
   background-color: #2a2a2a;
   min-width: max-content;
 }
@@ -143,7 +124,6 @@
   pointer-events: none;
 }
 
-/* Ensure items in the same layer are positioned correctly */
 .layer-items {
   position: relative;
   height: 100%;
@@ -152,7 +132,7 @@
 .timeline-item {
   position: absolute;
   height: 30px;
-  top: 5px; /* Consistent top offset */
+  top: 5px;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   cursor: move;
@@ -176,7 +156,6 @@
   box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
 }
 
-/* Resize Handles */
 .resize-handle {
   position: absolute;
   top: 0;
@@ -189,13 +168,13 @@
 }
 
 .resize-handle.resize-left {
-  left: -4px; /* Align the center of the handle with the left edge */
+  left: -4px;
   border-top-left-radius: 4px;
   border-bottom-left-radius: 4px;
 }
 
 .resize-handle.resize-right {
-  right: -4px; /* Align the center of the handle with the right edge */
+  right: -4px;
   border-top-right-radius: 4px;
   border-bottom-right-radius: 4px;
 }
@@ -275,14 +254,13 @@
   pointer-events: none;
 }
 
-/* Timeline Item Resize Handles */
 .timeline-item .resize-handle.resize-right {
-  right: -4px; /* Precisely align with the right edge of the item */
+  right: -4px;
   width: 8px;
 }
 
 .timeline-item .resize-handle.resize-left {
-  left: -4px; /* Precisely align with the left edge of the item */
+  left: -4px;
   width: 8px;
 }
 
@@ -585,8 +563,6 @@
   border-radius: 2px;
 }
 
-/* Add these to the existing Timeline.css */
-
 .split-control button {
   margin-left: 10px;
   padding: 6px;
@@ -619,20 +595,17 @@
   border: 2px dashed #ff9800;
 }
 
-/* Add these styles to the existing Timeline.css */
-
-/* Style for audio layers (negative indices) */
 .audio-layer {
-  background-color: #2a2a2a; /* Slightly darker background for audio layers */
+  background-color: #2a2a2a;
   border-bottom: 1px solid #555;
 }
 
 .audio-layer .layer-label {
-  color: #66bb6a; /* Green label to indicate audio layer */
+  color: #66bb6a;
 }
 
 .audio-layer .timeline-item.audio-segment {
-  background-color: #66bb6a; /* Green background for audio segments */
+  background-color: #66bb6a;
   border: 1px solid #4caf50;
 }
 
@@ -664,7 +637,6 @@
   white-space: nowrap;
 }
 
-/* Timeline.css */
 .timeline-separator {
   height: 20px;
   background-color: #444;
@@ -681,9 +653,8 @@
   font-weight: bold;
 }
 
-/* Image Segment Styles */
 .timeline-item.image-segment {
-  background-color: #ff5722; /* Orange background for images when no thumbnail */
+  background-color: #ff5722;
 }
 
 .image-segment-preview {
@@ -691,7 +662,7 @@
   height: 100%;
   display: flex;
   align-items: center;
-  justifyContent: center;
+  justify-content: center;
   padding: 3px;
   font-size: 12px;
   overflow: hidden;
@@ -701,7 +672,6 @@
   color: #fff;
 }
 
-/* New styles for audio section */
 .audio-section-label {
   height: 20px;
   line-height: 20px;
@@ -712,3 +682,4 @@
   font-size: 12px;
   border-bottom: 1px solid #444;
 }
+

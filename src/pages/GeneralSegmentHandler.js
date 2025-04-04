@@ -56,45 +56,70 @@ const GeneralSegmentHandler = ({
     if (isSplitMode) return;
     e.preventDefault();
     if (!draggingItem || !timelineRef.current) return;
+
     const timelineRect = timelineRef.current.getBoundingClientRect();
     const mouseX = e.clientX - timelineRect.left;
     let potentialStartTime = (mouseX / timeScale) - dragOffset;
     potentialStartTime = Math.max(0, potentialStartTime);
+
     const newSnapIndicators = [];
     const snapPoints = [];
+
+    // Collect snap points from all layers
     [...videoLayers, ...audioLayers].forEach((layer, layerIdx) => {
+      const isAudioLayer = layerIdx >= videoLayers.length;
+      const adjustedLayerIdx = isAudioLayer ? -(layerIdx - videoLayers.length + 1) : layerIdx;
       layer.forEach(item => {
-        if (item.id === draggingItem.id) return;
-        snapPoints.push({ time: item.startTime, layerIdx, type: 'start' });
-        snapPoints.push({ time: item.startTime + item.duration, layerIdx, type: 'end' });
-        snapPoints.push({ time: 0, layerIdx: -1, type: 'timelineStart' });
+        if (item.id === draggingItem.id) return; // Skip the dragged item itself
+        snapPoints.push({ time: item.startTime, layerIdx: adjustedLayerIdx, type: 'start' });
+        snapPoints.push({ time: item.startTime + item.duration, layerIdx: adjustedLayerIdx, type: 'end' });
       });
     });
+
+    // Always include timeline start (time 0) as a snap point
+    snapPoints.push({ time: 0, layerIdx: dragLayer, type: 'timelineStart' });
+
     let closestSnapPoint = null;
     let minDistance = SNAP_THRESHOLD;
+
+    // Evaluate both start and end snapping, but only keep the closest
     snapPoints.forEach(point => {
       const currentThreshold = point.time === 0 ? SNAP_THRESHOLD * 2 : SNAP_THRESHOLD;
+
+      // Check distance to start of dragged item
       const distanceToStart = Math.abs(point.time - potentialStartTime);
-      if (distanceToStart < minDistance) {
+      if (distanceToStart < currentThreshold && distanceToStart < minDistance) {
         minDistance = distanceToStart;
         closestSnapPoint = { time: point.time, layerIdx: point.layerIdx, type: point.type, edge: 'start' };
       }
+
+      // Check distance to end of dragged item
       const itemEndTime = potentialStartTime + draggingItem.duration;
       const distanceToEnd = Math.abs(point.time - itemEndTime);
-      if (distanceToEnd < minDistance) {
+      if (distanceToEnd < currentThreshold && distanceToEnd < minDistance) {
         minDistance = distanceToEnd;
         closestSnapPoint = { time: point.time - draggingItem.duration, layerIdx: point.layerIdx, type: point.type, edge: 'end' };
       }
     });
+
     if (closestSnapPoint) {
       potentialStartTime = closestSnapPoint.time;
+      // Add only one snap indicator on the dragged layer
       newSnapIndicators.push({
         time: closestSnapPoint.edge === 'start' ? potentialStartTime : potentialStartTime + draggingItem.duration,
-        layerIdx: closestSnapPoint.layerIdx,
+        layerIdx: dragLayer, // Use dragLayer to place indicator on the dragged layer
         edge: closestSnapPoint.edge,
       });
     }
+
     setSnapIndicators(newSnapIndicators);
+
+    // Update the dragged element's position for visual feedback
+    const draggedElement = document.querySelector('.timeline-item.dragging');
+    if (draggedElement) {
+      draggedElement.style.left = `${potentialStartTime * timeScale}px`;
+      draggedElement.classList.toggle('snapping', newSnapIndicators.length > 0);
+    }
   };
 
   const handleDragEnd = () => {
@@ -121,7 +146,7 @@ const GeneralSegmentHandler = ({
     setResizingItem({
       ...item,
       layerIndex,
-      originalStartTime: item.startTime, // Explicitly store original startTime
+      originalStartTime: item.startTime,
       originalStartWithinAudio: item.startTimeWithinAudio,
       originalEndWithinAudio: item.endTimeWithinAudio,
     });
@@ -148,7 +173,6 @@ const GeneralSegmentHandler = ({
       }
       const item = { ...layer[itemIndex] };
 
-      // Ensure startTime and within timings have valid defaults
       const originalStartTime = item.startTime ?? resizingItem.startTime ?? 0;
       const originalStartWithin = item.type === 'video'
         ? (item.startTimeWithinVideo ?? 0)
@@ -164,24 +188,23 @@ const GeneralSegmentHandler = ({
 
       if (resizeEdge === 'left') {
         const originalEndTime = originalStartTime + item.duration;
-        newStartTime = Math.min(newTime, originalEndTime - 0.1); // Minimum duration 0.1s
+        newStartTime = Math.min(newTime, originalEndTime - 0.1);
         newDuration = originalEndTime - newStartTime;
         if (item.type === 'video' || item.type === 'audio') {
           const timeShift = newStartTime - originalStartTime;
           newStartWithin = originalStartWithin + timeShift;
-          newStartWithin = Math.max(0, newStartWithin); // Prevent negative
-          newEndWithin = originalEndWithin; // End stays fixed
+          newStartWithin = Math.max(0, newStartWithin);
+          newEndWithin = originalEndWithin;
         }
       } else if (resizeEdge === 'right') {
         const newEndTime = Math.max(newTime, originalStartTime + 0.1);
         newDuration = newEndTime - originalStartTime;
         if (item.type === 'video' || item.type === 'audio') {
-          newStartWithin = originalStartWithin; // Start stays fixed
+          newStartWithin = originalStartWithin;
           newEndWithin = originalStartWithin + newDuration;
         }
       }
 
-      // Update item properties
       item.startTime = newStartTime;
       item.duration = newDuration;
       item.timelineStartTime = newStartTime;

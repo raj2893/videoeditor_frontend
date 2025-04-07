@@ -241,12 +241,12 @@
   flex: 1;
   min-height: 20px;
   position: relative;
-  padding: 20px 0; /* Add 20px top and bottom padding */
+  padding: 20px 0;
 }
 
 .preview-section > *:not(.resize-preview-section) {
   max-width: 100%;
-  max-height: calc(100% - 40px); /* Adjust for 20px top + 20px bottom padding */
+  max-height: calc(100% - 40px);
   object-fit: contain;
 }
 
@@ -299,7 +299,7 @@
 .timeline-section {
   overflow: hidden;
   min-height: 150px;
-  max-height: calc(50% - 46px); /* Adjusted for controls panel and zoom slider */
+  max-height: calc(50% - 46px);
   flex-shrink: 1;
 }
 
@@ -421,7 +421,7 @@
   background-color: #3367d6;
 }
 
-/* Filter Panel Styles (Added from old ProjectEditor.css) */
+/* Filter Panel Styles */
 .filter-panel {
   background-color: #2a2a2a;
   padding: 15px;
@@ -538,7 +538,7 @@
   margin-bottom: 10px;
 }
 
-/* New styles for zoom slider below timeline */
+/* Zoom Slider */
 .zoom-slider-container {
   display: flex;
   align-items: center;
@@ -546,11 +546,11 @@
   padding: 10px;
   background-color: #2a2a2a;
   border-top: 1px solid #444;
-  flex-shrink: 0; /* Prevent it from shrinking */
+  flex-shrink: 0;
 }
 
 .zoom-slider {
-  width: 100%; /* Wider for precision */
+  width: 100%;
   -webkit-appearance: none;
   height: 5px;
   background: #444;
@@ -583,6 +583,128 @@
 .zoom-slider-container span {
   color: #fff;
   font-size: 12px;
+}
+
+/* Premiere Pro-Inspired Keyframe Styles */
+.property-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 10px;
+}
+
+.property-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.property-header label {
+  font-size: 14px;
+  color: #e0e0e0;
+  flex-grow: 1;
+}
+
+.keyframe-toggle {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e0e0e0;
+}
+
+.keyframe-toggle.active {
+  color: #4CAF50;
+}
+
+.property-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.property-controls input[type="number"] {
+  padding: 5px;
+  font-size: 12px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #333;
+  color: #e0e0e0;
+}
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.slider-container input[type="range"] {
+  width: 100px;
+}
+
+.slider-container span {
+  font-size: 12px;
+  min-width: 30px;
+}
+
+.keyframe-nav {
+  display: flex;
+  gap: 5px;
+}
+
+.keyframe-nav button {
+  background: #333;
+  border: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #e0e0e0;
+}
+
+.keyframe-nav button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mini-timeline {
+  background: #333;
+  border: 1px solid #444;
+  height: 20px;
+  position: relative;
+  margin-top: 5px;
+}
+
+.mini-playhead {
+  position: absolute;
+  width: 2px;
+  height: 100%;
+  background: #ff4444;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.keyframe-marker {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #4CAF50;
+  border: 1px solid #fff;
+  transform: translate(-50%, -50%) rotate(45deg);
+  cursor: pointer;
+  top: 50%;
+}
+
+.keyframe-marker:hover {
+  background: #45a049;
 }
 
 /* Responsive Design */

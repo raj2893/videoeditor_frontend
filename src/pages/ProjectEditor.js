@@ -796,9 +796,6 @@ const ProjectEditor = () => {
           handleTimeUpdate(Math.max(0, currentTime - 1 / 30), true);
         } else if (e.key === 'ArrowRight') {
           handleTimeUpdate(Math.min(totalDuration, currentTime + 1 / 30), true);
-        } else if (e.key === 'Backspace' && selectedSegment && !isPlaying) { // Added from old code
-          e.preventDefault();
-          handleDeleteSegment();
         }
       }
     };

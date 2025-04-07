@@ -44,6 +44,8 @@ const ProjectEditor = () => {
   const [filterParams, setFilterParams] = useState({});
   const [appliedFilters, setAppliedFilters] = useState([]);
   const [timeScale, setTimeScale] = useState(20);
+  const [keyframes, setKeyframes] = useState({}); // e.g., { positionX: [{ time, value }], ... }
+  const [currentTimeInSegment, setCurrentTimeInSegment] = useState(0);
 
   let timelineSetPlayhead = null;
 
@@ -54,9 +56,20 @@ const ProjectEditor = () => {
   const { projectId } = useParams();
   const updateTimeoutRef = useRef(null);
 
+  // Sync currentTimeInSegment with timeline playhead
+  useEffect(() => {
+    if (selectedSegment) {
+      const relativeTime = currentTime - selectedSegment.startTime;
+      setCurrentTimeInSegment(Math.max(0, Math.min(selectedSegment.duration, relativeTime)));
+    }
+  }, [currentTime, selectedSegment]);
+
+  const areTimesEqual = (time1, time2, epsilon = 0.0001) => Math.abs(time1 - time2) < epsilon;
+
   const toggleTransformPanel = () => {
     setIsTransformOpen((prev) => !prev);
     setIsFiltersOpen(false);
+    setIsTextToolOpen(false);
   };
   const toggleMediaPanel = () => setIsMediaPanelOpen((prev) => !prev);
   const toggleToolsPanel = () => setIsToolsPanelOpen((prev) => !prev);
@@ -140,6 +153,7 @@ const ProjectEditor = () => {
           timelineStartTime: updatedTextSegment.timelineStartTime,
           timelineEndTime: updatedTextSegment.timelineEndTime,
           layer: updatedTextSegment.layer,
+          keyframes: keyframes, // Include keyframes if any
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -275,13 +289,8 @@ const ProjectEditor = () => {
       });
       const project = response.data;
       if (project.audioJson) {
-        let audioFiles;
-        try {
-          audioFiles = typeof project.audioJson === 'string' ? JSON.parse(project.audioJson) : project.audioJson;
-        } catch (e) {
-          console.error('Error parsing audio_json:', e);
-          audioFiles = [];
-        }
+        let audioFiles =
+          typeof project.audioJson === 'string' ? JSON.parse(project.audioJson) : project.audioJson;
         if (Array.isArray(audioFiles)) {
           const updatedAudios = audioFiles.map((audio) => ({
             id: audio.audioPath || `audio-${audio.audioFileName}-${Date.now()}`,
@@ -310,13 +319,8 @@ const ProjectEditor = () => {
       });
       const project = response.data;
       if (project.imagesJson) {
-        let imageFiles;
-        try {
-          imageFiles = typeof project.imagesJson === 'string' ? JSON.parse(project.imagesJson) : project.imagesJson;
-        } catch (e) {
-          console.error('Error parsing imagesJson:', e);
-          imageFiles = [];
-        }
+        let imageFiles =
+          typeof project.imagesJson === 'string' ? JSON.parse(project.imagesJson) : project.imagesJson;
         if (Array.isArray(imageFiles)) {
           const updatedPhotos = await Promise.all(
             imageFiles.map(async (image) => {
@@ -361,7 +365,6 @@ const ProjectEditor = () => {
             })
           );
           setPhotos(updatedPhotos);
-          console.log('Fetched photos:', updatedPhotos);
         } else {
           setPhotos([]);
         }
@@ -384,13 +387,8 @@ const ProjectEditor = () => {
         });
         const project = response.data;
         if (project && project.timelineState) {
-          let timelineState;
-          try {
-            timelineState = typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
-          } catch (e) {
-            console.error('Failed to parse timeline state:', e);
-            timelineState = { segments: [], textSegments: [], audioSegments: [] };
-          }
+          let timelineState =
+            typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
           const newVideoLayers = [[], [], []];
           const newAudioLayers = [[], [], []];
 
@@ -423,15 +421,15 @@ const ProjectEditor = () => {
                     scale: segment.scale || 1,
                   });
                 }
-              } else if (segment.imageFileName) {
-                const photo = photos.find((p) => p.fileName === segment.imageFileName);
+              } else if (segment.imagePath) {
+                const photo = photos.find((p) => p.fileName === segment.imagePath.split('/').pop());
                 if (photo) {
                   newVideoLayers[layerIndex].push({
                     id: segment.id,
                     type: 'image',
                     startTime: segment.timelineStartTime || 0,
                     duration: (segment.timelineEndTime - segment.timelineStartTime) || 5,
-                    fileName: segment.imageFileName,
+                    fileName: segment.imagePath.split('/').pop(),
                     filePath: photo.filePath,
                     layer: layerIndex,
                     positionX: segment.positionX || 0,
@@ -461,6 +459,8 @@ const ProjectEditor = () => {
                 fontSize: textSegment.fontSize || 24,
                 fontColor: textSegment.fontColor || '#FFFFFF',
                 backgroundColor: textSegment.backgroundColor || 'transparent',
+                positionX: textSegment.positionX || 0,
+                positionY: textSegment.positionY || 0,
               });
             }
           }
@@ -475,14 +475,13 @@ const ProjectEditor = () => {
               newAudioLayers[layerIndex].push({
                 id: audioSegment.id,
                 type: 'audio',
-                fileName: audioSegment.audioFileName || audioSegment.audioPath.split('/').pop(),
+                fileName: audioSegment.audioPath.split('/').pop(),
                 startTime: audioSegment.timelineStartTime || 0,
                 duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
                 layer: backendLayer,
-                displayName: audioSegment.audioFileName
-                  ? audioSegment.audioFileName.split('/').pop()
-                  : audioSegment.audioPath.split('/').pop(),
+                displayName: audioSegment.audioPath.split('/').pop(),
                 waveformImage: '/images/audio.jpeg',
+                volume: audioSegment.volume || 1.0,
               });
             }
           }
@@ -649,17 +648,12 @@ const ProjectEditor = () => {
         params: { sessionId },
         headers: { Authorization: `Bearer ${token}` },
       });
-      let timelineState;
-      if (response.data && response.data.timelineState) {
-        try {
-          timelineState = typeof response.data.timelineState === 'string' ? JSON.parse(response.data.timelineState) : response.data.timelineState;
-        } catch (e) {
-          console.error('Failed to parse timeline state:', e);
-          timelineState = { segments: [] };
-        }
-      } else {
-        timelineState = { segments: [] };
-      }
+      let timelineState =
+        response.data.timelineState
+          ? typeof response.data.timelineState === 'string'
+            ? JSON.parse(response.data.timelineState)
+            : response.data.timelineState
+          : { segments: [] };
       let endTime = 0;
       if (timelineState.segments && timelineState.segments.length > 0) {
         const layer0Segments = timelineState.segments.filter((seg) => seg.layer === 0);
@@ -700,7 +694,7 @@ const ProjectEditor = () => {
           filePath: videoPath,
           layer: layer || 0,
           positionX: segment.positionX || 0,
-          positionY: segment.positionX || 0,
+          positionY: segment.positionY || 0,
           scale: segment.scale || 1,
           thumbnail: video.thumbnail,
         };
@@ -793,21 +787,192 @@ const ProjectEditor = () => {
 
   const toggleSection = (section) => setExpandedSection(expandedSection === section ? null : section);
 
-  const handleSegmentSelect = (segment) => {
+  const handleSegmentSelect = async (segment) => {
     setSelectedSegment(segment);
     if (segment) {
-      setTempSegmentValues({
-        positionX: segment.positionX || 0,
-        positionY: segment.positionY || 0,
-        scale: segment.scale || 1,
+      let initialValues = {};
+      switch (segment.type) {
+        case 'video':
+          initialValues = {
+            positionX: segment.positionX || 0,
+            positionY: segment.positionY || 0,
+            scale: segment.scale || 1,
+          };
+          break;
+        case 'image':
+          initialValues = {
+            positionX: segment.positionX || 0,
+            positionY: segment.positionY || 0,
+            scale: segment.scale || 1,
+          };
+          break;
+        case 'text':
+          initialValues = {
+            positionX: segment.positionX || 0,
+            positionY: segment.positionY || 0,
+          };
+          break;
+        case 'audio':
+          initialValues = {
+            volume: segment.volume || 1.0,
+          };
+          break;
+        default:
+          break;
+      }
+      await fetchKeyframes(segment.id, segment.type);
+      const relativeTime = currentTime - segment.startTime;
+      setCurrentTimeInSegment(Math.max(0, Math.min(segment.duration, relativeTime)));
+      Object.keys(keyframes).forEach((prop) => {
+        const propKeyframes = keyframes[prop] || [];
+        if (propKeyframes.length > 0) {
+          const value = getValueAtTime(propKeyframes, currentTimeInSegment);
+          initialValues[prop] = value;
+        }
       });
+      setTempSegmentValues(initialValues);
       fetchFilters(segment.id);
     } else {
       setTempSegmentValues({});
       setAppliedFilters([]);
       setFilterParams({});
+      setKeyframes({});
+      setCurrentTimeInSegment(0);
     }
     handleTextSegmentSelect(segment);
+  };
+
+  const fetchKeyframes = async (segmentId, segmentType) => {
+    try {
+      const token = localStorage.getItem('token');
+      let response;
+      switch (segmentType) {
+        case 'video':
+          response = await axios.get(`${API_BASE_URL}/projects/${projectId}/get-segment`, {
+            params: { sessionId, segmentId },
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          break;
+        case 'image':
+        case 'text':
+        case 'audio':
+          response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+            params: { sessionId },
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const timelineState =
+            typeof response.data.timelineState === 'string'
+              ? JSON.parse(response.data.timelineState)
+              : response.data.timelineState;
+          const segments =
+            segmentType === 'image'
+              ? timelineState.imageSegments
+              : segmentType === 'text'
+              ? timelineState.textSegments
+              : timelineState.audioSegments;
+          const segment = segments.find((s) => s.id === segmentId);
+          response = { data: segment };
+          break;
+        default:
+          throw new Error('Invalid segment type');
+      }
+      const segmentData = response.data;
+      setKeyframes(segmentData?.keyframes || {});
+      return segmentData;
+    } catch (error) {
+      console.error(`Error fetching keyframes for ${segmentType}:`, error);
+      setKeyframes({});
+      return null;
+    }
+  };
+
+  const getValueAtTime = (keyframesArray, time) => {
+    if (!keyframesArray || keyframesArray.length === 0) return null;
+    const sorted = [...keyframesArray].sort((a, b) => a.time - b.time);
+    if (time <= sorted[0].time) return sorted[0].value;
+    if (time >= sorted[sorted.length - 1].time) return sorted[sorted.length - 1].value;
+
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (time >= sorted[i].time && time <= sorted[i + 1].time) {
+        const t = (time - sorted[i].time) / (sorted[i + 1].time - sorted[i].time);
+        return sorted[i].value + t * (sorted[i + 1].value - sorted[i].value); // Linear interpolation
+      }
+    }
+    return sorted[0].value; // Fallback
+  };
+
+  const addKeyframe = async (property, value) => {
+    if (!selectedSegment) return;
+    const time = currentTimeInSegment;
+
+    const segmentData = await fetchKeyframes(selectedSegment.id, selectedSegment.type);
+    const currentKeyframes = segmentData?.keyframes || {};
+
+    const updatedPropertyKeyframes = (currentKeyframes[property] || []).filter(
+      (kf) => !areTimesEqual(kf.time, time)
+    );
+    updatedPropertyKeyframes.push({ time, value, interpolationType: 'linear' });
+    updatedPropertyKeyframes.sort((a, b) => a.time - b.time);
+
+    const updatedKeyframes = {
+      ...currentKeyframes,
+      [property]: updatedPropertyKeyframes,
+    };
+
+    setKeyframes(updatedKeyframes);
+    await saveSegmentChanges(updatedKeyframes);
+  };
+
+  const removeKeyframe = async (property, time) => {
+    if (!selectedSegment) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE_URL}/projects/${projectId}/remove-keyframe`, {
+        params: {
+          sessionId,
+          segmentId: selectedSegment.id,
+          segmentType: selectedSegment.type,
+          property,
+          time,
+        },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updatedKeyframes = {
+        ...keyframes,
+        [property]: (keyframes[property] || []).filter((kf) => !areTimesEqual(kf.time, time)),
+      };
+      setKeyframes(updatedKeyframes);
+      await fetchKeyframes(selectedSegment.id, selectedSegment.type);
+    } catch (error) {
+      console.error('Error removing keyframe:', error);
+    }
+  };
+
+  const toggleKeyframe = (property) => {
+    const currentKeyframes = keyframes[property] || [];
+    const keyframeAtTime = currentKeyframes.find((kf) => areTimesEqual(kf.time, currentTimeInSegment));
+    if (keyframeAtTime) {
+      removeKeyframe(property, currentTimeInSegment);
+    } else {
+      addKeyframe(property, tempSegmentValues[property]);
+    }
+  };
+
+  const navigateKeyframes = (property, direction) => {
+    if (!selectedSegment || !keyframes[property]) return;
+    const sortedKeyframes = keyframes[property].sort((a, b) => a.time - b.time);
+    const currentIndex = sortedKeyframes.findIndex((kf) => kf.time >= currentTimeInSegment);
+    let newIndex;
+    if (direction === 'prev') {
+      newIndex = currentIndex === -1 ? sortedKeyframes.length - 1 : Math.max(0, currentIndex - 1);
+    } else {
+      newIndex = currentIndex === -1 ? 0 : Math.min(sortedKeyframes.length - 1, currentIndex + 1);
+    }
+    if (sortedKeyframes[newIndex]) {
+      const newTime = sortedKeyframes[newIndex].time;
+      setCurrentTimeInSegment(newTime);
+      handleTimeUpdate(selectedSegment.startTime + newTime);
+    }
   };
 
   const updateSegmentProperty = (property, value) => {
@@ -822,66 +987,96 @@ const ProjectEditor = () => {
     if (selectedSegment.layer < 0) setAudioLayers(newLayers);
     else setVideoLayers(newLayers);
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => saveSegmentChanges(), 500);
+    updateTimeoutRef.current = setTimeout(() => saveSegmentChanges(keyframes), 500);
   };
 
-  const saveSegmentChanges = async () => {
+  const saveSegmentChanges = async (updatedKeyframes = keyframes) => {
     if (!selectedSegment || !sessionId || !projectId) return;
     try {
       const token = localStorage.getItem('token');
-      if (selectedSegment.type === 'audio') {
-        await axios.put(
-          `${API_BASE_URL}/projects/${projectId}/update-audio`,
-          { audioSegmentId: selectedSegment.id, positionX: tempSegmentValues.positionX, positionY: tempSegmentValues.positionY },
-          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else if (selectedSegment.type === 'video') {
-        const requestBody = {
-          segmentId: selectedSegment.id,
-          positionX: tempSegmentValues.positionX,
-          positionY: tempSegmentValues.positionY,
-          scale: tempSegmentValues.scale,
-        };
-        await axios.put(
-          `${API_BASE_URL}/projects/${projectId}/update-segment`,
-          requestBody,
-          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else if (selectedSegment.type === 'image') {
-        const requestBody = {
-          segmentId: selectedSegment.id,
-          positionX: tempSegmentValues.positionX,
-          positionY: tempSegmentValues.positionY,
-          scale: tempSegmentValues.scale,
-        };
-        await axios.put(
-          `${API_BASE_URL}/projects/${projectId}/update-image`,
-          requestBody,
-          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else if (selectedSegment.type === 'text') {
-        const updatedTextSettings = {
-          ...selectedSegment,
-          ...textSettings,
-        };
-        await axios.put(
-          `${API_BASE_URL}/projects/${projectId}/update-text`,
-          {
-            segmentId: selectedSegment.id,
-            text: updatedTextSettings.text,
-            fontFamily: updatedTextSettings.fontFamily,
-            fontSize: updatedTextSettings.fontSize,
-            fontColor: updatedTextSettings.fontColor,
-            backgroundColor: updatedTextSettings.backgroundColor,
-            timelineStartTime: updatedTextSettings.startTime,
-            timelineEndTime: updatedTextSettings.startTime + updatedTextSettings.duration,
-            layer: updatedTextSettings.layer,
-          },
-          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-        );
+      switch (selectedSegment.type) {
+        case 'video':
+          await axios.put(
+            `${API_BASE_URL}/projects/${projectId}/update-segment`,
+            {
+              segmentId: selectedSegment.id,
+              positionX:
+                updatedKeyframes.positionX && updatedKeyframes.positionX.length > 0
+                  ? undefined
+                  : tempSegmentValues.positionX,
+              positionY:
+                updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0
+                  ? undefined
+                  : tempSegmentValues.positionY,
+              scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : tempSegmentValues.scale,
+              keyframes: updatedKeyframes,
+            },
+            { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+          );
+          break;
+        case 'image':
+          await axios.put(
+            `${API_BASE_URL}/projects/${projectId}/update-image`,
+            {
+              segmentId: selectedSegment.id,
+              positionX:
+                updatedKeyframes.positionX && updatedKeyframes.positionX.length > 0
+                  ? undefined
+                  : tempSegmentValues.positionX,
+              positionY:
+                updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0
+                  ? undefined
+                  : tempSegmentValues.positionY,
+              scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : tempSegmentValues.scale,
+              keyframes: updatedKeyframes,
+            },
+            { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+          );
+          break;
+        case 'text':
+          await axios.put(
+            `${API_BASE_URL}/projects/${projectId}/update-text`,
+            {
+              segmentId: selectedSegment.id,
+              text: textSettings.text,
+              fontFamily: textSettings.fontFamily,
+              fontSize: textSettings.fontSize,
+              fontColor: textSettings.fontColor,
+              backgroundColor: textSettings.backgroundColor,
+              timelineStartTime: selectedSegment.startTime,
+              timelineEndTime: selectedSegment.startTime + textSettings.duration,
+              layer: selectedSegment.layer,
+              positionX:
+                updatedKeyframes.positionX && updatedKeyframes.positionX.length > 0
+                  ? undefined
+                  : tempSegmentValues.positionX,
+              positionY:
+                updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0
+                  ? undefined
+                  : tempSegmentValues.positionY,
+              keyframes: updatedKeyframes,
+            },
+            { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+          );
+          break;
+        case 'audio':
+          await axios.put(
+            `${API_BASE_URL}/projects/${projectId}/update-audio`,
+            {
+              audioSegmentId: selectedSegment.id,
+              volume:
+                updatedKeyframes.volume && updatedKeyframes.volume.length > 0 ? undefined : tempSegmentValues.volume,
+              keyframes: updatedKeyframes,
+            },
+            { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+          );
+          break;
+        default:
+          break;
       }
+      await fetchKeyframes(selectedSegment.id, selectedSegment.type);
     } catch (error) {
-      console.error('Error saving segment changes:', error);
+      console.error(`Error saving ${selectedSegment.type} segment changes:`, error);
     }
   };
 
@@ -915,11 +1110,12 @@ const ProjectEditor = () => {
         params: { sessionId },
         headers: { Authorization: `Bearer ${token}` },
       });
-      let timelineState = response.data.timelineState
-        ? typeof response.data.timelineState === 'string'
-          ? JSON.parse(response.data.timelineState)
-          : response.data.timelineState
-        : { segments: [], textSegments: [] };
+      let timelineState =
+        response.data.timelineState
+          ? typeof response.data.timelineState === 'string'
+            ? JSON.parse(response.data.timelineState)
+            : response.data.timelineState
+          : { segments: [], textSegments: [] };
       let endTime = 0;
       const layer0Items = [
         ...(timelineState.segments || []).filter((seg) => seg.layer === 0),
@@ -940,8 +1136,13 @@ const ProjectEditor = () => {
         params: { sessionId },
         headers: { Authorization: `Bearer ${token}` },
       });
-      const updatedTimelineState = typeof updatedResponse.data.timelineState === 'string' ? JSON.parse(updatedResponse.data.timelineState) : updatedResponse.data.timelineState;
-      const newImageSegment = updatedTimelineState.segments.find((seg) => seg.imagePath && seg.timelineStartTime === endTime && seg.layer === 0);
+      const updatedTimelineState =
+        typeof updatedResponse.data.timelineState === 'string'
+          ? JSON.parse(updatedResponse.data.timelineState)
+          : updatedResponse.data.timelineState;
+      const newImageSegment = updatedTimelineState.imageSegments.find(
+        (seg) => seg.imagePath && seg.timelineStartTime === endTime && seg.layer === 0
+      );
       if (newImageSegment) {
         const filename = newImageSegment.imagePath.split('/').pop();
         const thumbnail = await new Promise((resolve) => {
@@ -1045,57 +1246,31 @@ const ProjectEditor = () => {
       {
         name: 'Brightness',
         type: 'brightness',
-        params: [
-          { key: 'value', label: 'Value', type: 'range', min: -1, max: 1, step: 0.1, default: 0 },
-        ],
+        params: [{ key: 'value', label: 'Value', type: 'range', min: -1, max: 1, step: 0.1, default: 0 }],
       },
       {
         name: 'Contrast',
         type: 'contrast',
-        params: [
-          { key: 'value', label: 'Value', type: 'range', min: 0, max: 3, step: 0.1, default: 1 },
-        ],
+        params: [{ key: 'value', label: 'Value', type: 'range', min: 0, max: 3, step: 0.1, default: 1 }],
       },
       {
         name: 'Saturation',
         type: 'saturation',
-        params: [
-          { key: 'value', label: 'Value', type: 'range', min: 0, max: 3, step: 0.1, default: 1 },
-        ],
+        params: [{ key: 'value', label: 'Value', type: 'range', min: 0, max: 3, step: 0.1, default: 1 }],
       },
       {
         name: 'Blur',
         type: 'blur',
-        params: [
-          { key: 'sigma', label: 'Sigma', type: 'range', min: 1, max: 10, step: 1, default: 5 },
-        ],
+        params: [{ key: 'sigma', label: 'Sigma', type: 'range', min: 1, max: 10, step: 1, default: 5 }],
       },
-      {
-        name: 'Sharpen',
-        type: 'sharpen',
-        params: [],
-      },
-      {
-        name: 'Grayscale',
-        type: 'grayscale',
-        params: [],
-      },
-      {
-        name: 'Sepia',
-        type: 'sepia',
-        params: [],
-      },
-      {
-        name: 'Mirror',
-        type: 'mirror',
-        params: [],
-      },
+      { name: 'Sharpen', type: 'sharpen', params: [] },
+      { name: 'Grayscale', type: 'grayscale', params: [] },
+      { name: 'Sepia', type: 'sepia', params: [] },
+      { name: 'Mirror', type: 'mirror', params: [] },
       {
         name: 'Rotate',
         type: 'rotate',
-        params: [
-          { key: 'angle', label: 'Angle (degrees)', type: 'number', default: 90 },
-        ],
+        params: [{ key: 'angle', label: 'Angle (degrees)', type: 'number', default: 90 }],
       },
       {
         name: 'Color Balance',
@@ -1106,26 +1281,10 @@ const ProjectEditor = () => {
           { key: 'blue', label: 'Blue', type: 'range', min: -1, max: 1, step: 0.1, default: 0 },
         ],
       },
-      {
-        name: 'Vignette',
-        type: 'vignette',
-        params: [],
-      },
-      {
-        name: 'Film Grain',
-        type: 'filmgrain',
-        params: [],
-      },
-      {
-        name: 'Cinematic',
-        type: 'cinematic',
-        params: [],
-      },
-      {
-        name: 'Glow',
-        type: 'glow',
-        params: [],
-      },
+      { name: 'Vignette', type: 'vignette', params: [] },
+      { name: 'Film Grain', type: 'filmgrain', params: [] },
+      { name: 'Cinematic', type: 'cinematic', params: [] },
+      { name: 'Glow', type: 'glow', params: [] },
     ];
 
     return (
@@ -1216,6 +1375,123 @@ const ProjectEditor = () => {
     );
   };
 
+  const renderKeyframeControls = () => {
+    if (!selectedSegment) return null;
+
+    let properties = [];
+    switch (selectedSegment.type) {
+      case 'video':
+        properties = [
+          { name: 'positionX', label: 'Position X', unit: 'px', type: 'number', step: 1 },
+          { name: 'positionY', label: 'Position Y', unit: 'px', type: 'number', step: 1 },
+          { name: 'scale', label: 'Scale', unit: 'x', type: 'range', min: 0.1, max: 5, step: 0.1 },
+        ];
+        break;
+      case 'image':
+        properties = [
+          { name: 'positionX', label: 'Position X', unit: 'px', type: 'number', step: 1 },
+          { name: 'positionY', label: 'Position Y', unit: 'px', type: 'number', step: 1 },
+          { name: 'scale', label: 'Scale', unit: 'x', type: 'range', min: 0.1, max: 5, step: 0.1 },
+        ];
+        break;
+      case 'text':
+        properties = [
+          { name: 'positionX', label: 'Position X', unit: 'px', type: 'number', step: 1 },
+          { name: 'positionY', label: 'Position Y', unit: 'px', type: 'number', step: 1 },
+        ];
+        break;
+      case 'audio':
+        properties = [
+          { name: 'volume', label: 'Volume', unit: '', type: 'range', min: 0, max: 1, step: 0.01 },
+        ];
+        break;
+      default:
+        return null;
+    }
+
+    return (
+      <div className="keyframe-section">
+        {properties.map((prop) => {
+          const hasKeyframes = keyframes[prop.name] && keyframes[prop.name].length > 0;
+          const currentValue = hasKeyframes
+            ? getValueAtTime(keyframes[prop.name], currentTimeInSegment)
+            : tempSegmentValues[prop.name];
+          const miniTimelineWidth = 200;
+          const duration = selectedSegment.duration;
+
+          return (
+            <div key={prop.name} className="property-row">
+              <div className="property-header">
+                <button
+                  className={`keyframe-toggle ${hasKeyframes ? 'active' : ''}`}
+                  onClick={() => toggleKeyframe(prop.name)}
+                  title="Toggle Keyframe"
+                >
+                  ⏱
+                </button>
+                <label>{prop.label}</label>
+              </div>
+              <div className="property-controls">
+                {prop.type === 'number' ? (
+                  <input
+                    type="number"
+                    value={currentValue || 0}
+                    onChange={(e) => updateSegmentProperty(prop.name, parseInt(e.target.value) || 0)}
+                    step={prop.step}
+                    style={{ width: '60px' }}
+                  />
+                ) : (
+                  <div className="slider-container">
+                    <input
+                      type="range"
+                      min={prop.min}
+                      max={prop.max}
+                      step={prop.step}
+                      value={currentValue !== undefined ? currentValue : prop.name === 'volume' ? 1 : 1}
+                      onChange={(e) => updateSegmentProperty(prop.name, parseFloat(e.target.value))}
+                    />
+                    <span>
+                      {(currentValue !== undefined ? currentValue : prop.name === 'volume' ? 1 : 1).toFixed(
+                        prop.step < 1 ? 2 : 1
+                      )}
+                      {prop.unit}
+                    </span>
+                  </div>
+                )}
+                <div className="keyframe-nav">
+                  <button onClick={() => navigateKeyframes(prop.name, 'prev')} disabled={!hasKeyframes}>
+                    ◄
+                  </button>
+                  <button onClick={() => navigateKeyframes(prop.name, 'next')} disabled={!hasKeyframes}>
+                    ►
+                  </button>
+                </div>
+              </div>
+              <div className="mini-timeline" style={{ width: `${miniTimelineWidth}px`, position: 'relative', height: '20px' }}>
+                <div
+                  className="mini-playhead"
+                  style={{ left: `${(currentTimeInSegment / duration) * miniTimelineWidth}px` }}
+                />
+                {(keyframes[prop.name] || []).map((kf, index) => (
+                  <div
+                    key={index}
+                    className="keyframe-marker"
+                    style={{ left: `${(kf.time / duration) * miniTimelineWidth}px` }}
+                    onClick={() => {
+                      setCurrentTimeInSegment(kf.time);
+                      handleTimeUpdate(selectedSegment.startTime + kf.time);
+                      setTempSegmentValues((prev) => ({ ...prev, [prop.name]: kf.value }));
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="project-editor">
       <aside className={`media-panel ${isMediaPanelOpen ? 'open' : 'closed'}`}>
@@ -1244,7 +1520,11 @@ const ProjectEditor = () => {
                       {videos.map((video) => (
                         <div
                           key={video.id || video.filePath || video.filename}
-                          className={`video-item ${selectedVideo && (selectedVideo.id === video.id || selectedVideo.filePath === video.filePath) ? 'selected' : ''}`}
+                          className={`video-item ${
+                            selectedVideo && (selectedVideo.id === video.id || selectedVideo.filePath === video.filePath)
+                              ? 'selected'
+                              : ''
+                          }`}
                           draggable={true}
                           onDragStart={(e) => handleMediaDragStart(e, video, 'media')}
                           onClick={(e) => {
@@ -1428,42 +1708,7 @@ const ProjectEditor = () => {
             {selectedSegment && isTransformOpen && (
               <div className="transform-panel">
                 <h3>Transform</h3>
-                <div className="control-group">
-                  <label>Position X (px)</label>
-                  <input
-                    type="number"
-                    value={tempSegmentValues.positionX || 0}
-                    onChange={(e) => updateSegmentProperty('positionX', parseInt(e.target.value) || 0)}
-                    step="1"
-                    style={{ width: '100px' }}
-                  />
-                </div>
-                <div className="control-group">
-                  <label>Position Y (px)</label>
-                  <input
-                    type="number"
-                    value={tempSegmentValues.positionY || 0}
-                    onChange={(e) => updateSegmentProperty('positionY', parseInt(e.target.value) || 0)}
-                    step="1"
-                    style={{ width: '100px' }}
-                  />
-                </div>
-                {(selectedSegment.type === 'video' || selectedSegment.type === 'image') && (
-                  <div className="control-group">
-                    <label>Scale</label>
-                    <div className="slider-container">
-                      <input
-                        type="range"
-                        min="0.1"
-                        max="5"
-                        step="0.1"
-                        value={tempSegmentValues.scale || 1}
-                        onChange={(e) => updateSegmentProperty('scale', parseFloat(e.target.value))}
-                      />
-                      <span>{(tempSegmentValues.scale || 1).toFixed(1)}x</span>
-                    </div>
-                  </div>
-                )}
+                {renderKeyframeControls()}
               </div>
             )}
             {isFiltersOpen && renderFilterControls()}
@@ -1472,11 +1717,18 @@ const ProjectEditor = () => {
                 <h3>Edit Text</h3>
                 <div className="control-group">
                   <label>Text</label>
-                  <textarea value={textSettings.text} onChange={(e) => updateTextSettings({ ...textSettings, text: e.target.value })} rows={3} />
+                  <textarea
+                    value={textSettings.text}
+                    onChange={(e) => updateTextSettings({ ...textSettings, text: e.target.value })}
+                    rows={3}
+                  />
                 </div>
                 <div className="control-group">
                   <label>Font</label>
-                  <select value={textSettings.fontFamily} onChange={(e) => updateTextSettings({ ...textSettings, fontFamily: e.target.value })}>
+                  <select
+                    value={textSettings.fontFamily}
+                    onChange={(e) => updateTextSettings({ ...textSettings, fontFamily: e.target.value })}
+                  >
                     <option value="Arial">Arial</option>
                     <option value="Verdana">Verdana</option>
                     <option value="Times New Roman">Times New Roman</option>
@@ -1496,7 +1748,11 @@ const ProjectEditor = () => {
                 </div>
                 <div className="control-group">
                   <label>Text Color</label>
-                  <input type="color" value={textSettings.fontColor} onChange={(e) => updateTextSettings({ ...textSettings, fontColor: e.target.value })} />
+                  <input
+                    type="color"
+                    value={textSettings.fontColor}
+                    onChange={(e) => updateTextSettings({ ...textSettings, fontColor: e.target.value })}
+                  />
                 </div>
                 <div className="control-group">
                   <label>Background</label>
@@ -1509,7 +1765,9 @@ const ProjectEditor = () => {
                     <input
                       type="checkbox"
                       checked={textSettings.backgroundColor === 'transparent'}
-                      onChange={(e) => updateTextSettings({ ...textSettings, backgroundColor: e.target.checked ? 'transparent' : '#000000' })}
+                      onChange={(e) =>
+                        updateTextSettings({ ...textSettings, backgroundColor: e.target.checked ? 'transparent' : '#000000' })
+                      }
                     />
                     Transparent
                   </label>

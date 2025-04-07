@@ -451,4 +451,3 @@ const loadProjectTimeline = async () => {
       console.error('Error loading project timeline:', error);
     }
   };
-

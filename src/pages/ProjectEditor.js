@@ -44,7 +44,7 @@ const ProjectEditor = () => {
   const [filterParams, setFilterParams] = useState({});
   const [appliedFilters, setAppliedFilters] = useState([]);
   const [timeScale, setTimeScale] = useState(20);
-  const [keyframes, setKeyframes] = useState({}); // e.g., { positionX: [{ time, value }], ... }
+  const [keyframes, setKeyframes] = useState({});
   const [currentTimeInSegment, setCurrentTimeInSegment] = useState(0);
 
   let timelineSetPlayhead = null;
@@ -56,7 +56,6 @@ const ProjectEditor = () => {
   const { projectId } = useParams();
   const updateTimeoutRef = useRef(null);
 
-  // Sync currentTimeInSegment with timeline playhead
   useEffect(() => {
     if (selectedSegment) {
       const relativeTime = currentTime - selectedSegment.startTime;
@@ -153,7 +152,7 @@ const ProjectEditor = () => {
           timelineStartTime: updatedTextSegment.timelineStartTime,
           timelineEndTime: updatedTextSegment.timelineEndTime,
           layer: updatedTextSegment.layer,
-          keyframes: keyframes, // Include keyframes if any
+          keyframes: keyframes,
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -419,6 +418,7 @@ const ProjectEditor = () => {
                     positionX: segment.positionX || 0,
                     positionY: segment.positionY || 0,
                     scale: segment.scale || 1,
+                    filters: segment.filters || [], // Added from old code
                   });
                 }
               } else if (segment.imagePath) {
@@ -435,6 +435,7 @@ const ProjectEditor = () => {
                     positionX: segment.positionX || 0,
                     positionY: segment.positionY || 0,
                     scale: segment.scale || 1,
+                    filters: segment.filters || [], // Added from old code
                   });
                 }
               }
@@ -697,6 +698,7 @@ const ProjectEditor = () => {
           positionY: segment.positionY || 0,
           scale: segment.scale || 1,
           thumbnail: video.thumbnail,
+          filters: segment.filters || [], // Added from old code
         };
         setVideoLayers((prevLayers) => {
           const newLayers = [...prevLayers];
@@ -719,6 +721,74 @@ const ProjectEditor = () => {
     }
   };
 
+  // Added Delete Segment Functionality from old code
+  const handleDeleteSegment = async () => {
+    if (!selectedSegment || !sessionId || !projectId) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      let endpoint = '';
+      switch (selectedSegment.type) {
+        case 'video':
+          endpoint = `${API_BASE_URL}/projects/timeline/video/${sessionId}/${selectedSegment.id}`;
+          break;
+        case 'audio':
+          endpoint = `${API_BASE_URL}/projects/timeline/audio/${sessionId}/${selectedSegment.id}`;
+          break;
+        case 'image':
+          endpoint = `${API_BASE_URL}/projects/timeline/image/${sessionId}/${selectedSegment.id}`;
+          break;
+        case 'text':
+          endpoint = `${API_BASE_URL}/projects/timeline/text/${sessionId}/${selectedSegment.id}`;
+          break;
+        default:
+          console.error('Unknown segment type:', selectedSegment.type);
+          return;
+      }
+
+      await axios.delete(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (selectedSegment.type === 'audio') {
+        setAudioLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          const layerIndex = Math.abs(selectedSegment.layer) - 1;
+          newLayers[layerIndex] = newLayers[layerIndex].filter(
+            (item) => item.id !== selectedSegment.id
+          );
+          return newLayers;
+        });
+      } else {
+        setVideoLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].filter(
+            (item) => item.id !== selectedSegment.id
+          );
+          return newLayers;
+        });
+      }
+
+      const allLayers = [...videoLayers, ...audioLayers];
+      let maxEndTime = 0;
+      allLayers.forEach((layer) => {
+        layer.forEach((item) => {
+          const endTime = item.startTime + item.duration;
+          if (endTime > maxEndTime) maxEndTime = endTime;
+        });
+      });
+      setTotalDuration(maxEndTime);
+
+      setSelectedSegment(null);
+      setIsTextToolOpen(false);
+      setIsTransformOpen(false);
+      setIsFiltersOpen(false);
+    } catch (error) {
+      console.error('Error deleting segment:', error);
+      alert('Failed to delete segment. Please try again.');
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!isPlaying) {
@@ -726,12 +796,15 @@ const ProjectEditor = () => {
           handleTimeUpdate(Math.max(0, currentTime - 1 / 30), true);
         } else if (e.key === 'ArrowRight') {
           handleTimeUpdate(Math.min(totalDuration, currentTime + 1 / 30), true);
+        } else if (e.key === 'Backspace' && selectedSegment && !isPlaying) { // Added from old code
+          e.preventDefault();
+          handleDeleteSegment();
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, totalDuration, currentTime]);
+  }, [isPlaying, totalDuration, currentTime, selectedSegment]); // Added selectedSegment dependency
 
   useEffect(() => {
     if (isPlaying && currentTime >= totalDuration) {
@@ -831,7 +904,15 @@ const ProjectEditor = () => {
         }
       });
       setTempSegmentValues(initialValues);
-      fetchFilters(segment.id);
+      // Fetch filters when segment is selected (from old code)
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+        params: { sessionId },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const timelineState = typeof response.data.timelineState === 'string' ? JSON.parse(response.data.timelineState) : response.data.timelineState;
+      const segmentData = (segment.type === 'video' || segment.type === 'image' ? timelineState.segments : []).find(s => s.id === segment.id);
+      setAppliedFilters(segmentData?.filters || segment.filters || []);
     } else {
       setTempSegmentValues({});
       setAppliedFilters([]);
@@ -895,10 +976,10 @@ const ProjectEditor = () => {
     for (let i = 0; i < sorted.length - 1; i++) {
       if (time >= sorted[i].time && time <= sorted[i + 1].time) {
         const t = (time - sorted[i].time) / (sorted[i + 1].time - sorted[i].time);
-        return sorted[i].value + t * (sorted[i + 1].value - sorted[i].value); // Linear interpolation
+        return sorted[i].value + t * (sorted[i + 1].value - sorted[i].value);
       }
     }
-    return sorted[0].value; // Fallback
+    return sorted[0].value;
   };
 
   const addKeyframe = async (property, value) => {
@@ -1010,6 +1091,7 @@ const ProjectEditor = () => {
                   : tempSegmentValues.positionY,
               scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : tempSegmentValues.scale,
               keyframes: updatedKeyframes,
+              filters: appliedFilters, // Added from old code
             },
             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
           );
@@ -1029,6 +1111,7 @@ const ProjectEditor = () => {
                   : tempSegmentValues.positionY,
               scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : tempSegmentValues.scale,
               keyframes: updatedKeyframes,
+              filters: appliedFilters, // Added from old code
             },
             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
           );
@@ -1188,6 +1271,7 @@ const ProjectEditor = () => {
             positionX: newImageSegment.positionX || 50,
             positionY: newImageSegment.positionY || 50,
             scale: newImageSegment.scale || 1,
+            filters: newImageSegment.filters || [], // Added from old code
           });
           return newLayers;
         });
@@ -1197,178 +1281,263 @@ const ProjectEditor = () => {
     }
   };
 
-  const fetchFilters = async (segmentId) => {
-    if (!segmentId || !sessionId) return;
+  // Added Filter Functionality from old code
+  const handleApplyFilter = async () => {
+    if (!selectedSegment || !sessionId || !projectId || Object.keys(filterParams).length === 0) return;
+    if (selectedSegment.type !== 'video' && selectedSegment.type !== 'image') return;
+
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_BASE_URL}/projects/${projectId}/sessions/${sessionId}/segments/${segmentId}/filters`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const filterRequests = Object.entries(filterParams).map(([filterName, filterValue]) =>
+        axios.post(
+          `${API_BASE_URL}/projects/${projectId}/apply-filter`,
+          {
+            segmentId: selectedSegment.id,
+            filterName,
+            filterValue: filterValue.toString(),
+          },
+          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+        )
       );
-      setAppliedFilters(response.data || []);
+      await Promise.all(filterRequests);
+      const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+        params: { sessionId },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updatedTimelineState = typeof response.data.timelineState === 'string' ? JSON.parse(response.data.timelineState) : response.data.timelineState;
+      const updatedSegment = updatedTimelineState.segments.find((seg) => seg.id === selectedSegment.id);
+      if (updatedSegment) {
+        setVideoLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
+            item.id === selectedSegment.id ? { ...item, filters: updatedSegment.filters || [] } : item
+          );
+          return newLayers;
+        });
+        setSelectedSegment((prev) => ({ ...prev, filters: updatedSegment.filters || [] }));
+        setAppliedFilters(updatedSegment.filters || []);
+      }
+      setFilterParams({}); // Clear temp filter settings after applying
     } catch (error) {
-      console.error('Error fetching filters:', error);
-      setAppliedFilters([]);
+      console.error('Error applying filters:', error);
     }
   };
 
-  const applyFilter = async (filterType, params) => {
-    if (!selectedSegment || !sessionId) return;
+  const handleRemoveFilter = async (filterName) => {
+    if (!selectedSegment || !sessionId || !projectId) return;
     try {
       const token = localStorage.getItem('token');
+      const filterToRemove = selectedSegment.filters.find((f) => f.filterName === filterName);
+      if (!filterToRemove) return;
       await axios.post(
-        `${API_BASE_URL}/projects/${projectId}/sessions/${sessionId}/segments/${selectedSegment.id}/filters`,
-        { filterType, filterParams: params },
-        { headers: { Authorization: `Bearer ${token}` } }
+        `${API_BASE_URL}/projects/${projectId}/remove-filter`,
+        {
+          segmentId: selectedSegment.id,
+          filterId: filterToRemove.filterId,
+        },
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
-      await fetchFilters(selectedSegment.id);
-    } catch (error) {
-      console.error('Error applying filter:', error);
-    }
-  };
-
-  const removeFilter = async (filterId) => {
-    if (!selectedSegment || !sessionId) return;
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(
-        `${API_BASE_URL}/projects/${projectId}/sessions/${sessionId}/filters/${filterId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      await fetchFilters(selectedSegment.id);
+      const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+        params: { sessionId },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updatedTimelineState = typeof response.data.timelineState === 'string' ? JSON.parse(response.data.timelineState) : response.data.timelineState;
+      const updatedSegment = updatedTimelineState.segments.find((seg) => seg.id === selectedSegment.id);
+      if (updatedSegment) {
+        setVideoLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
+            item.id === selectedSegment.id ? { ...item, filters: updatedSegment.filters || [] } : item
+          );
+          return newLayers;
+        });
+        setSelectedSegment((prev) => ({ ...prev, filters: updatedSegment.filters || [] }));
+        setAppliedFilters(updatedSegment.filters || []);
+        setFilterParams((prev) => {
+          const newSettings = { ...prev };
+          delete newSettings[filterName];
+          return newSettings;
+        });
+      }
     } catch (error) {
       console.error('Error removing filter:', error);
     }
   };
 
-  const renderFilterControls = () => {
-    const filterDefinitions = [
-      {
-        name: 'Brightness',
-        type: 'brightness',
-        params: [{ key: 'value', label: 'Value', type: 'range', min: -1, max: 1, step: 0.1, default: 0 }],
-      },
-      {
-        name: 'Contrast',
-        type: 'contrast',
-        params: [{ key: 'value', label: 'Value', type: 'range', min: 0, max: 3, step: 0.1, default: 1 }],
-      },
-      {
-        name: 'Saturation',
-        type: 'saturation',
-        params: [{ key: 'value', label: 'Value', type: 'range', min: 0, max: 3, step: 0.1, default: 1 }],
-      },
-      {
-        name: 'Blur',
-        type: 'blur',
-        params: [{ key: 'sigma', label: 'Sigma', type: 'range', min: 1, max: 10, step: 1, default: 5 }],
-      },
-      { name: 'Sharpen', type: 'sharpen', params: [] },
-      { name: 'Grayscale', type: 'grayscale', params: [] },
-      { name: 'Sepia', type: 'sepia', params: [] },
-      { name: 'Mirror', type: 'mirror', params: [] },
-      {
-        name: 'Rotate',
-        type: 'rotate',
-        params: [{ key: 'angle', label: 'Angle (degrees)', type: 'number', default: 90 }],
-      },
-      {
-        name: 'Color Balance',
-        type: 'colorbalance',
-        params: [
-          { key: 'red', label: 'Red', type: 'range', min: -1, max: 1, step: 0.1, default: 0 },
-          { key: 'green', label: 'Green', type: 'range', min: -1, max: 1, step: 0.1, default: 0 },
-          { key: 'blue', label: 'Blue', type: 'range', min: -1, max: 1, step: 0.1, default: 0 },
-        ],
-      },
-      { name: 'Vignette', type: 'vignette', params: [] },
-      { name: 'Film Grain', type: 'filmgrain', params: [] },
-      { name: 'Cinematic', type: 'cinematic', params: [] },
-      { name: 'Glow', type: 'glow', params: [] },
-    ];
+  const updateFilterSetting = (filterName, filterValue) => {
+    setFilterParams((prev) => ({
+      ...prev,
+      [filterName]: filterValue,
+    }));
+  };
 
+  const renderFilterControls = () => {
     return (
-      <div className="filter-panel">
+      <div className="filters-panel" style={{ maxHeight: '400px', overflowY: 'auto' }}>
         <h3>Filters</h3>
-        {!selectedSegment ? (
-          <p>Select a segment to apply filters</p>
+        {!selectedSegment || (selectedSegment.type !== 'video' && selectedSegment.type !== 'image') ? (
+          <p>Select a video or image segment to apply filters</p>
         ) : (
           <>
-            <div className="filter-list">
-              {filterDefinitions.map((filter) => (
-                <div key={filter.type} className="filter-option">
-                  <div className="filter-header">
-                    <span>{filter.name}</span>
-                    <button
-                      className="apply-filter-btn"
-                      onClick={() => {
-                        const params = {};
-                        filter.params.forEach((param) => {
-                          params[param.key] = filterParams[`${filter.type}_${param.key}`] || param.default;
-                        });
-                        applyFilter(filter.type, params);
-                      }}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  {filter.params.length > 0 && (
-                    <div className="filter-params">
-                      {filter.params.map((param) => (
-                        <div key={param.key} className="control-group">
-                          <label>{param.label}</label>
-                          {param.type === 'range' ? (
-                            <div className="slider-container">
-                              <input
-                                type="range"
-                                min={param.min}
-                                max={param.max}
-                                step={param.step}
-                                value={filterParams[`${filter.type}_${param.key}`] || param.default}
-                                onChange={(e) =>
-                                  setFilterParams((prev) => ({
-                                    ...prev,
-                                    [`${filter.type}_${param.key}`]: parseFloat(e.target.value),
-                                  }))
-                                }
-                              />
-                              <span>{filterParams[`${filter.type}_${param.key}`] || param.default}</span>
-                            </div>
-                          ) : param.type === 'number' ? (
-                            <input
-                              type="number"
-                              value={filterParams[`${filter.type}_${param.key}`] || param.default}
-                              onChange={(e) =>
-                                setFilterParams((prev) => ({
-                                  ...prev,
-                                  [`${filter.type}_${param.key}`]: parseInt(e.target.value),
-                                }))
-                              }
-                              className="filter-input"
-                            />
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+            <div className="filter-group">
+              <h4>Color Adjustments</h4>
+              <div className="control-group">
+                <label>Brightness (-1 to 1)</label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min="-1"
+                    max="1"
+                    step="0.1"
+                    value={filterParams.brightness || 0}
+                    onChange={(e) => updateFilterSetting('brightness', e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    value={filterParams.brightness || 0}
+                    onChange={(e) => updateFilterSetting('brightness', e.target.value)}
+                    step="0.1"
+                    min="-1"
+                    max="1"
+                    style={{ width: '60px', marginLeft: '10px' }}
+                  />
                 </div>
-              ))}
+              </div>
+              <div className="control-group">
+                <label>Contrast (0 to 2)</label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={filterParams.contrast || 1}
+                    onChange={(e) => updateFilterSetting('contrast', e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    value={filterParams.contrast || 1}
+                    onChange={(e) => updateFilterSetting('contrast', e.target.value)}
+                    step="0.1"
+                    min="0"
+                    max="2"
+                    style={{ width: '60px', marginLeft: '10px' }}
+                  />
+                </div>
+              </div>
+              <div className="control-group">
+                <label>Saturation (0 to 2)</label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={filterParams.saturation || 1}
+                    onChange={(e) => updateFilterSetting('saturation', e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    value={filterParams.saturation || 1}
+                    onChange={(e) => updateFilterSetting('saturation', e.target.value)}
+                    step="0.1"
+                    min="0"
+                    max="2"
+                    style={{ width: '60px', marginLeft: '10px' }}
+                  />
+                </div>
+              </div>
+              <div className="control-group">
+                <label>Hue (-180 to 180)</label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min="-180"
+                    max="180"
+                    step="1"
+                    value={filterParams.hue || 0}
+                    onChange={(e) => updateFilterSetting('hue', e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    value={filterParams.hue || 0}
+                    onChange={(e) => updateFilterSetting('hue', e.target.value)}
+                    step="1"
+                    min="-180"
+                    max="180"
+                    style={{ width: '60px', marginLeft: '10px' }}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="applied-filters">
-              <h4>Applied Filters</h4>
-              {appliedFilters.length > 0 ? (
-                appliedFilters.map((filter) => (
-                  <div key={filter.filterId} className="filter-item">
-                    <span>{filter.filterType}</span>
-                    <button onClick={() => removeFilter(filter.filterId)} className="remove-filter-btn">
-                      Remove
+            <div className="filter-group">
+              <h4>Blur and Sharpen</h4>
+              <div className="control-group">
+                <label>Blur (0-10)</label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    step="1"
+                    value={filterParams.blur || 0}
+                    onChange={(e) => updateFilterSetting('blur', e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    value={filterParams.blur || 0}
+                    onChange={(e) => updateFilterSetting('blur', e.target.value)}
+                    step="1"
+                    min="0"
+                    max="10"
+                    style={{ width: '60px', marginLeft: '10px' }}
+                  />
+                </div>
+              </div>
+              <div className="control-group">
+                <label>Sharpen (-2 to 2)</label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min="-2"
+                    max="2"
+                    step="0.1"
+                    value={filterParams.sharpen || 0}
+                    onChange={(e) => updateFilterSetting('sharpen', e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    value={filterParams.sharpen || 0}
+                    onChange={(e) => updateFilterSetting('sharpen', e.target.value)}
+                    step="0.1"
+                    min="-2"
+                    max="2"
+                    style={{ width: '60px', marginLeft: '10px' }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="filter-actions">
+              <button onClick={handleApplyFilter} disabled={Object.keys(filterParams).length === 0}>
+                Apply Filters
+              </button>
+            </div>
+            {appliedFilters && appliedFilters.length > 0 && (
+              <div className="applied-filters">
+                <h4>Applied Filters</h4>
+                {appliedFilters.map((filter) => (
+                  <div key={filter.filterId} className="applied-filter-item">
+                    {filter.filterName}: {filter.filterValue}
+                    <button
+                      onClick={() => handleRemoveFilter(filter.filterName)}
+                      className="remove-filter-button"
+                    >
+                      ✕
                     </button>
                   </div>
-                ))
-              ) : (
-                <p>No filters applied</p>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -1634,6 +1803,14 @@ const ProjectEditor = () => {
             <button className="control-button" onClick={handleSaveProject}>
               Save Project
             </button>
+            {/* Added Delete Button from old code */}
+            <button
+              className="delete-button"
+              onClick={handleDeleteSegment}
+              disabled={!selectedSegment}
+            >
+              🗑️
+            </button>
             <button className="control-button" onClick={handleExportProject}>
               Export Video
             </button>
@@ -1661,6 +1838,7 @@ const ProjectEditor = () => {
                 timeScale={timeScale}
                 setTimeScale={setTimeScale}
                 setPlayheadFromParent={(setPlayhead) => (timelineSetPlayhead = setPlayhead)}
+                onDeleteSegment={handleDeleteSegment} // Pass delete handler to TimelineComponent
               />
             ) : (
               <div className="loading-message">Loading timeline...</div>
@@ -1712,42 +1890,40 @@ const ProjectEditor = () => {
               </div>
             )}
             {isFiltersOpen && renderFilterControls()}
-            {selectedSegment && selectedSegment.type === 'text' && isTextToolOpen && (
-              <div className="text-panel">
-                <h3>Edit Text</h3>
+            {isTextToolOpen && selectedSegment && selectedSegment.type === 'text' && (
+              <div className="text-tool-panel">
+                <h3>Text Settings</h3>
                 <div className="control-group">
-                  <label>Text</label>
-                  <textarea
+                  <label>Text Content</label>
+                  <input
+                    type="text"
                     value={textSettings.text}
                     onChange={(e) => updateTextSettings({ ...textSettings, text: e.target.value })}
-                    rows={3}
                   />
                 </div>
                 <div className="control-group">
-                  <label>Font</label>
+                  <label>Font Family</label>
                   <select
                     value={textSettings.fontFamily}
                     onChange={(e) => updateTextSettings({ ...textSettings, fontFamily: e.target.value })}
                   >
                     <option value="Arial">Arial</option>
-                    <option value="Verdana">Verdana</option>
+                    <option value="Helvetica">Helvetica</option>
                     <option value="Times New Roman">Times New Roman</option>
-                    <option value="Georgia">Georgia</option>
                     <option value="Courier New">Courier New</option>
                   </select>
                 </div>
                 <div className="control-group">
-                  <label>Size</label>
+                  <label>Font Size</label>
                   <input
                     type="number"
                     value={textSettings.fontSize}
-                    onChange={(e) => updateTextSettings({ ...textSettings, fontSize: parseInt(e.target.value) })}
-                    min="8"
-                    max="72"
+                    onChange={(e) => updateTextSettings({ ...textSettings, fontSize: parseInt(e.target.value) || 24 })}
+                    min="1"
                   />
                 </div>
                 <div className="control-group">
-                  <label>Text Color</label>
+                  <label>Font Color</label>
                   <input
                     type="color"
                     value={textSettings.fontColor}
@@ -1755,41 +1931,29 @@ const ProjectEditor = () => {
                   />
                 </div>
                 <div className="control-group">
-                  <label>Background</label>
+                  <label>Background Color</label>
                   <input
                     type="color"
                     value={textSettings.backgroundColor === 'transparent' ? '#000000' : textSettings.backgroundColor}
-                    onChange={(e) => updateTextSettings({ ...textSettings, backgroundColor: e.target.value })}
+                    onChange={(e) =>
+                      updateTextSettings({
+                        ...textSettings,
+                        backgroundColor: e.target.value === '#000000' ? 'transparent' : e.target.value,
+                      })
+                    }
                   />
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={textSettings.backgroundColor === 'transparent'}
-                      onChange={(e) =>
-                        updateTextSettings({ ...textSettings, backgroundColor: e.target.checked ? 'transparent' : '#000000' })
-                      }
-                    />
-                    Transparent
-                  </label>
                 </div>
                 <div className="control-group">
-                  <label>Duration (seconds)</label>
+                  <label>Duration (s)</label>
                   <input
                     type="number"
                     value={textSettings.duration}
-                    onChange={(e) => updateTextSettings({ ...textSettings, duration: parseFloat(e.target.value) })}
+                    onChange={(e) => updateTextSettings({ ...textSettings, duration: parseFloat(e.target.value) || 5 })}
                     min="0.1"
                     step="0.1"
                   />
                 </div>
-                <div className="dialog-buttons">
-                  <button className="cancel-button" onClick={() => setIsTextToolOpen(false)}>
-                    Cancel
-                  </button>
-                  <button className="save-button" onClick={handleSaveTextSegment}>
-                    Save
-                  </button>
-                </div>
+                <button onClick={handleSaveTextSegment}>Save Text</button>
               </div>
             )}
           </div>

@@ -46,6 +46,7 @@ const ProjectEditor = () => {
   const [timeScale, setTimeScale] = useState(20);
   const [keyframes, setKeyframes] = useState({});
   const [currentTimeInSegment, setCurrentTimeInSegment] = useState(0);
+  const [editingProperty, setEditingProperty] = useState(null);
 
   let timelineSetPlayhead = null;
 
@@ -867,6 +868,7 @@ const ProjectEditor = () => {
             positionX: segment.positionX || 0,
             positionY: segment.positionY || 0,
             scale: segment.scale || 1,
+            opacity: segment.opacity || 1, // Added opacity
           };
           break;
         case 'image':
@@ -874,12 +876,14 @@ const ProjectEditor = () => {
             positionX: segment.positionX || 0,
             positionY: segment.positionY || 0,
             scale: segment.scale || 1,
+            opacity: segment.opacity || 1, // Added opacity
           };
           break;
         case 'text':
           initialValues = {
             positionX: segment.positionX || 0,
             positionY: segment.positionY || 0,
+            opacity: segment.opacity || 1, // Added opacity
           };
           break;
         case 'audio':
@@ -901,7 +905,6 @@ const ProjectEditor = () => {
         }
       });
       setTempSegmentValues(initialValues);
-      // Fetch filters when segment is selected (from old code)
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
         params: { sessionId },
@@ -1032,7 +1035,13 @@ const ProjectEditor = () => {
     if (keyframeAtTime) {
       removeKeyframe(property, currentTimeInSegment);
     } else {
-      addKeyframe(property, tempSegmentValues[property]);
+      // Use the current value from tempSegmentValues if available, otherwise interpolate or use default
+      const value = tempSegmentValues[property] !== undefined
+        ? tempSegmentValues[property]
+        : (currentKeyframes.length > 0
+           ? getValueAtTime(currentKeyframes, currentTimeInSegment)
+           : (property === 'scale' || property === 'opacity' ? 1 : 0));
+      addKeyframe(property, value);
     }
   };
 
@@ -1087,8 +1096,9 @@ const ProjectEditor = () => {
                   ? undefined
                   : tempSegmentValues.positionY,
               scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : tempSegmentValues.scale,
+              opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : tempSegmentValues.opacity, // Added opacity
               keyframes: updatedKeyframes,
-              filters: appliedFilters, // Added from old code
+              filters: appliedFilters,
             },
             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
           );
@@ -1107,8 +1117,9 @@ const ProjectEditor = () => {
                   ? undefined
                   : tempSegmentValues.positionY,
               scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : tempSegmentValues.scale,
+              opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : tempSegmentValues.opacity, // Added opacity
               keyframes: updatedKeyframes,
-              filters: appliedFilters, // Added from old code
+              filters: appliedFilters,
             },
             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
           );
@@ -1134,6 +1145,7 @@ const ProjectEditor = () => {
                 updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0
                   ? undefined
                   : tempSegmentValues.positionY,
+              opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : tempSegmentValues.opacity, // Added opacity
               keyframes: updatedKeyframes,
             },
             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
@@ -1548,40 +1560,98 @@ const ProjectEditor = () => {
     switch (selectedSegment.type) {
       case 'video':
         properties = [
-          { name: 'positionX', label: 'Position X', unit: 'px', type: 'number', step: 1 },
-          { name: 'positionY', label: 'Position Y', unit: 'px', type: 'number', step: 1 },
-          { name: 'scale', label: 'Scale', unit: 'x', type: 'range', min: 0.1, max: 5, step: 0.1 },
+          { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
+          { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
+          { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 },
+          { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 }, // Added opacity
         ];
         break;
       case 'image':
         properties = [
-          { name: 'positionX', label: 'Position X', unit: 'px', type: 'number', step: 1 },
-          { name: 'positionY', label: 'Position Y', unit: 'px', type: 'number', step: 1 },
-          { name: 'scale', label: 'Scale', unit: 'x', type: 'range', min: 0.1, max: 5, step: 0.1 },
+          { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
+          { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
+          { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 },
+          { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 }, // Added opacity
         ];
         break;
       case 'text':
         properties = [
-          { name: 'positionX', label: 'Position X', unit: 'px', type: 'number', step: 1 },
-          { name: 'positionY', label: 'Position Y', unit: 'px', type: 'number', step: 1 },
+          { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
+          { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
+          { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 }, // Added opacity
         ];
         break;
       case 'audio':
         properties = [
-          { name: 'volume', label: 'Volume', unit: '', type: 'range', min: 0, max: 1, step: 0.01 },
+          { name: 'volume', label: 'Volume', unit: '', step: 0.01, min: 0, max: 1 },
         ];
         break;
       default:
         return null;
     }
 
+    const startDragging = (e, property) => {
+      e.preventDefault();
+      const initialX = e.clientX;
+      const initialValue = parseFloat(
+        tempSegmentValues[property.name] ||
+        selectedSegment[property.name] ||
+        (property.name === 'scale' ? 1 : property.name === 'opacity' ? 1 : 0) // Default opacity to 1
+      );
+      const step = property.step;
+
+      const onMouseMove = (moveEvent) => {
+        const deltaX = moveEvent.clientX - initialX;
+        const sensitivity = step < 1 ? 0.1 : 1;
+        let newValue = initialValue + (deltaX * step * sensitivity);
+        newValue = Math.max(property.min, Math.min(property.max, newValue));
+        newValue = Math.round(newValue / step) * step;
+        setTempSegmentValues((prev) => ({ ...prev, [property.name]: newValue }));
+        updateSegmentProperty(property.name, newValue);
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    };
+
+    const handleValueClick = (property) => {
+      setEditingProperty(property.name);
+    };
+
+    const handleInputChange = (e, property) => {
+      let newValue = parseFloat(e.target.value);
+      if (isNaN(newValue)) return;
+      newValue = Math.max(property.min, Math.min(property.max, newValue));
+      newValue = Math.round(newValue / property.step) * property.step;
+      setTempSegmentValues((prev) => ({ ...prev, [property.name]: newValue }));
+      updateSegmentProperty(property.name, newValue);
+    };
+
+    const handleInputKeyDown = (e, property) => {
+      if (e.key === 'Enter') {
+        setEditingProperty(null);
+      }
+    };
+
+    const handleInputBlur = (property) => {
+      setEditingProperty(null);
+    };
+
     return (
       <div className="keyframe-section">
         {properties.map((prop) => {
           const hasKeyframes = keyframes[prop.name] && keyframes[prop.name].length > 0;
+          const isAtKeyframe = hasKeyframes && keyframes[prop.name].some((kf) => areTimesEqual(kf.time, currentTimeInSegment));
           const currentValue = hasKeyframes
             ? getValueAtTime(keyframes[prop.name], currentTimeInSegment)
-            : tempSegmentValues[prop.name];
+            : (tempSegmentValues[prop.name] !== undefined
+               ? tempSegmentValues[prop.name]
+               : selectedSegment[prop.name] || (prop.name === 'scale' || prop.name === 'opacity' ? 1 : 0)); // Default opacity to 1
           const miniTimelineWidth = 200;
           const duration = selectedSegment.duration;
 
@@ -1589,7 +1659,7 @@ const ProjectEditor = () => {
             <div key={prop.name} className="property-row">
               <div className="property-header">
                 <button
-                  className={`keyframe-toggle ${hasKeyframes ? 'active' : ''}`}
+                  className={`keyframe-toggle ${isAtKeyframe ? 'active' : ''}`}
                   onClick={() => toggleKeyframe(prop.name)}
                   title="Toggle Keyframe"
                 >
@@ -1598,42 +1668,42 @@ const ProjectEditor = () => {
                 <label>{prop.label}</label>
               </div>
               <div className="property-controls">
-                {prop.type === 'number' ? (
+                {editingProperty === prop.name ? (
                   <input
-                    type="number"
-                    value={currentValue || 0}
-                    onChange={(e) => updateSegmentProperty(prop.name, parseInt(e.target.value) || 0)}
-                    step={prop.step}
-                    style={{ width: '60px' }}
+                    type="text"
+                    className="value-scrubber"
+                    defaultValue={currentValue.toFixed(prop.step < 1 ? 2 : 0)}
+                    onChange={(e) => handleInputChange(e, prop)}
+                    onKeyDown={(e) => handleInputKeyDown(e, prop)}
+                    onBlur={() => handleInputBlur(prop)}
+                    autoFocus
+                    style={{ width: '60px', textAlign: 'center' }}
                   />
                 ) : (
-                  <div className="slider-container">
-                    <input
-                      type="range"
-                      min={prop.min}
-                      max={prop.max}
-                      step={prop.step}
-                      value={currentValue !== undefined ? currentValue : prop.name === 'volume' ? 1 : 1}
-                      onChange={(e) => updateSegmentProperty(prop.name, parseFloat(e.target.value))}
-                    />
-                    <span>
-                      {(currentValue !== undefined ? currentValue : prop.name === 'volume' ? 1 : 1).toFixed(
-                        prop.step < 1 ? 2 : 1
-                      )}
-                      {prop.unit}
-                    </span>
+                  <div
+                    className="value-scrubber"
+                    onClick={() => handleValueClick(prop)}
+                    onMouseDown={(e) => startDragging(e, prop)}
+                  >
+                    {currentValue.toFixed(prop.step < 1 ? 2 : 0)} {prop.unit}
                   </div>
                 )}
                 <div className="keyframe-nav">
-                  <button onClick={() => navigateKeyframes(prop.name, 'prev')} disabled={!hasKeyframes}>
+                  <button
+                    onClick={() => navigateKeyframes(prop.name, 'prev')}
+                    disabled={!hasKeyframes}
+                  >
                     ◄
                   </button>
-                  <button onClick={() => navigateKeyframes(prop.name, 'next')} disabled={!hasKeyframes}>
+                  <button
+                    onClick={() => navigateKeyframes(prop.name, 'next')}
+                    disabled={!hasKeyframes}
+                  >
                     ►
                   </button>
                 </div>
               </div>
-              <div className="mini-timeline" style={{ width: `${miniTimelineWidth}px`, position: 'relative', height: '20px' }}>
+              <div className="mini-timeline">
                 <div
                   className="mini-playhead"
                   style={{ left: `${(currentTimeInSegment / duration) * miniTimelineWidth}px` }}

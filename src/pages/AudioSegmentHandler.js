@@ -14,6 +14,7 @@ const AudioSegmentHandler = ({
 }) => {
   const updateAudioSegment = async (audioSegmentId, newStartTime, newLayer, newDuration, startTimeWithinAudio, endTimeWithinAudio, draggingItem) => {
     if (!projectId || !sessionId) return;
+
     try {
       const token = localStorage.getItem('token');
       let item = draggingItem;
@@ -24,17 +25,42 @@ const AudioSegmentHandler = ({
       if (!item) {
         throw new Error(`Audio segment with ID ${audioSegmentId} not found in layer ${newLayer}`);
       }
+
       const originalDuration = item.duration;
       const timelineEndTime = newStartTime + (newDuration || originalDuration);
+
+      // [Change] Assume item.duration is the timeline duration; fetch actual audio duration if needed
+      // For simplicity, we'll use a reasonable max duration if not available; ideally, this should come from item
+      const maxAudioDuration = item.maxDuration || 3600; // Default to 1 hour if not known; replace with actual duration if stored
+
+      // [Change] Clamp startTimeWithinAudio and endTimeWithinAudio to valid ranges
+      const clampedStartTimeWithinAudio = Math.max(0, Math.min(
+        startTimeWithinAudio !== undefined ? startTimeWithinAudio : item.startTimeWithinAudio || 0,
+        maxAudioDuration - (newDuration || originalDuration)
+      ));
+      const clampedEndTimeWithinAudio = Math.max(
+        clampedStartTimeWithinAudio + 0.001, // Ensure end > start
+        Math.min(
+          endTimeWithinAudio !== undefined ? endTimeWithinAudio : (item.endTimeWithinAudio || clampedStartTimeWithinAudio + originalDuration),
+          maxAudioDuration
+        )
+      );
+
+      // [Change] Adjust timelineEndTime if audio bounds were clamped
+      const adjustedDuration = clampedEndTimeWithinAudio - clampedStartTimeWithinAudio;
+      const adjustedTimelineEndTime = newStartTime + adjustedDuration;
+
       const requestBody = {
         audioSegmentId,
         timelineStartTime: newStartTime,
-        timelineEndTime: timelineEndTime,
+        timelineEndTime: adjustedTimelineEndTime,
         layer: newLayer,
-        startTime: startTimeWithinAudio !== undefined ? startTimeWithinAudio : item.startTimeWithinAudio || 0,
-        endTime: endTimeWithinAudio !== undefined ? endTimeWithinAudio : item.endTimeWithinAudio || (item.startTimeWithinAudio || 0) + (newDuration || originalDuration),
+        startTime: clampedStartTimeWithinAudio,
+        endTime: clampedEndTimeWithinAudio,
+        ...(item.volume !== undefined && { volume: item.volume }) // Include volume if available
       };
-      await axios.put(
+
+      const response = await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-audio`,
         requestBody,
         {
@@ -42,9 +68,28 @@ const AudioSegmentHandler = ({
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      console.log(`Updated audio segment ${audioSegmentId} to start at ${newStartTime}s, end at ${timelineEndTime}s, layer ${newLayer}, startTimeWithinAudio at ${startTimeWithinAudio}s, endTimeWithinAudio at ${endTimeWithinAudio}s`);
+
+      // [Change] Update local item with clamped values to maintain consistency
+      const updatedItem = {
+        ...item,
+        startTime: newStartTime,
+        duration: adjustedDuration,
+        timelineEndTime: adjustedTimelineEndTime,
+        startTimeWithinAudio: clampedStartTimeWithinAudio,
+        endTimeWithinAudio: clampedEndTimeWithinAudio,
+      };
+      const layerIndex = Math.abs(newLayer) - 1;
+      setAudioLayers(prevLayers => {
+        const newLayers = [...prevLayers];
+        newLayers[layerIndex] = newLayers[layerIndex].map(i => i.id === audioSegmentId ? updatedItem : i);
+        return newLayers;
+      });
+
+      console.log(`Updated audio segment ${audioSegmentId} to start at ${newStartTime}s, end at ${adjustedTimelineEndTime}s, layer ${newLayer}, startTimeWithinAudio at ${clampedStartTimeWithinAudio}s, endTimeWithinAudio at ${clampedEndTimeWithinAudio}s`);
     } catch (error) {
-      console.error('Error updating audio segment:', error);
+      // [Change] Enhanced error logging with response data
+      console.error('Error updating audio segment:', error.response?.data || error.message);
+      throw error; // Re-throw to allow caller to handle
     }
   };
 
@@ -107,7 +152,7 @@ const AudioSegmentHandler = ({
             }
           }
 
-          console.log('Dropping audio with fileName:', audio.fileName); // Debug log
+          console.log('Dropping audio with fileName:', audio.fileName);
           await axios.post(
             `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
             {
@@ -236,8 +281,7 @@ const AudioSegmentHandler = ({
       firstPart
     );
 
-    // Use the full item.fileName as it matches the updated audioJson
-    const audioFileName = item.fileName.split('/').pop(); // Remove any path, keep full unique name
+    const audioFileName = item.fileName.split('/').pop();
     console.log('Original item.fileName:', item.fileName);
     console.log('Sending audioFileName to backend:', audioFileName);
 
@@ -245,7 +289,7 @@ const AudioSegmentHandler = ({
       await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
         {
-          audioFileName: audioFileName, // e.g., "58_1743668985141_38_1743166762719_Suniyan Suniyan - Juss 320 Kbps.mp3"
+          audioFileName: audioFileName,
           layer: item.layer,
           timelineStartTime: secondPart.startTime,
           timelineEndTime: secondPart.timelineEndTime,

@@ -4,9 +4,9 @@
 .dashboard {
   padding: 20px;
   font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, #1E2525 0%, #2A3439 100%); /* Dark gradient background */
+  background: linear-gradient(135deg, #1E2525 0%, #2A3439 100%);
   min-height: 100vh;
-  color: #E0E6E6; /* Light text for contrast */
+  color: #E0E6E6;
 }
 
 .dashboard-header {
@@ -20,7 +20,7 @@
 .header-left .product-name {
   font-size: 2rem;
   font-weight: 700;
-  color: #FFD700; /* Muted gold for branding */
+  color: #FFD700;
   margin: 0;
   letter-spacing: 1px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -28,6 +28,9 @@
 
 .header-right {
   position: relative;
+  display: flex; /* Updated to align create button and profile section */
+  align-items: center;
+  gap: 20px; /* Space between create button and profile */
 }
 
 .create-dropdown {
@@ -39,7 +42,7 @@
   font-size: 1rem;
   font-weight: 500;
   color: #fff;
-  background: linear-gradient(90deg, #00C4B4 0%, #26A69A 100%); /* Teal gradient */
+  background: linear-gradient(90deg, #00C4B4 0%, #26A69A 100%);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -63,7 +66,7 @@
   position: absolute;
   top: 100%;
   right: 0;
-  background: #2E3838; /* Slightly lighter dark shade */
+  background: #2E3838;
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   z-index: 10;
@@ -93,7 +96,7 @@
   font-size: 1rem;
   font-weight: 400;
   color: #E0E6E6;
-  background: #3A4444; /* Dark input background */
+  background: #3A4444;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   margin-bottom: 10px;
@@ -102,7 +105,7 @@
 }
 
 .dropdown-input:focus {
-  border-color: #00C4B4; /* Teal accent */
+  border-color: #00C4B4;
   box-shadow: 0 0 5px rgba(0, 196, 180, 0.5);
   outline: none;
 }
@@ -125,7 +128,7 @@
 .dropdown-subtitle {
   font-size: 0.9rem;
   font-weight: 500;
-  color: #A0A8A8; /* Muted gray */
+  color: #A0A8A8;
   padding: 5px 0;
 }
 
@@ -140,7 +143,7 @@
 }
 
 .dropdown-item:hover {
-  background-color: rgba(0, 196, 180, 0.15); /* Teal hover effect */
+  background-color: rgba(0, 196, 180, 0.15);
   color: #00C4B4;
 }
 
@@ -172,7 +175,7 @@
 
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* Slightly wider cards */
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 25px;
   max-width: 1200px;
   margin: 0 auto;
@@ -196,7 +199,7 @@
 
 .thumbnail-container {
   width: 100%;
-  height: 124px; /* Slightly taller for better visuals */
+  height: 124px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -241,4 +244,84 @@
   font-size: 1.1rem;
   font-weight: 400;
   margin: 20px 0;
+}
+
+/* New styles for profile section */
+.profile-section {
+  position: relative;
+}
+
+.profile-icon {
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+  transition: border-color 0.2s;
+}
+
+.profile-icon:hover {
+  border-color: #00C4B4; /* Teal accent on hover */
+}
+
+.profile-picture {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.default-profile-icon {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #00C4B4 0%, #26A69A 100%); /* Teal gradient */
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background: #2E3838; /* Matches dropdown-menu */
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  z-index: 10;
+  width: 200px;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-name {
+  padding: 8px 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #E0E6E6;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-dropdown-item {
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #E0E6E6;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  border-radius: 4px;
+}
+
+.profile-dropdown-item:hover {
+  background-color: rgba(0, 196, 180, 0.15); /* Teal hover effect */
+  color: #00C4B4;
 }

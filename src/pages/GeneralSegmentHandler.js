@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 
 const GeneralSegmentHandler = ({
   videoLayers,
@@ -26,11 +26,15 @@ const GeneralSegmentHandler = ({
   updateTextSegment,
   updateImageSegment,
   updateAudioSegment,
+  fetchVideoDuration, // Add new prop
 }) => {
+  // Cache video durations
+  const durationCache = useRef(new Map());
+
   const handleDragStart = (e, item, layerIndex) => {
     if (isSplitMode) return;
     setDraggingItem(item);
-    setDragLayer(item.layer); // Use original layer value (negative for audio)
+    setDragLayer(item.layer);
     const rect = e.currentTarget.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     setDragOffset(offsetX / timeScale);
@@ -65,35 +69,30 @@ const GeneralSegmentHandler = ({
     const newSnapIndicators = [];
     const snapPoints = [];
 
-    // Collect snap points from all layers
     [...videoLayers, ...audioLayers].forEach((layer, layerIdx) => {
       const isAudioLayer = layerIdx >= videoLayers.length;
       const adjustedLayerIdx = isAudioLayer ? -(layerIdx - videoLayers.length + 1) : layerIdx;
       layer.forEach(item => {
-        if (item.id === draggingItem.id) return; // Skip the dragged item itself
+        if (item.id === draggingItem.id) return;
         snapPoints.push({ time: item.startTime, layerIdx: adjustedLayerIdx, type: 'start' });
         snapPoints.push({ time: item.startTime + item.duration, layerIdx: adjustedLayerIdx, type: 'end' });
       });
     });
 
-    // Always include timeline start (time 0) as a snap point
     snapPoints.push({ time: 0, layerIdx: dragLayer, type: 'timelineStart' });
 
     let closestSnapPoint = null;
     let minDistance = SNAP_THRESHOLD;
 
-    // Evaluate both start and end snapping, but only keep the closest
     snapPoints.forEach(point => {
       const currentThreshold = point.time === 0 ? SNAP_THRESHOLD * 2 : SNAP_THRESHOLD;
 
-      // Check distance to start of dragged item
       const distanceToStart = Math.abs(point.time - potentialStartTime);
       if (distanceToStart < currentThreshold && distanceToStart < minDistance) {
         minDistance = distanceToStart;
         closestSnapPoint = { time: point.time, layerIdx: point.layerIdx, type: point.type, edge: 'start' };
       }
 
-      // Check distance to end of dragged item
       const itemEndTime = potentialStartTime + draggingItem.duration;
       const distanceToEnd = Math.abs(point.time - itemEndTime);
       if (distanceToEnd < currentThreshold && distanceToEnd < minDistance) {
@@ -104,17 +103,15 @@ const GeneralSegmentHandler = ({
 
     if (closestSnapPoint) {
       potentialStartTime = closestSnapPoint.time;
-      // Add only one snap indicator on the dragged layer
       newSnapIndicators.push({
         time: closestSnapPoint.edge === 'start' ? potentialStartTime : potentialStartTime + draggingItem.duration,
-        layerIdx: dragLayer, // Use dragLayer to place indicator on the dragged layer
+        layerIdx: dragLayer,
         edge: closestSnapPoint.edge,
       });
     }
 
     setSnapIndicators(newSnapIndicators);
 
-    // Update the dragged element's position for visual feedback
     const draggedElement = document.querySelector('.timeline-item.dragging');
     if (draggedElement) {
       draggedElement.style.left = `${potentialStartTime * timeScale}px`;
@@ -186,25 +183,74 @@ const GeneralSegmentHandler = ({
       let newStartWithin = originalStartWithin;
       let newEndWithin = originalEndWithin;
 
+      // Check for collisions with other segments in the same layer
+      const otherItems = layer.filter((i) => i.id !== resizingItem.id);
+      let maxLeftBound = -Infinity;
+      let minRightBound = Infinity;
+
+      otherItems.forEach((otherItem) => {
+        const otherStart = otherItem.startTime;
+        const otherEnd = otherItem.startTime + otherItem.duration;
+        if (otherEnd <= originalStartTime && otherEnd > maxLeftBound) {
+          maxLeftBound = otherEnd;
+        }
+        if (otherStart >= originalStartTime + item.duration && otherStart < minRightBound) {
+          minRightBound = otherStart;
+        }
+      });
+
       if (resizeEdge === 'left') {
         const originalEndTime = originalStartTime + item.duration;
         newStartTime = Math.min(newTime, originalEndTime - 0.1);
+        if (maxLeftBound !== -Infinity) {
+          newStartTime = Math.max(newStartTime, maxLeftBound);
+        }
         newDuration = originalEndTime - newStartTime;
         if (item.type === 'video' || item.type === 'audio') {
           const timeShift = newStartTime - originalStartTime;
           newStartWithin = originalStartWithin + timeShift;
+          if (item.type === 'video' && newStartWithin < 0) {
+            newStartWithin = 0;
+            newStartTime = originalStartTime - (originalStartWithin - newStartWithin);
+            newDuration = originalEndTime - newStartTime;
+          }
           newStartWithin = Math.max(0, newStartWithin);
           newEndWithin = originalEndWithin;
         }
       } else if (resizeEdge === 'right') {
         const newEndTime = Math.max(newTime, originalStartTime + 0.1);
-        newDuration = newEndTime - originalStartTime;
+        let clampedEndTime = newEndTime;
+        if (minRightBound !== Infinity) {
+          clampedEndTime = Math.min(newEndTime, minRightBound);
+        }
+        newDuration = clampedEndTime - originalStartTime;
         if (item.type === 'video' || item.type === 'audio') {
           newStartWithin = originalStartWithin;
           newEndWithin = originalStartWithin + newDuration;
+          // Prevent endTimeWithinVideo from exceeding source video duration
+          if (item.type === 'video') {
+            // Check cached duration
+            let sourceDuration = durationCache.current.get(item.filePath);
+            if (sourceDuration === undefined) {
+              // Fetch duration and cache it
+              fetchVideoDuration(item.filePath).then((duration) => {
+                if (duration !== null) {
+                  durationCache.current.set(item.filePath, duration);
+                }
+              });
+              // Use item.duration as fallback for this resize operation
+              sourceDuration = item.duration;
+            }
+            if (newEndWithin > sourceDuration) {
+              newEndWithin = sourceDuration;
+              newDuration = newEndWithin - originalStartWithin;
+              clampedEndTime = originalStartTime + newDuration;
+            }
+          }
         }
       }
 
+      // Update item properties
       item.startTime = newStartTime;
       item.duration = newDuration;
       item.timelineStartTime = newStartTime;
@@ -226,7 +272,16 @@ const GeneralSegmentHandler = ({
         setVideoLayers(newVideoLayers);
       }
     },
-    [resizingItem, resizeEdge, videoLayers, audioLayers, timeScale, setVideoLayers, setAudioLayers]
+    [
+      resizingItem,
+      resizeEdge,
+      videoLayers,
+      audioLayers,
+      timeScale,
+      setVideoLayers,
+      setAudioLayers,
+      fetchVideoDuration, // Add to dependencies
+    ]
   );
 
   const handleResizeEnd = async () => {

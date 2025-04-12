@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../CSS/Dashboard.css';
+import { FaTrash } from 'react-icons/fa'; // Import dustbin icon from react-icons
 
 const API_BASE_URL = 'http://localhost:8080';
 
@@ -15,7 +16,7 @@ const Dashboard = () => {
   const [userProfile, setUserProfile] = useState({
     firstName: '',
     lastName: '',
-    picture: null
+    picture: null,
   });
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,7 +26,7 @@ const Dashboard = () => {
     fetchUserProfile();
   }, []);
 
-  // Fetch user profile from /auth/me endpoint with enhanced error logging
+  // Fetch user profile from /auth/me endpoint
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -48,7 +49,6 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      // Added: Detailed error logging
       if (error.response) {
         console.error('Response data:', error.response.data);
         console.error('Response status:', error.response.status);
@@ -228,7 +228,7 @@ const Dashboard = () => {
         {
           name: newProjectName,
           width: width,
-          height: height
+          height: height,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -242,6 +242,40 @@ const Dashboard = () => {
       console.error('Error creating project:', error);
       if (error.response?.status === 401) {
         navigate('/');
+      }
+    }
+  };
+
+  const deleteProject = async (projectId) => {
+    const confirmDelete = window.confirm('Are you sure about deleting this Project?');
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found. User might not be authenticated.');
+        navigate('/');
+        return;
+      }
+
+      await axios.delete(`${API_BASE_URL}/projects/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Remove the deleted project from the state
+      setProjects(projects.filter((project) => project.id !== projectId));
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      if (error.response?.status === 401) {
+        navigate('/');
+      } else if (error.response?.status === 403) {
+        alert('Unauthorized to delete this project');
+      } else if (error.response?.status === 404) {
+        alert('Project not found');
+      } else {
+        alert('Failed to delete project');
       }
     }
   };
@@ -304,28 +338,16 @@ const Dashboard = () => {
                 </div>
                 <div className="dropdown-presets">
                   <div className="dropdown-subtitle">Presets</div>
-                  <div
-                    className="dropdown-item"
-                    onClick={() => handlePresetSelect(1920, 1080)}
-                  >
+                  <div className="dropdown-item" onClick={() => handlePresetSelect(1920, 1080)}>
                     YouTube (1920x1080)
                   </div>
-                  <div
-                    className="dropdown-item"
-                    onClick={() => handlePresetSelect(1080, 1920)}
-                  >
+                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920)}>
                     YouTube Shorts (1080x1920)
                   </div>
-                  <div
-                    className="dropdown-item"
-                    onClick={() => handlePresetSelect(1080, 1920)}
-                  >
+                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920)}>
                     Instagram Reels (1080x1920)
                   </div>
-                  <div
-                    className="dropdown-item"
-                    onClick={() => handlePresetSelect(1080, 1920)}
-                  >
+                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920)}>
                     TikTok (1080x1920)
                   </div>
                 </div>
@@ -338,11 +360,7 @@ const Dashboard = () => {
           <div className="profile-section">
             <div className="profile-icon" onClick={toggleProfileDropdown}>
               {userProfile.picture ? (
-                <img
-                  src={userProfile.picture}
-                  alt="Profile"
-                  className="profile-picture"
-                />
+                <img src={userProfile.picture} alt="Profile" className="profile-picture" />
               ) : (
                 <div className="default-profile-icon">
                   {userProfile.firstName && userProfile.firstName.length > 0
@@ -369,25 +387,33 @@ const Dashboard = () => {
 
       <section className="projects-section">
         <h2>My Projects</h2>
-        {location.state?.error && (
-          <p className="error-message">{location.state.error}</p>
-        )}
+        {location.state?.error && <p className="error-message">{location.state.error}</p>}
         <div className="project-grid">
           {projects.length === 0 ? (
             <p className="no-projects">No projects yet. Create one to get started!</p>
           ) : (
             projects.map((project) => (
-              <div
-                key={project.id}
-                className="project-card"
-                onClick={() => loadProject(project.id)}
-              >
-                <div className="thumbnail-container">
+              <div key={project.id} className="project-card">
+                <div className="thumbnail-container" onClick={() => loadProject(project.id)}>
                   {project.thumbnail ? (
-                    <img src={project.thumbnail} alt={`${project.name} thumbnail`} className="project-thumbnail" />
+                    <img
+                      src={project.thumbnail}
+                      alt={`${project.name} thumbnail`}
+                      className="project-thumbnail"
+                    />
                   ) : (
                     <div className="thumbnail-placeholder">No Preview Available</div>
                   )}
+                  <div
+                    className="delete-icon"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering loadProject
+                      deleteProject(project.id);
+                    }}
+                    title="Delete Project"
+                  >
+                    <FaTrash />
+                  </div>
                 </div>
                 <h3 className="project-title">{project.name}</h3>
               </div>

@@ -422,6 +422,7 @@ const TimelineComponent = ({
     updateTextSegment: textHandler.updateTextSegment,
     updateImageSegment: imageHandler.updateImageSegment,
     updateAudioSegment: audioHandler.updateAudioSegment,
+    fetchVideoDuration: videoHandler.fetchVideoDuration,
   });
 
   useEffect(() => {

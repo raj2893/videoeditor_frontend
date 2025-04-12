@@ -18,14 +18,23 @@ const VideoSegmentHandler = ({
     newStartTime,
     newLayer,
     newDuration,
-    startTimeWithinVideo, // Add parameter
-    endTimeWithinVideo    // Add parameter
+    startTimeWithinVideo,
+    endTimeWithinVideo,
+    layers = videoLayers // Default to videoLayers, override with newVideoLayers if provided
   ) => {
     if (!projectId || !sessionId) return;
     try {
       const token = localStorage.getItem('token');
-      const layer = videoLayers[newLayer];
+      const layer = layers[newLayer];
+      if (!layer) {
+        console.error(`Layer ${newLayer} does not exist in provided layers`, layers);
+        return;
+      }
       const item = layer.find((i) => i.id === segmentId);
+      if (!item) {
+        console.error(`Segment ${segmentId} not found in layer ${newLayer}`);
+        return;
+      }
       const timelineEndTime = newStartTime + newDuration;
       const requestBody = {
         segmentId,
@@ -81,7 +90,8 @@ const VideoSegmentHandler = ({
       return;
     }
 
-    targetLayer = Math.max(0, Math.min(targetLayer, videoLayers.length));
+    // Allow dropping into new layer
+    targetLayer = Math.max(0, reversedIndex < 0 ? totalVideoLayers : targetLayer);
 
     if (!draggingItem) {
       const dataString = e.dataTransfer.getData('application/json');
@@ -157,17 +167,21 @@ const VideoSegmentHandler = ({
       timelineEndTime: adjustedStartTime + draggingItem.duration,
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
+
+    // Update state first
     setVideoLayers(newVideoLayers);
     saveHistory(newVideoLayers, []);
     autoSave(newVideoLayers, []);
-    // Call updateSegmentPosition with full data
+
+    // Pass newVideoLayers to updateSegmentPosition
     await updateSegmentPosition(
       draggingItem.id,
       adjustedStartTime,
       actualLayerIndex,
-      draggingItem.duration, // Explicitly pass duration
+      draggingItem.duration,
       updatedItem.startTimeWithinVideo,
-      updatedItem.endTimeWithinVideo
+      updatedItem.endTimeWithinVideo,
+      newVideoLayers
     );
   };
 
@@ -205,7 +219,16 @@ const VideoSegmentHandler = ({
     setVideoLayers(newVideoLayers);
     saveHistory(newVideoLayers, []);
 
-    await updateSegmentPosition(item.id, item.startTime, layerIndex, firstPartDuration);
+    // Use updated newVideoLayers for consistency
+    await updateSegmentPosition(
+      item.id,
+      item.startTime,
+      layerIndex,
+      firstPartDuration,
+      undefined,
+      undefined,
+      newVideoLayers
+    );
     await addVideoToTimeline(
       item.filePath || item.filename,
       layerIndex,
@@ -218,7 +241,22 @@ const VideoSegmentHandler = ({
     await loadProjectTimeline();
   };
 
-  return { handleVideoDrop, updateSegmentPosition, handleVideoSplit };
+  // Fetch video duration from backend
+  const fetchVideoDuration = async (filePath) => {
+    try {
+      const token = localStorage.getItem('token');
+      const filename = filePath.split('/').pop(); // Extract filename from path
+      const response = await axios.get(`${API_BASE_URL}/videos/duration/${encodeURIComponent(filename)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data; // Duration in seconds
+    } catch (error) {
+      console.error('Error fetching video duration:', error);
+      return null; // Fallback to prevent breaking
+    }
+  };
+
+  return { handleVideoDrop, updateSegmentPosition, handleVideoSplit, fetchVideoDuration };
 };
 
 export default VideoSegmentHandler;

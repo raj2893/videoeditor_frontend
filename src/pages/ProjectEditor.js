@@ -1012,7 +1012,14 @@ const ProjectEditor = () => {
           throw new Error('Invalid segment type');
       }
       const segmentData = response.data;
-      setKeyframes(segmentData?.keyframes || {});
+      console.log(`Fetched keyframes for ${segmentType} segment:`, segmentData); // Debug
+      let keyframesData;
+      if (segmentType === 'video') {
+        keyframesData = segmentData?.videoSegment?.keyframes || {};
+      } else {
+        keyframesData = segmentData?.keyframes || {};
+      }
+      setKeyframes(keyframesData);
       return segmentData;
     } catch (error) {
       console.error(`Error fetching keyframes for ${segmentType}:`, error);

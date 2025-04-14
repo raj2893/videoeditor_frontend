@@ -4,14 +4,17 @@ import '../CSS/VideoPreview.css';
 const API_BASE_URL = 'http://localhost:8080';
 
 const VideoPreview = ({
-  layers,
+  videoLayers, // Renamed from layers
+  audioLayers = [], // Added for audio support
   currentTime,
   isPlaying,
   canvasDimensions = { width: 1080, height: 1920 },
   onTimeUpdate,
   totalDuration = 0,
-  setIsPlaying,
+  setIsPlaying, // Optional
   containerHeight,
+  videos = [], // Added for video metadata
+  photos = [], // Added for image metadata
 }) => {
   const [loadingVideos, setLoadingVideos] = useState(new Set());
   const [preloadComplete, setPreloadComplete] = useState(false);
@@ -19,6 +22,7 @@ const VideoPreview = ({
   const previewContainerRef = useRef(null);
   const videoRefs = useRef({});
   const preloadRefs = useRef({});
+  const audioRefs = useRef({});
   const animationFrameRef = useRef(null);
   const lastUpdateTimeRef = useRef(0);
 
@@ -29,18 +33,38 @@ const VideoPreview = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
   };
 
-  const videoLayerIds = useMemo(() => {
-    return layers
-      .flat()
-      .filter(item => item.type === 'video')
-      .map(item => `${item.id}-${item.filePath}`)
-      .join('|');
-  }, [layers]);
+  // Linear interpolation for keyframes (matches renderFinalVideo)
+  const lerp = (a, b, t) => a + (b - a) * Math.min(Math.max(t, 0), 1);
 
+  // Get keyframe value at time (matches renderFinalVideo)
+  const getKeyframeValue = (keyframes, time, defaultValue) => {
+    if (!keyframes || keyframes.length === 0) return defaultValue;
+    const sorted = [...keyframes].sort((a, b) => a.time - b.time);
+    if (time <= sorted[0].time) return sorted[0].value;
+    if (time >= sorted[sorted.length - 1].time) return sorted[sorted.length - 1].value;
+
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (time >= sorted[i].time && time <= sorted[i + 1].time) {
+        const t = (time - sorted[i].time) / (sorted[i + 1].time - sorted[i].time);
+        return lerp(sorted[i].value, sorted[i + 1].value, t);
+      }
+    }
+    return defaultValue;
+  };
+
+  const videoLayerIds = useMemo(() => {
+    return videoLayers
+      .flat()
+      .filter((item) => item.type === 'video')
+      .map((item) => `${item.id}-${item.filePath}`)
+      .join('|');
+  }, [videoLayers]);
+
+  // Preload videos
   useEffect(() => {
     const preloadVideos = () => {
-      const allVideoItems = layers.flat().filter(item => item.type === 'video');
-      const preloadPromises = allVideoItems.map(item => {
+      const allVideoItems = videoLayers.flat().filter((item) => item.type === 'video');
+      const preloadPromises = allVideoItems.map((item) => {
         const normalizedFilePath = item.filePath.startsWith('videos/')
           ? item.filePath.substring(7)
           : item.filePath;
@@ -57,20 +81,23 @@ const VideoPreview = ({
 
           return new Promise((resolve) => {
             video.onloadeddata = () => {
-              setLoadingVideos(prev => {
+              setLoadingVideos((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(item.id);
                 return newSet;
               });
               resolve();
             };
-            video.onerror = () => resolve();
+            video.onerror = () => {
+              console.error(`Failed to preload video ${item.filePath}`);
+              resolve();
+            };
           });
         }
         return Promise.resolve();
       });
 
-      setLoadingVideos(new Set(allVideoItems.map(item => item.id)));
+      setLoadingVideos(new Set(allVideoItems.map((item) => item.id)));
       Promise.all(preloadPromises).then(() => {
         setPreloadComplete(true);
         console.log('All videos preloaded');
@@ -80,7 +107,7 @@ const VideoPreview = ({
     preloadVideos();
 
     return () => {
-      Object.values(preloadRefs.current).forEach(video => {
+      Object.values(preloadRefs.current).forEach((video) => {
         video.pause();
         document.body.removeChild(video);
       });
@@ -88,16 +115,47 @@ const VideoPreview = ({
     };
   }, [videoLayerIds]);
 
+  // Preload audio
+  useEffect(() => {
+    const preloadAudio = () => {
+      audioLayers.flat().forEach((segment) => {
+        if (segment.type === 'audio' && !audioRefs.current[segment.id]) {
+          const audioUrl = `${API_BASE_URL}/projects/${segment.projectId || '77'}/audio/${encodeURIComponent(segment.fileName)}`;
+          const audio = document.createElement('audio');
+          audio.preload = 'auto';
+          audio.src = audioUrl;
+          audioRefs.current[segment.id] = audio;
+
+          audio.onloadeddata = () => {
+            console.log(`Audio ${segment.fileName} loaded`);
+          };
+          audio.onerror = () => {
+            console.error(`Failed to load audio ${segment.fileName}`);
+          };
+        }
+      });
+    };
+
+    preloadAudio();
+
+    return () => {
+      Object.values(audioRefs.current).forEach((audio) => {
+        audio.pause();
+      });
+    };
+  }, [audioLayers]);
+
+  // Sync video playback
   useEffect(() => {
     const visibleElements = getVisibleElements();
 
     const topmostVideo = visibleElements
-      .filter(el => el.type === 'video')
+      .filter((el) => el.type === 'video')
       .sort((a, b) => b.layerIndex - a.layerIndex)[0];
 
     const setVideoTimeFunctions = new Map();
 
-    visibleElements.forEach(element => {
+    visibleElements.forEach((element) => {
       if (element.type === 'video') {
         const videoRef = videoRefs.current[element.id];
         if (videoRef) {
@@ -128,7 +186,7 @@ const VideoPreview = ({
           videoRef.muted = topmostVideo && topmostVideo.id !== element.id;
 
           if (isPlaying && preloadComplete) {
-            videoRef.play().catch(error => console.error("Playback error:", error));
+            videoRef.play().catch((error) => console.error('Playback error:', error));
           } else {
             videoRef.pause();
           }
@@ -136,7 +194,7 @@ const VideoPreview = ({
       }
     });
 
-    const visibleIds = visibleElements.map(el => el.id);
+    const visibleIds = visibleElements.map((el) => el.id);
     Object.entries(videoRefs.current).forEach(([id, videoRef]) => {
       if (!visibleIds.includes(id) && videoRef) {
         videoRef.pause();
@@ -152,8 +210,42 @@ const VideoPreview = ({
         }
       });
     };
-  }, [currentTime, isPlaying, layers, preloadComplete]);
+  }, [currentTime, isPlaying, videoLayers, preloadComplete]);
 
+  // Sync audio playback
+  useEffect(() => {
+    audioLayers.flat().forEach((segment) => {
+      const audio = audioRefs.current[segment.id];
+      if (!audio) return;
+
+      const start = segment.startTime || 0;
+      const end = start + segment.duration;
+      const relativeTime = currentTime - start;
+
+      const volume = getKeyframeValue(
+        segment.keyframes && segment.keyframes.volume,
+        relativeTime,
+        segment.volume || 1
+      );
+
+      if (currentTime >= start && currentTime < end) {
+        if (audio.paused && isPlaying) {
+          audio.currentTime = relativeTime + (segment.startTimeWithinAudio || 0);
+          audio.volume = volume;
+          audio.play().catch((e) => console.error('Audio play error:', e));
+        } else if (!audio.paused) {
+          audio.volume = volume;
+          if (Math.abs(audio.currentTime - (relativeTime + (segment.startTimeWithinAudio || 0))) > 0.05) {
+            audio.currentTime = relativeTime + (segment.startTimeWithinAudio || 0);
+          }
+        }
+      } else if (!audio.paused) {
+        audio.pause();
+      }
+    });
+  }, [currentTime, isPlaying, audioLayers]);
+
+  // Update playhead
   useEffect(() => {
     const updatePlayhead = (timestamp) => {
       if (isPlaying) {
@@ -162,7 +254,7 @@ const VideoPreview = ({
         const newTime = Math.min(totalDuration, currentTime + delta);
         onTimeUpdate(newTime);
         if (newTime >= totalDuration) {
-          setIsPlaying(false);
+          if (setIsPlaying) setIsPlaying(false);
           onTimeUpdate(0);
         }
       }
@@ -181,27 +273,26 @@ const VideoPreview = ({
     };
   }, [isPlaying, currentTime, onTimeUpdate, totalDuration, setIsPlaying]);
 
+  // Update canvas size and scale
   useEffect(() => {
     if (previewContainerRef.current) {
       const calculateSize = () => {
         const containerWidth = previewContainerRef.current.clientWidth;
-        const containerHeightPx = containerHeight && containerHeight !== 'auto'
-          ? parseFloat(containerHeight)
-          : previewContainerRef.current.clientHeight;
+        const containerHeightPx =
+          containerHeight && containerHeight !== 'auto'
+            ? parseFloat(containerHeight)
+            : previewContainerRef.current.clientHeight;
         const canvasAspectRatio = canvasDimensions.width / canvasDimensions.height;
 
-        // Calculate base scale based on container dimensions
         let newScale = Math.min(
           containerWidth / canvasDimensions.width,
           containerHeightPx / canvasDimensions.height
         );
 
-        // Define scale limits synchronized with ProjectEditor's minPreviewHeight
-        const minPreviewHeight = 100; // Match ProjectEditor's minimum
-        const minScale = minPreviewHeight / canvasDimensions.height; // e.g., 100 / 1920 ≈ 0.052
-        const maxScale = 1.0; // Content won't exceed original size
+        const minPreviewHeight = 100;
+        const minScale = minPreviewHeight / canvasDimensions.height;
+        const maxScale = 1.0;
 
-        // Clamp the scale
         newScale = Math.max(minScale, Math.min(maxScale, newScale));
         setScale(newScale);
 
@@ -227,7 +318,7 @@ const VideoPreview = ({
 
   const getVisibleElements = () => {
     const visibleElements = [];
-    layers.forEach((layer, layerIndex) => {
+    videoLayers.forEach((layer, layerIndex) => {
       layer.forEach((item) => {
         const itemStartTime = item.startTime || 0;
         const itemEndTime = itemStartTime + item.duration;
@@ -237,6 +328,8 @@ const VideoPreview = ({
             layerIndex,
             localTime: currentTime - itemStartTime,
           });
+          // Debug keyframes
+          console.log(`Visible ${item.type} ${item.id} at t=${currentTime.toFixed(2)}:`, item.keyframes || {});
         }
       });
     });
@@ -259,10 +352,40 @@ const VideoPreview = ({
             transformOrigin: 'top left',
           }}
         >
-          {visibleElements.map(element => {
-            // Calculate position in pixels relative to center
-            const centerX = canvasDimensions.width / 2;
-            const centerY = canvasDimensions.height / 2;
+          {visibleElements.map((element) => {
+            const relativeTime = currentTime - (element.startTime || 0);
+
+            // Get keyframed properties
+            const positionX = getKeyframeValue(
+              element.keyframes && element.keyframes.positionX,
+              relativeTime,
+              element.positionX || 0
+            );
+            const positionY = getKeyframeValue(
+              element.keyframes && element.keyframes.positionY,
+              relativeTime,
+              element.positionY || 0
+            );
+            const scaleFactor = getKeyframeValue(
+              element.keyframes && element.keyframes.scale,
+              relativeTime,
+              element.scale || 1
+            );
+            const opacity = getKeyframeValue(
+              element.keyframes && element.keyframes.opacity,
+              relativeTime,
+              element.opacity || 1
+            );
+
+            // Debug keyframes
+            if (element.keyframes) {
+              console.log(`Element ${element.id} at t=${relativeTime.toFixed(2)}:`, {
+                positionX,
+                positionY,
+                scale: scaleFactor,
+                opacity,
+              });
+            }
 
             if (element.type === 'video') {
               const videoWidth = element.width || 1080;
@@ -278,18 +401,23 @@ const VideoPreview = ({
                 displayWidth = canvasDimensions.height * videoAspectRatio;
               }
 
-              const scaleFactor = element.scale || 1;
               displayWidth *= scaleFactor;
               displayHeight *= scaleFactor;
 
-              // Position in pixels from center
-              const posX = centerX + (element.positionX || 0) - (displayWidth / 2);
-              const posY = centerY + (element.positionY || 0) - (displayHeight / 2);
+              // Position matches renderFinalVideo: (W-w)/2 + positionX - w/2*(scale-1)
+              const posX =
+                (canvasDimensions.width - displayWidth) / 2 +
+                positionX -
+                (displayWidth * (scaleFactor - 1)) / 2;
+              const posY =
+                (canvasDimensions.height - displayHeight) / 2 +
+                positionY -
+                (displayHeight * (scaleFactor - 1)) / 2;
 
               return (
                 <video
                   key={element.id}
-                  ref={el => (videoRefs.current[element.id] = el)}
+                  ref={(el) => (videoRefs.current[element.id] = el)}
                   className="preview-video"
                   muted={false}
                   style={{
@@ -299,6 +427,7 @@ const VideoPreview = ({
                     left: `${posX}px`,
                     top: `${posY}px`,
                     zIndex: element.layerIndex,
+                    opacity,
                   }}
                   onError={(e) => console.error(`Error loading video ${element.filePath}:`, e)}
                   onLoadedData={() => console.log(`Video ${element.filePath} loaded`)}
@@ -308,18 +437,28 @@ const VideoPreview = ({
             } else if (element.type === 'image') {
               const imgWidth = element.width || canvasDimensions.width;
               const imgHeight = element.height || canvasDimensions.height;
-              const scaleFactor = element.scale || 1;
               const displayWidth = imgWidth * scaleFactor;
               const displayHeight = imgHeight * scaleFactor;
 
-              // Position in pixels from center
-              const posX = centerX + (element.positionX || 0) - (displayWidth / 2);
-              const posY = centerY + (element.positionY || 0) - (displayHeight / 2);
+              // Position matches renderFinalVideo
+              const posX =
+                (canvasDimensions.width - displayWidth) / 2 +
+                positionX -
+                (displayWidth * (scaleFactor - 1)) / 2;
+              const posY =
+                (canvasDimensions.height - displayHeight) / 2 +
+                positionY -
+                (displayHeight * (scaleFactor - 1)) / 2;
+
+              // Use photos prop for accurate filePath
+              const photo = photos.find((p) => p.fileName === element.fileName) || {
+                filePath: element.filePath,
+              };
 
               return (
                 <img
                   key={element.id}
-                  src={element.filePath}
+                  src={photo.filePath}
                   alt="Preview"
                   style={{
                     position: 'absolute',
@@ -327,20 +466,19 @@ const VideoPreview = ({
                     height: `${displayHeight}px`,
                     left: `${posX}px`,
                     top: `${posY}px`,
-                    opacity: element.opacity || 1,
+                    opacity,
                     zIndex: element.layerIndex,
                   }}
                 />
               );
             } else if (element.type === 'text') {
-              const fontSize = (element.fontSize || 24) * scale;
-              // Approximate text dimensions (this is an estimation)
+              const fontSize = (element.fontSize || 24) * scaleFactor;
               const textWidth = element.text.length * fontSize * 0.6; // Rough estimate
               const textHeight = fontSize * 1.2;
 
-              // Position in pixels from center
-              const posX = centerX + (element.positionX || 0) - (textWidth / 2);
-              const posY = centerY + (element.positionY || 0) - (textHeight / 2);
+              // Position matches renderFinalVideo: (w-tw)/2 + positionX
+              const posX = (canvasDimensions.width - textWidth) / 2 + positionX;
+              const posY = (canvasDimensions.height - textHeight) / 2 + positionY;
 
               return (
                 <div
@@ -353,11 +491,14 @@ const VideoPreview = ({
                     fontFamily: element.fontFamily || 'Arial',
                     fontSize: `${fontSize}px`,
                     color: element.fontColor || '#FFFFFF',
-                    backgroundColor: element.backgroundColor || 'transparent',
+                    backgroundColor: element.backgroundColor
+                      ? `${element.backgroundColor}${element.backgroundColor.startsWith('#') ? '80' : ''}`
+                      : 'transparent',
                     padding: `${5 * scale}px`,
                     zIndex: element.layerIndex + 10,
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
+                    opacity,
                   }}
                 >
                   {element.text}
@@ -368,10 +509,7 @@ const VideoPreview = ({
           })}
         </div>
 
-        {visibleElements.length === 0 && (
-          <div className="preview-empty-state">
-          </div>
-        )}
+        {visibleElements.length === 0 && <div className="preview-empty-state"></div>}
 
         {loadingVideos.size > 0 && (
           <div className="preview-loading">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../CSS/Dashboard.css';
-import { FaTrash } from 'react-icons/fa'; // Import dustbin icon from react-icons
+import { FaTrash } from 'react-icons/fa';
 
 const API_BASE_URL = 'http://localhost:8080';
 
@@ -11,6 +11,7 @@ const Dashboard = () => {
   const [newProjectName, setNewProjectName] = useState('');
   const [width, setWidth] = useState(1920);
   const [height, setHeight] = useState(1080);
+  const [fps, setFps] = useState(25); // New state for FPS
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [userProfile, setUserProfile] = useState({
@@ -26,7 +27,6 @@ const Dashboard = () => {
     fetchUserProfile();
   }, []);
 
-  // Fetch user profile from /auth/me endpoint
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -49,13 +49,7 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-        console.error('Response headers:', error.response.headers);
-      }
       if (error.response?.status === 401) {
-        console.log('Unauthorized, redirecting to login');
         navigate('/');
       }
       setUserProfile({ firstName: '', lastName: '', picture: null });
@@ -168,7 +162,6 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const projectList = response.data;
-      console.log('Fetched projects for user:', projectList);
 
       const projectsWithThumbnails = await Promise.all(
         projectList.map(async (project) => {
@@ -215,6 +208,11 @@ const Dashboard = () => {
       return;
     }
 
+    if (fps <= 0 || fps > 120) {
+      alert('FPS must be between 1 and 120.');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -229,6 +227,7 @@ const Dashboard = () => {
           name: newProjectName,
           width: width,
           height: height,
+          fps: fps, // Include FPS in the request
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -236,12 +235,17 @@ const Dashboard = () => {
       setNewProjectName('');
       setWidth(1920);
       setHeight(1080);
+      setFps(25); // Reset FPS to default
       setIsDropdownOpen(false);
       navigate(`/projecteditor/${response.data.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
       if (error.response?.status === 401) {
         navigate('/');
+      } else if (error.response?.status === 400) {
+        alert('Invalid project parameters: ' + error.response.data);
+      } else {
+        alert('Failed to create project');
       }
     }
   };
@@ -264,7 +268,6 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Remove the deleted project from the state
       setProjects(projects.filter((project) => project.id !== projectId));
     } catch (error) {
       console.error('Error deleting project:', error);
@@ -292,9 +295,10 @@ const Dashboard = () => {
     setIsProfileDropdownOpen(!isProfileDropdownOpen);
   };
 
-  const handlePresetSelect = (presetWidth, presetHeight) => {
+  const handlePresetSelect = (presetWidth, presetHeight, presetFps = 25) => {
     setWidth(presetWidth);
     setHeight(presetHeight);
+    setFps(presetFps); // Set FPS for the preset
   };
 
   return (
@@ -334,21 +338,41 @@ const Dashboard = () => {
                       onChange={(e) => setHeight(parseInt(e.target.value, 10))}
                       className="dropdown-input dimension-input"
                     />
+                    <input
+                      type="number"
+                      placeholder="FPS"
+                      value={fps}
+                      onChange={(e) => setFps(parseInt(e.target.value, 10))}
+                      className="dropdown-input dimension-input"
+                    />
                   </div>
                 </div>
                 <div className="dropdown-presets">
                   <div className="dropdown-subtitle">Presets</div>
-                  <div className="dropdown-item" onClick={() => handlePresetSelect(1920, 1080)}>
-                    YouTube (1920x1080)
+                  <div className="dropdown-item" onClick={() => handlePresetSelect(1920, 1080, 30)}>
+                    YouTube (1920x1080, 30 FPS)
                   </div>
-                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920)}>
-                    YouTube Shorts (1080x1920)
+                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920, 60)}>
+                    YouTube Shorts (1080x1920, 60 FPS)
                   </div>
-                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920)}>
-                    Instagram Reels (1080x1920)
+                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920, 60)}>
+                    Instagram Reels (1080x1920, 60 FPS)
                   </div>
-                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920)}>
-                    TikTok (1080x1920)
+                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920, 60)}>
+                    TikTok (1080x1920, 60 FPS)
+                  </div>
+                  <div className="dropdown-subtitle">FPS Options</div>
+                  <div className="dropdown-item" onClick={() => setFps(24)}>
+                    24 FPS (Cinematic)
+                  </div>
+                  <div className="dropdown-item" onClick={() => setFps(25)}>
+                    25 FPS (Standard)
+                  </div>
+                  <div className="dropdown-item" onClick={() => setFps(30)}>
+                    30 FPS (Common)
+                  </div>
+                  <div className="dropdown-item" onClick={() => setFps(60)}>
+                    60 FPS (Smooth)
                   </div>
                 </div>
                 <button className="dropdown-create-button" onClick={createNewProject}>
@@ -407,7 +431,7 @@ const Dashboard = () => {
                   <div
                     className="delete-icon"
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevent triggering loadProject
+                      e.stopPropagation();
                       deleteProject(project.id);
                     }}
                     title="Delete Project"

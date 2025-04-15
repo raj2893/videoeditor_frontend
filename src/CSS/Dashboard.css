@@ -69,7 +69,7 @@
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   z-index: 10;
-  width: 280px;
+  width: 300px; /* Slightly wider to accommodate FPS input */
   padding: 15px;
   box-sizing: border-box;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -111,12 +111,12 @@
 
 .dimension-inputs {
   display: flex;
-  gap: 10px;
+  gap: 8px; /* Reduced gap for three inputs */
+  flex-wrap: wrap; /* Allow wrapping if needed */
 }
 
 .dimension-input {
-  width: 50%;
-  max-width: 100%;
+  width: 80px; /* Fixed width for consistency */
   box-sizing: border-box;
 }
 
@@ -188,7 +188,7 @@
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  position: relative; /* Ensure positioning context for delete icon */
+  position: relative;
 }
 
 .project-card:hover {
@@ -246,7 +246,6 @@
   margin: 20px 0;
 }
 
-/* Delete icon styles */
 .delete-icon {
   position: absolute;
   top: 8px;
@@ -256,7 +255,7 @@
   border-radius: 50%;
   width: 24px;
   height: 24px;
-  display: none; /* Hidden by default */
+  display: none;
   align-items: center;
   justify-content: center;
   cursor: pointer;
@@ -265,15 +264,14 @@
 }
 
 .delete-icon:hover {
-  color: #FF4D4D; /* Red color on hover */
+  color: #FF4D4D;
   background: rgba(0, 0, 0, 0.7);
 }
 
 .project-card:hover .delete-icon {
-  display: flex; /* Show on hover */
+  display: flex;
 }
 
-/* Profile section styles */
 .profile-section {
   position: relative;
 }

@@ -1134,8 +1134,8 @@ const ProjectEditor = () => {
     if (!selectedSegment) return;
     const time = currentTimeInSegment;
 
-    const segmentData = await fetchKeyframes(selectedSegment.id, selectedSegment.type);
-    const currentKeyframes = segmentData?.keyframes || {};
+//    const segmentData = await fetchKeyframes(selectedSegment.id, selectedSegment.type);
+    const currentKeyframes = keyframes || {};
 
     const updatedPropertyKeyframes = (currentKeyframes[property] || []).filter(
       (kf) => !areTimesEqual(kf.time, time)
@@ -1150,17 +1150,34 @@ const ProjectEditor = () => {
 
     setKeyframes(updatedKeyframes);
 
-    // Update videoLayers with new keyframes
-    setVideoLayers((prevLayers) => {
-      const newLayers = [...prevLayers];
-      newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
-        item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
-      );
-      return newLayers;
-    });
+    // [Change] Update the appropriate layers (video or audio) with new keyframes to ensure UI re-renders
+      if (selectedSegment.type === 'audio') {
+        setAudioLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          const layerIndex = Math.abs(selectedSegment.layer) - 1;
+          newLayers[layerIndex] = newLayers[layerIndex].map((item) =>
+            item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+          );
+          return newLayers;
+        });
+      } else {
+        setVideoLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
+            item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+          );
+          return newLayers;
+        });
+      }
 
-    await saveSegmentChanges(updatedKeyframes);
-  };
+      // [Change] Update tempSegmentValues to reflect the new keyframe value at the current time
+      setTempSegmentValues((prev) => ({
+        ...prev,
+        [property]: value,
+      }));
+
+      await saveSegmentChanges(updatedKeyframes);
+    };
 
   const removeKeyframe = async (property, time) => {
     if (!selectedSegment) return;
@@ -1324,7 +1341,7 @@ const ProjectEditor = () => {
         default:
           break;
       }
-      await fetchKeyframes(selectedSegment.id, selectedSegment.type);
+//      await fetchKeyframes(selectedSegment.id, selectedSegment.type);
       preloadMedia();
     } catch (error) {
       console.error(`Error saving ${selectedSegment.type} segment changes:`, error);

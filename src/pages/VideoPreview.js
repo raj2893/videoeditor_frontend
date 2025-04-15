@@ -390,29 +390,14 @@ const VideoPreview = ({
             if (element.type === 'video') {
               const videoWidth = element.width || 1080;
               const videoHeight = element.height || 1920;
-              const videoAspectRatio = videoWidth / videoHeight;
 
-              let displayWidth = canvasDimensions.width;
-              let displayHeight = canvasDimensions.height;
+              // Don't automatically adjust to fit the canvas
+              let displayWidth = videoWidth * scaleFactor;
+              let displayHeight = videoHeight * scaleFactor;
 
-              if (canvasDimensions.height / canvasDimensions.width > videoAspectRatio) {
-                displayHeight = canvasDimensions.width / videoAspectRatio;
-              } else {
-                displayWidth = canvasDimensions.height * videoAspectRatio;
-              }
-
-              displayWidth *= scaleFactor;
-              displayHeight *= scaleFactor;
-
-              // Position matches renderFinalVideo: (W-w)/2 + positionX - w/2*(scale-1)
-              const posX =
-                (canvasDimensions.width - displayWidth) / 2 +
-                positionX -
-                (displayWidth * (scaleFactor - 1)) / 2;
-              const posY =
-                (canvasDimensions.height - displayHeight) / 2 +
-                positionY -
-                (displayHeight * (scaleFactor - 1)) / 2;
+              // Position centered on canvas
+              const posX = (canvasDimensions.width - displayWidth) / 2 + positionX;
+              const posY = (canvasDimensions.height - displayHeight) / 2 + positionY;
 
               return (
                 <video
@@ -428,6 +413,7 @@ const VideoPreview = ({
                     top: `${posY}px`,
                     zIndex: element.layerIndex,
                     opacity,
+                    objectFit: 'contain',
                   }}
                   onError={(e) => console.error(`Error loading video ${element.filePath}:`, e)}
                   onLoadedData={() => console.log(`Video ${element.filePath} loaded`)}

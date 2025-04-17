@@ -577,14 +577,9 @@ const VideoPreview = ({
               const displayWidth = imgWidth * scaleFactor;
               const displayHeight = imgHeight * scaleFactor;
 
-              const posX =
-                (canvasDimensions.width - displayWidth) / 2 +
-                positionX -
-                (displayWidth * (scaleFactor - 1)) / 2;
-              const posY =
-                (canvasDimensions.height - displayHeight) / 2 +
-                positionY -
-                (displayHeight * (scaleFactor - 1)) / 2;
+              // Center the image like the video segment
+              const posX = (canvasDimensions.width - displayWidth) / 2 + positionX;
+              const posY = (canvasDimensions.height - displayHeight) / 2 + positionY;
 
               const photo = photos.find((p) => p.fileName === element.fileName) || {
                 filePath: element.filePath,

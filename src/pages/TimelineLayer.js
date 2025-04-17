@@ -1,4 +1,5 @@
 import React from 'react';
+import '../CSS/Timeline.css';
 
 const TimelineLayer = ({
   layer,
@@ -10,8 +11,23 @@ const TimelineLayer = ({
   handleVideoSelect,
   handleEditTextSegment,
   selectedSegmentId,
+  transitions,
+  onTransitionSelect, // NEW: Prop to handle transition selection
 }) => {
-  const isAudioLayer = layer.some(item => item.type === 'audio');
+  const isAudioLayer = layer.some((item) => item.type === 'audio');
+
+  // Function to get transition position, adjusted for the segment's startTime
+  const getTransitionPosition = (transition, segmentStartTime) => {
+    const startTime = transition.timelineStartTime || 0;
+    // Since the transition is inside the timeline-item, we need to offset its left position
+    // by subtracting the segment's startTime to make it absolute relative to the timeline
+    const relativeLeft = (startTime - segmentStartTime) * timeScale;
+    return {
+      left: relativeLeft,
+      width: transition.duration * timeScale,
+      transition,
+    };
+  };
 
   return (
     <div className="layer">
@@ -34,6 +50,11 @@ const TimelineLayer = ({
             top: '5px',
           };
           const isSelected = item.id === selectedSegmentId;
+
+          // Find transitions related to this segment
+          const itemTransitions = transitions.filter(
+            (t) => t.fromSegmentId === item.id || t.toSegmentId === item.id
+          );
 
           return (
             <div
@@ -109,6 +130,39 @@ const TimelineLayer = ({
                   }}
                 />
               )}
+              {/* Render transitions */}
+              {itemTransitions.map((transition) => {
+                const pos = getTransitionPosition(transition, item.startTime);
+                if (!pos) return null;
+                return (
+                  <div
+                    key={transition.id}
+                    className="transition-overlay"
+                    style={{
+                      left: `${pos.left}px`,
+                      width: `${pos.width}px`,
+                      height: '20px',
+                      backgroundColor: 'rgba(0, 255, 255, 0.5)',
+                      position: 'absolute',
+                      top: '0',
+                      zIndex: index + 100,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTransitionSelect(transition); // NEW: Select transition and open panel
+                    }}
+                    onDragStart={(e) => e.preventDefault()} // Prevent dragging
+                    onMouseDown={(e) => e.stopPropagation()} // Prevent drag initiation on segment
+                  >
+                    <span className="transition-label">{transition.type}</span>
+                    {/* REMOVED: Resize handles */}
+                  </div>
+                );
+              })}
             </div>
           );
         })}

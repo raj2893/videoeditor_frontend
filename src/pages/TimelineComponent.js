@@ -34,6 +34,10 @@ const TimelineComponent = ({
   timeScale,
   setTimeScale,
   setPlayheadFromParent,
+  transitions,
+  setTransitions,
+  handleTransitionDrop,
+  onTransitionSelect,
 }) => {
   const [timelineVideos, setTimelineVideos] = useState([]);
   const [playhead, setPlayhead] = useState(0);
@@ -325,6 +329,13 @@ const TimelineComponent = ({
           }
         }
 
+        // Fetch transitions
+        const transitionsResponse = await axios.get(
+          `${API_BASE_URL}/projects/${projectId}/transitions`,
+          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+        );
+        setTransitions(transitionsResponse.data || []);
+
         setVideoLayers(newVideoLayers);
         setAudioLayers(newAudioLayers);
         setHistory([]);
@@ -439,6 +450,57 @@ const TimelineComponent = ({
     calculateDuration();
   }, [videoLayers, audioLayers, setTotalDuration]);
 
+  const findAdjacentSegments = (timelinePosition, layerIndex, videoLayers) => {
+    if (layerIndex < 0 || layerIndex >= videoLayers.length) {
+      return { fromSegment: null, toSegment: null };
+    }
+
+    const layer = videoLayers[layerIndex];
+    let fromSegment = null;
+    let toSegment = null;
+
+    // Sort segments by startTime to ensure correct ordering
+    const sortedSegments = [...layer].sort((a, b) => a.startTime - b.startTime);
+
+    for (let i = 0; i < sortedSegments.length; i++) {
+      const segment = sortedSegments[i];
+      const segmentStart = segment.startTime;
+      const segmentEnd = segment.startTime + segment.duration;
+
+      // If the drop position is within or at the start of a segment
+      if (timelinePosition >= segmentStart && timelinePosition <= segmentEnd) {
+        toSegment = segment;
+        // If this is not the first segment, the previous one is fromSegment
+        if (i > 0) {
+          fromSegment = sortedSegments[i - 1];
+        }
+        break;
+      }
+      // If the drop position is between this segment and the next
+      else if (
+        i < sortedSegments.length - 1 &&
+        timelinePosition > segmentEnd &&
+        timelinePosition < sortedSegments[i + 1].startTime
+      ) {
+        fromSegment = segment;
+        toSegment = sortedSegments[i + 1];
+        break;
+      }
+      // If the drop position is before the first segment
+      else if (i === 0 && timelinePosition < segmentStart) {
+        toSegment = segment;
+        break;
+      }
+      // If the drop position is after the last segment
+      else if (i === sortedSegments.length - 1 && timelinePosition > segmentEnd) {
+        fromSegment = segment;
+        break;
+      }
+    }
+
+    return { fromSegment, toSegment };
+  };
+
   const handleDrop = async (e) => {
     if (isSplitMode) return;
     e.preventDefault();
@@ -463,6 +525,59 @@ const TimelineComponent = ({
       } catch (error) {
         console.error('Error parsing drag data:', error);
       }
+    }
+
+    if (dragData?.type === 'transition') {
+      const rect = timelineRef.current.getBoundingClientRect();
+      const clickX = mouseX - rect.left;
+      const timelinePosition = clickX / timeScale;
+      const layerHeight = 40;
+      const totalVideoLayers = videoLayers.length;
+      const totalAudioLayers = audioLayers.length;
+      const totalLayers = totalVideoLayers + totalAudioLayers + 2;
+      const reversedIndex = Math.floor((mouseY - rect.top) / layerHeight);
+      let layerIndex;
+      let isAudioLayer = false;
+
+      if (reversedIndex <= totalVideoLayers) {
+        layerIndex = totalVideoLayers - reversedIndex;
+      } else if (reversedIndex >= totalVideoLayers + 1 && reversedIndex < totalLayers - 1) {
+        layerIndex = totalLayers - 2 - reversedIndex;
+        isAudioLayer = true;
+      } else {
+        layerIndex = 0; // Default to first video layer
+      }
+
+      if (!isAudioLayer && layerIndex >= 0 && layerIndex < videoLayers.length) {
+        const { fromSegment, toSegment } = findAdjacentSegments(timelinePosition, layerIndex, videoLayers);
+        if (fromSegment && toSegment) {
+          await handleTransitionDrop(
+            fromSegment.id,
+            toSegment.id,
+            layerIndex,
+            timelinePosition,
+            dragData.transition.type // Pass the transition type from dragData
+          );
+        } else if (toSegment) {
+          await handleTransitionDrop(
+            null,
+            toSegment.id,
+            layerIndex,
+            timelinePosition,
+            dragData.transition.type // Pass the transition type from dragData
+          );
+        } else {
+          console.warn('No valid segment found for transition drop');
+        }
+      } else {
+        console.warn('Transition drop ignored: Invalid layer or audio layer');
+      }
+
+      setDraggingItem(null);
+      setDragLayer(null);
+      setDragOffset(0);
+      setSnapIndicators([]);
+      return;
     }
 
     if (dragData?.type === 'audio' || (draggingItem && draggingItem.type === 'audio')) {
@@ -784,6 +899,8 @@ const TimelineComponent = ({
                   }}
                   selectedSegmentId={selectedSegment ? selectedSegment.id : null}
                   showResizeHandles={(item) => item.id === (selectedSegment ? selectedSegment.id : null)}
+                  transitions={transitions.filter((t) => t.layer === layerIndex)} // Pass transitions for this layer
+                  onTransitionSelect={onTransitionSelect} // NEW: Pass transition select handler
                 />
               </div>
             );
@@ -804,6 +921,8 @@ const TimelineComponent = ({
                 handleEditTextSegment={() => {}}
                 selectedSegmentId={selectedSegment ? selectedSegment.id : null}
                 showResizeHandles={(item) => item.id === (selectedSegment ? selectedSegment.id : null)}
+                transitions={[]} // No transitions for audio layers
+                onTransitionSelect={onTransitionSelect} // NEW: Pass transition select handler
               />
             </div>
           ))}

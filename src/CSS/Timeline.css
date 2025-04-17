@@ -683,3 +683,33 @@
   border-bottom: 1px solid #444;
 }
 
+.transition-overlay {
+  border: 1px solid #00ffff;
+  box-sizing: border-box;
+}
+
+.transition-label {
+  font-size: 10px;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 0 2px #000;
+}
+
+.resize-handle.transition-resize-left,
+.resize-handle.transition-resize-right {
+  width: 5px;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  background-color: #00ffff;
+  cursor: ew-resize;
+}
+
+.resize-handle.transition-resize-left {
+  left: 0;
+}
+
+.resize-handle.transition-resize-right {
+  right: 0;
+}
+

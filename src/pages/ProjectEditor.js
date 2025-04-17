@@ -48,6 +48,127 @@ const ProjectEditor = () => {
   const [currentTimeInSegment, setCurrentTimeInSegment] = useState(0);
   const [editingProperty, setEditingProperty] = useState(null);
 
+  // Add state variables at the top of ProjectEditor.js (after existing state declarations)
+  const [isTransitionsOpen, setIsTransitionsOpen] = useState(false);
+  const [transitions, setTransitions] = useState([]);
+  const [availableTransitions] = useState([
+   { type: 'Fade', label: 'Fade', icon : '/icons/fade.png' },
+   { type: 'Slide', label: 'Slide', icon: '/icons/slide.png' },
+   { type: 'Wipe', label: 'Wipe', icon: '/icons/wipe.png' },
+  ]);
+  const [selectedTransition, setSelectedTransition] = useState(null); // NEW: State for selected transition
+
+  // Add function to toggle transitions panel (before render)
+  const toggleTransitionsPanel = () => {
+   setIsTransitionsOpen((prev) => !prev);
+   setIsTransformOpen(false);
+   setIsFiltersOpen(false);
+   setIsTextToolOpen(false);
+  };
+
+  const handleTransitionSelect = (transition) => {
+    setSelectedTransition(transition);
+    setIsTransitionsOpen(true); // Open Transitions panel
+    setIsTransformOpen(false);
+    setIsFiltersOpen(false);
+    setIsTextToolOpen(false);
+  };
+
+  const handleTransitionDurationChange = async (newDuration) => {
+    if (!selectedTransition || !sessionId || !projectId) return;
+    if (newDuration <= 0) {
+      alert('Duration must be positive');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${API_BASE_URL}/projects/${projectId}/update-transition`,
+        {
+          transitionId: selectedTransition.id,
+          type: selectedTransition.type,
+          duration: newDuration,
+          fromSegmentId: selectedTransition.fromSegmentId,
+          toSegmentId: selectedTransition.toSegmentId,
+          layer: selectedTransition.layer,
+        },
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTransitions((prev) =>
+        prev.map((t) =>
+          t.id === selectedTransition.id ? { ...t, duration: newDuration } : t
+        )
+      );
+      setSelectedTransition((prev) => ({ ...prev, duration: newDuration }));
+    } catch (error) {
+      console.error('Error updating transition duration:', error);
+      alert('Failed to update transition duration');
+    }
+  };
+
+  const handleTransitionDelete = async () => {
+    if (!selectedTransition || !sessionId || !projectId) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(
+        `${API_BASE_URL}/projects/${projectId}/remove-transition`,
+        {
+          params: { sessionId, transitionId: selectedTransition.id },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setTransitions((prev) => prev.filter((t) => t.id !== selectedTransition.id));
+      setSelectedTransition(null);
+    } catch (error) {
+      console.error('Error deleting transition:', error);
+      alert('Failed to delete transition');
+    }
+  };
+
+  const fetchTransitions = async () => {
+    if (!sessionId || !projectId || !localStorage.getItem('token')) {
+      console.warn('Cannot fetch transitions: Missing sessionId, projectId, or token');
+      setTransitions([]);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/projects/${projectId}/transitions`, {
+        params: { sessionId },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTransitions(response.data || []);
+    } catch (error) {
+      console.error('Error fetching transitions:', error);
+      if (error.response?.status === 403) {
+        // Attempt to refresh session and retry
+        try {
+          const token = localStorage.getItem('token');
+          const sessionResponse = await axios.post(
+            `${API_BASE_URL}/projects/${projectId}/session`,
+            {},
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          setSessionId(sessionResponse.data);
+          // Retry fetching transitions with new sessionId
+          const retryResponse = await axios.get(`${API_BASE_URL}/projects/${projectId}/transitions`, {
+            params: { sessionId: sessionResponse.data },
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setTransitions(retryResponse.data || []);
+        } catch (retryError) {
+          console.error('Error retrying transitions fetch:', retryError);
+          setTransitions([]);
+        }
+      } else if (error.response?.status === 401) {
+        navigate('/login');
+      } else {
+        setTransitions([]);
+      }
+    }
+  };
+
   let timelineSetPlayhead = null;
 
   const MIN_TIME_SCALE = 0.1;
@@ -238,6 +359,7 @@ const ProjectEditor = () => {
         await fetchVideos();
         await fetchAudios();
         await fetchPhotos();
+//        await fetchTransitions();
         const token = localStorage.getItem('token');
         const sessionResponse = await axios.post(
           `${API_BASE_URL}/projects/${projectId}/session`,
@@ -378,6 +500,50 @@ const ProjectEditor = () => {
       setPhotos([]);
     }
   };
+
+  // Add function to handle transition drag start (before render)
+  const handleTransitionDragStart = (e, transition) => {
+   const dragData = {
+   type: 'transition',
+   transition: {
+   type: transition.type,
+   duration: 1, // Default duration
+   label: transition.label,
+   },
+   };
+   e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+   e.dataTransfer.effectAllowed = 'copy';
+  };
+
+  // Add function to handle transition drop (before render)
+  const handleTransitionDrop = async (fromSegmentId, toSegmentId, layer, timelinePosition, transitionType) => {
+    if (!sessionId || !projectId || !transitionType) {
+      console.error('Missing required parameters for transition drop:', { sessionId, projectId, transitionType });
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const payload = {
+        type: transitionType,
+        duration: 1, // Default duration
+        fromSegmentId: fromSegmentId || null, // Allow null for transitions at segment start
+        toSegmentId: toSegmentId,
+        layer: layer,
+      };
+      const response = await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/add-transition`,
+        payload,
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+      );
+      const newTransition = response.data;
+      setTransitions((prev) => [...prev, newTransition]);
+      await fetchTransitions(); // Refresh transitions to ensure consistency
+    } catch (error) {
+      console.error('Error adding transition:', error.response?.data || error.message);
+      alert('Failed to add transition. Please try again.');
+    }
+  };
+
 
   // New function to preload media
   const preloadMedia = () => {
@@ -807,10 +973,33 @@ const ProjectEditor = () => {
           return;
       }
 
+      // Delete the segment
       await axios.delete(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // Delete associated transitions
+      const transitionsToDelete = transitions.filter(
+        (transition) =>
+          transition.fromSegmentId === selectedSegment.id ||
+          transition.toSegmentId === selectedSegment.id
+      );
+
+      for (const transition of transitionsToDelete) {
+        try {
+          await axios.delete(
+            `${API_BASE_URL}/projects/${projectId}/remove-transition`,
+            {
+              params: { sessionId, transitionId: transition.id },
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+        } catch (error) {
+          console.error(`Error deleting transition ${transition.id}:`, error);
+        }
+      }
+
+      // Update local state
       if (selectedSegment.type === 'audio') {
         setAudioLayers((prevLayers) => {
           const newLayers = [...prevLayers];
@@ -830,6 +1019,16 @@ const ProjectEditor = () => {
         });
       }
 
+      // Update transitions state
+      setTransitions((prevTransitions) =>
+        prevTransitions.filter(
+          (transition) =>
+            transition.fromSegmentId !== selectedSegment.id &&
+            transition.toSegmentId !== selectedSegment.id
+        )
+      );
+
+      // Update total duration
       const allLayers = [...videoLayers, ...audioLayers];
       let maxEndTime = 0;
       allLayers.forEach((layer) => {
@@ -840,6 +1039,7 @@ const ProjectEditor = () => {
       });
       setTotalDuration(maxEndTime);
 
+      // Reset selected segment and panels
       setSelectedSegment(null);
       setIsTextToolOpen(false);
       setIsTransformOpen(false);
@@ -1052,6 +1252,7 @@ const ProjectEditor = () => {
           sharpen: 0,
         });
       }
+      await fetchTransitions();
     } else {
       setTempSegmentValues({});
       setAppliedFilters([]);
@@ -1364,6 +1565,7 @@ const ProjectEditor = () => {
       }
       // Refresh keyframes after saving
       await fetchKeyframes(selectedSegment.id, selectedSegment.type);
+      await fetchTransitions();
       preloadMedia();
     } catch (error) {
       console.error(`Error saving ${selectedSegment.type} segment changes:`, error);
@@ -1936,6 +2138,49 @@ const ProjectEditor = () => {
     );
   };
 
+    const renderTransitionsPanel = () => {
+      return (
+        <div className="transitions-panel">
+          <h3>Transitions</h3>
+          <div className="transitions-list">
+            {availableTransitions.map((transition) => (
+              <div
+                key={transition.type}
+                className="transition-item"
+                draggable
+                onDragStart={(e) => handleTransitionDragStart(e, transition)}
+              >
+                <img src={transition.icon} alt={transition.label} className="transition-icon" />
+                <span>{transition.label}</span>
+              </div>
+            ))}
+          </div>
+          {selectedTransition && (
+            <div className="selected-transition-details">
+              <h4>Selected Transition</h4>
+              <div className="control-group">
+                <label>Type</label>
+                <span>{selectedTransition.type}</span>
+              </div>
+              <div className="control-group">
+                <label>Duration (s)</label>
+                <input
+                  type="number"
+                  value={selectedTransition.duration}
+                  onChange={(e) => handleTransitionDurationChange(parseFloat(e.target.value))}
+                  min="0.1"
+                  step="0.1"
+                />
+              </div>
+              <button className="delete-button" onClick={handleTransitionDelete}>
+                🗑️ Delete Transition
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
   return (
     <div className="project-editor">
       <aside className={`media-panel ${isMediaPanelOpen ? 'open' : 'closed'}`}>
@@ -2116,6 +2361,10 @@ const ProjectEditor = () => {
                 setTimeScale={setTimeScale}
                 setPlayheadFromParent={(setPlayhead) => (timelineSetPlayhead = setPlayhead)}
                 onDeleteSegment={handleDeleteSegment} // Pass delete handler to TimelineComponent
+                transitions={transitions} // Add this
+                setTransitions={setTransitions} // Add this
+                handleTransitionDrop={handleTransitionDrop} // Add this
+                onTransitionSelect={handleTransitionSelect} // NEW: Pass transition select handler
               />
             ) : (
               <div className="loading-message">Loading timeline...</div>
@@ -2158,6 +2407,9 @@ const ProjectEditor = () => {
                 disabled={!selectedSegment || selectedSegment.type !== 'text'}
               >
                 Text
+              </button>
+              <button className={`tool-button ${isTransitionsOpen ? 'active' : ''}`} onClick={toggleTransitionsPanel}>
+              Transitions
               </button>
             </div>
             {selectedSegment && isTransformOpen && (
@@ -2233,6 +2485,7 @@ const ProjectEditor = () => {
                 <button onClick={handleSaveTextSegment}>Save Text</button>
               </div>
             )}
+            {isTransitionsOpen && renderTransitionsPanel()}
           </div>
         )}
       </aside>

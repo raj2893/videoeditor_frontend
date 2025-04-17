@@ -739,6 +739,39 @@
   background: #45a049;
 }
 
+.transitions-panel {
+ padding: 10px;
+}
+
+.transitions-list {
+ display: flex;
+ flex-direction: column;
+ gap: 10px;
+}
+
+.transition-item {
+ display: flex;
+ align-items: center;
+ gap: 10px;
+ padding: 8px;
+ background-color: #2a2a2a;
+ border-radius: 4px;
+ cursor: grab;
+}
+
+.transition-item:hover {
+ background-color: #3a3a3a;
+}
+
+.transition-icon {
+ width: 24px;
+ height: 24px;
+}
+
+.transition-item.dragging {
+ opacity: 0.5;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .project-editor {

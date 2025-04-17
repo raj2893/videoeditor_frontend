@@ -1134,9 +1134,7 @@ const ProjectEditor = () => {
     if (!selectedSegment) return;
     const time = currentTimeInSegment;
 
-//    const segmentData = await fetchKeyframes(selectedSegment.id, selectedSegment.type);
     const currentKeyframes = keyframes || {};
-
     const updatedPropertyKeyframes = (currentKeyframes[property] || []).filter(
       (kf) => !areTimesEqual(kf.time, time)
     );
@@ -1150,34 +1148,54 @@ const ProjectEditor = () => {
 
     setKeyframes(updatedKeyframes);
 
-    // [Change] Update the appropriate layers (video or audio) with new keyframes to ensure UI re-renders
-      if (selectedSegment.type === 'audio') {
-        setAudioLayers((prevLayers) => {
-          const newLayers = [...prevLayers];
-          const layerIndex = Math.abs(selectedSegment.layer) - 1;
-          newLayers[layerIndex] = newLayers[layerIndex].map((item) =>
-            item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
-          );
-          return newLayers;
-        });
-      } else {
-        setVideoLayers((prevLayers) => {
-          const newLayers = [...prevLayers];
-          newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
-            item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
-          );
-          return newLayers;
-        });
-      }
+    // Update the appropriate layers with new keyframes
+    if (selectedSegment.type === 'audio') {
+      setAudioLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        const layerIndex = Math.abs(selectedSegment.layer) - 1;
+        newLayers[layerIndex] = newLayers[layerIndex].map((item) =>
+          item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+        );
+        return newLayers;
+      });
+    } else {
+      setVideoLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
+          item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+        );
+        return newLayers;
+      });
+    }
 
-      // [Change] Update tempSegmentValues to reflect the new keyframe value at the current time
-      setTempSegmentValues((prev) => ({
-        ...prev,
-        [property]: value,
-      }));
+    // Update tempSegmentValues to reflect the new keyframe value
+    setTempSegmentValues((prev) => ({
+      ...prev,
+      [property]: value,
+    }));
 
+    // Send keyframe to backend
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/add-keyframe`,
+        {
+          segmentId: selectedSegment.id,
+          segmentType: selectedSegment.type,
+          property,
+          time,
+          value,
+          interpolationType: 'linear',
+        },
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Save segment changes to persist the updated keyframes
       await saveSegmentChanges(updatedKeyframes);
-    };
+    } catch (error) {
+      console.error('Error adding keyframe:', error);
+    }
+  };
 
   const removeKeyframe = async (property, time) => {
     if (!selectedSegment) return;
@@ -1271,7 +1289,7 @@ const ProjectEditor = () => {
                   ? undefined
                   : tempSegmentValues.positionY,
               scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : tempSegmentValues.scale,
-              opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : tempSegmentValues.opacity, // Added opacity
+              opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : tempSegmentValues.opacity,
               keyframes: updatedKeyframes,
               filters: appliedFilters,
             },
@@ -1292,7 +1310,10 @@ const ProjectEditor = () => {
                   ? undefined
                   : tempSegmentValues.positionY,
               scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : tempSegmentValues.scale,
-              opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : tempSegmentValues.opacity, // Added opacity
+              opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : tempSegmentValues.opacity,
+              layer: selectedSegment.layer,
+              timelineStartTime: selectedSegment.startTime,
+              timelineEndTime: selectedSegment.startTime + selectedSegment.duration,
               keyframes: updatedKeyframes,
               filters: appliedFilters,
             },
@@ -1320,7 +1341,7 @@ const ProjectEditor = () => {
                 updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0
                   ? undefined
                   : tempSegmentValues.positionY,
-              opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : tempSegmentValues.opacity, // Added opacity
+              opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : tempSegmentValues.opacity,
               keyframes: updatedKeyframes,
             },
             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
@@ -1341,7 +1362,8 @@ const ProjectEditor = () => {
         default:
           break;
       }
-//      await fetchKeyframes(selectedSegment.id, selectedSegment.type);
+      // Refresh keyframes after saving
+      await fetchKeyframes(selectedSegment.id, selectedSegment.type);
       preloadMedia();
     } catch (error) {
       console.error(`Error saving ${selectedSegment.type} segment changes:`, error);

@@ -60,6 +60,7 @@ const ProjectEditor = () => {
     { type: 'Push', label: 'Push', icon: '/icons/push.png' },
   ]);
   const [selectedTransition, setSelectedTransition] = useState(null); // NEW: State for selected transition
+  const [projectFps, setProjectFps] = useState(25); // Default to 25 as per backend
 
   // Add function to toggle transitions panel (before render)
   const toggleTransitionsPanel = () => {
@@ -410,6 +411,9 @@ const ProjectEditor = () => {
         const project = projectResponse.data;
         if (project.width && project.height) {
           setCanvasDimensions({ width: project.width, height: project.height });
+        }
+        if (project.fps) {
+          setProjectFps(project.fps); // Set the FPS from backend
         }
       } catch (error) {
         console.error('Error initializing project:', error);
@@ -1101,18 +1105,19 @@ const ProjectEditor = () => {
   };
 
   useEffect(() => {
+    const frameDuration = 1 / projectFps; // Duration of one frame in seconds
     const handleKeyDown = (e) => {
       if (!isPlaying) {
         if (e.key === 'ArrowLeft') {
-          handleTimeUpdate(Math.max(0, currentTime - 1 / 30), true);
+          handleTimeUpdate(Math.max(0, currentTime - frameDuration), true);
         } else if (e.key === 'ArrowRight') {
-          handleTimeUpdate(Math.min(totalDuration, currentTime + 1 / 30), true);
+          handleTimeUpdate(Math.min(totalDuration, currentTime + frameDuration), true);
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, totalDuration, currentTime, selectedSegment]); // Added selectedSegment dependency
+  }, [isPlaying, totalDuration, currentTime, selectedSegment, projectFps]); // Added projectFps dependency
 
   useEffect(() => {
     if (isPlaying && currentTime >= totalDuration) {
@@ -2416,6 +2421,7 @@ const ProjectEditor = () => {
               videos={videos}
               photos={photos}
               transitions={transitions}
+              fps={projectFps}
             />
           </div>
           <div className={`resize-preview-section ${isDraggingHandle ? 'dragging' : ''}`} onMouseDown={handleMouseDown}></div>

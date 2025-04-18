@@ -25,7 +25,7 @@ const TextSegmentHandler = ({
           timelineStartTime: startTime,
           timelineEndTime: textEndTime,
           fontFamily: updatedTextSettings.fontFamily,
-          fontSize: updatedTextSettings.fontSize,
+          scale: updatedTextSettings.scale, // Replaced fontSize
           fontColor: updatedTextSettings.fontColor,
           backgroundColor: updatedTextSettings.backgroundColor,
           positionX: updatedTextSettings.positionX,
@@ -50,7 +50,7 @@ const TextSegmentHandler = ({
         segmentId,
         text: updatedTextSettings.text,
         fontFamily: updatedTextSettings.fontFamily,
-        fontSize: updatedTextSettings.fontSize,
+        scale: updatedTextSettings.scale, // Replaced fontSize
         fontColor: updatedTextSettings.fontColor,
         backgroundColor: updatedTextSettings.backgroundColor,
         positionX: updatedTextSettings.positionX,
@@ -77,7 +77,7 @@ const TextSegmentHandler = ({
 
   const handleTextDrop = async (e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators) => {
     if (!sessionId || !timelineRef.current) return null;
-    const timelineRect = timelineRef.current.getBoundingClientRect(); // Use ref instead of e.currentTarget
+    const timelineRect = timelineRef.current.getBoundingClientRect();
     const layerHeight = 40;
     const reversedIndex = Math.floor((mouseY - timelineRect.top) / layerHeight);
     let targetLayer = videoLayers.length - reversedIndex;
@@ -90,7 +90,7 @@ const TextSegmentHandler = ({
         const data = JSON.parse(dataString);
         if (data.type === 'text') {
           const dropTimePosition = (mouseX - timelineRect.left) / timeScale;
-          return { layer: targetLayer, startTime: dropTimePosition, isNew: true };
+          return { layer: targetLayer, startTime: dropTimePosition, isNew: true, scale: 1.0 }; // Added scale
         }
       }
       return null;
@@ -149,7 +149,7 @@ const TextSegmentHandler = ({
         duration: updatedTextSettings.duration || 5,
         layer: editingTextSegment.layer,
         fontFamily: updatedTextSettings.fontFamily,
-        fontSize: updatedTextSettings.fontSize,
+        scale: updatedTextSettings.scale, // Replaced fontSize
         fontColor: updatedTextSettings.fontColor,
         backgroundColor: updatedTextSettings.backgroundColor,
         positionX: updatedTextSettings.positionX,
@@ -159,8 +159,8 @@ const TextSegmentHandler = ({
       while (newVideoLayers.length <= editingTextSegment.layer) newVideoLayers.push([]);
       newVideoLayers[editingTextSegment.layer].push(newTextSegment);
       setVideoLayers(newVideoLayers);
-      saveHistory(newVideoLayers, []); // Pass empty audioLayers since only videoLayers changed
-      autoSave(newVideoLayers, []); // Pass empty audioLayers since only videoLayers changed
+      saveHistory(newVideoLayers, []);
+      autoSave(newVideoLayers, []);
       await loadProjectTimeline();
     } else {
       if (!editingTextSegment.id) {
@@ -175,7 +175,7 @@ const TextSegmentHandler = ({
                 ...item,
                 text: updatedTextSettings.text,
                 fontFamily: updatedTextSettings.fontFamily,
-                fontSize: updatedTextSettings.fontSize,
+                scale: updatedTextSettings.scale, // Replaced fontSize
                 fontColor: updatedTextSettings.fontColor,
                 backgroundColor: updatedTextSettings.backgroundColor,
                 positionX: updatedTextSettings.positionX,
@@ -186,47 +186,48 @@ const TextSegmentHandler = ({
         )
       );
       setVideoLayers(newVideoLayers);
-      saveHistory(newVideoLayers, []); // Pass empty audioLayers since only videoLayers changed
-      autoSave(newVideoLayers, []); // Pass empty audioLayers since only videoLayers changed
+      saveHistory(newVideoLayers, []);
+      autoSave(newVideoLayers, []);
       await loadProjectTimeline();
     }
   };
 
-    const handleTextSplit = async (item, clickTime, layerIndex) => {
-      const splitTime = clickTime - item.startTime;
-      if (splitTime <= 0.1 || splitTime >= item.duration - 0.1) return;
+  const handleTextSplit = async (item, clickTime, layerIndex) => {
+    const splitTime = clickTime - item.startTime;
+    if (splitTime <= 0.1 || splitTime >= item.duration - 0.1) return;
 
-      const firstPartDuration = splitTime;
-      const secondPartDuration = item.duration - splitTime;
-      let newVideoLayers = [...videoLayers];
-      const layer = newVideoLayers[layerIndex];
-      const itemIndex = layer.findIndex(i => i.id === item.id);
+    const firstPartDuration = splitTime;
+    const secondPartDuration = item.duration - splitTime;
+    let newVideoLayers = [...videoLayers];
+    const layer = newVideoLayers[layerIndex];
+    const itemIndex = layer.findIndex(i => i.id === item.id);
 
-      const firstPart = { ...item, duration: firstPartDuration, timelineEndTime: item.startTime + firstPartDuration };
-      layer[itemIndex] = firstPart;
+    const firstPart = { ...item, duration: firstPartDuration, timelineEndTime: item.startTime + firstPartDuration };
+    layer[itemIndex] = firstPart;
 
-      const secondPart = {
-        ...item,
-        id: `${item.id}-split-${Date.now()}`,
-        startTime: item.startTime + splitTime,
-        duration: secondPartDuration,
-        timelineStartTime: item.startTime + splitTime,
-        timelineEndTime: item.startTime + item.duration,
-      };
-      layer.push(secondPart);
-
-      newVideoLayers[layerIndex] = layer;
-      setVideoLayers(newVideoLayers);
-      saveHistory(newVideoLayers, []);
-
-      await updateTextSegment(item.id, firstPart, item.startTime, layerIndex);
-      await addTextToTimeline(layerIndex, secondPart.startTime, {
-        ...secondPart,
-        duration: secondPartDuration,
-      });
-      autoSave(newVideoLayers, []);
-      await loadProjectTimeline();
+    const secondPart = {
+      ...item,
+      id: `${item.id}-split-${Date.now()}`,
+      startTime: item.startTime + splitTime,
+      duration: secondPartDuration,
+      timelineStartTime: item.startTime + splitTime,
+      timelineEndTime: item.startTime + item.duration,
+      scale: item.scale, // Ensure scale is copied
     };
+    layer.push(secondPart);
+
+    newVideoLayers[layerIndex] = layer;
+    setVideoLayers(newVideoLayers);
+    saveHistory(newVideoLayers, []);
+
+    await updateTextSegment(item.id, firstPart, item.startTime, layerIndex);
+    await addTextToTimeline(layerIndex, secondPart.startTime, {
+      ...secondPart,
+      duration: secondPartDuration,
+    });
+    autoSave(newVideoLayers, []);
+    await loadProjectTimeline();
+  };
 
   return { addTextToTimeline, updateTextSegment, handleTextDrop, handleSaveTextSegment, handleTextSplit };
 };

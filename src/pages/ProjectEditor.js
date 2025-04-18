@@ -35,7 +35,7 @@ const ProjectEditor = () => {
   const [textSettings, setTextSettings] = useState({
     text: 'New Text',
     fontFamily: 'Arial',
-    fontSize: 24,
+    scale: 1.0,
     fontColor: '#FFFFFF',
     backgroundColor: 'transparent',
     duration: 5,
@@ -61,6 +61,9 @@ const ProjectEditor = () => {
   ]);
   const [selectedTransition, setSelectedTransition] = useState(null); // NEW: State for selected transition
   const [projectFps, setProjectFps] = useState(25); // Default to 25 as per backend
+
+  // Add a baseFontSize constant (used in VideoPreview.js for rendering)
+  const baseFontSize = 24;
 
   // Add function to toggle transitions panel (before render)
   const toggleTransitionsPanel = () => {
@@ -254,7 +257,7 @@ const ProjectEditor = () => {
       setTextSettings({
         text: segment.text || 'New Text',
         fontFamily: segment.fontFamily || 'Arial',
-        fontSize: segment.fontSize || 24,
+        scale: segment.scale || 1.0,
         fontColor: segment.fontColor || '#FFFFFF',
         backgroundColor: segment.backgroundColor || 'transparent',
         duration: segment.duration || 5,
@@ -306,7 +309,7 @@ const ProjectEditor = () => {
           segmentId: editingTextSegment.id,
           text: updatedTextSegment.text,
           fontFamily: updatedTextSegment.fontFamily,
-          fontSize: updatedTextSegment.fontSize,
+          scale: updatedTextSegment.scale,
           fontColor: updatedTextSegment.fontColor,
           backgroundColor: updatedTextSegment.backgroundColor,
           timelineStartTime: updatedTextSegment.timelineStartTime,
@@ -340,7 +343,6 @@ const ProjectEditor = () => {
           timelineStartTime: startTime,
           timelineEndTime: startTime + duration,
           fontFamily: textSettings.fontFamily,
-          fontSize: textSettings.fontSize,
           fontColor: textSettings.fontColor,
           backgroundColor: textSettings.backgroundColor,
           positionX: 0,
@@ -357,7 +359,6 @@ const ProjectEditor = () => {
         duration: duration,
         layer: 0,
         fontFamily: textSettings.fontFamily,
-        fontSize: textSettings.fontSize,
         fontColor: textSettings.fontColor,
         backgroundColor: textSettings.backgroundColor,
         positionX: 0,
@@ -786,46 +787,58 @@ const ProjectEditor = () => {
   }, [videoLayers, audioLayers]);
 
   const handleVideoUpload = async (event) => {
-    const file = event.target.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('title', file.name);
-    try {
-      setUploading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_BASE_URL}/videos/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
-      });
-      const newVideo = response.data;
-      if (newVideo) await fetchVideos();
-    } catch (error) {
-      console.error('Error uploading video:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
 
-  const handleAudioUpload = async (event) => {
-    const file = event.target.files[0];
-    const formData = new FormData();
-    formData.append('audio', file);
-    formData.append('audioFileName', file.name);
-    try {
-      setUploading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/projects/${projectId}/upload-audio`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
-      );
-      const updatedProject = response.data;
-      if (updatedProject) await fetchAudios();
-    } catch (error) {
-      console.error('Error uploading audio:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('files', file);
+        formData.append('titles', file.name); // Use file name as title, or customize as needed
+      });
+
+      try {
+        setUploading(true);
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${API_BASE_URL}/videos/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
+        });
+        const newVideos = response.data; // Expecting an array of Video objects
+        if (newVideos && newVideos.length > 0) await fetchVideos();
+      } catch (error) {
+        console.error('Error uploading videos:', error);
+        alert('Failed to upload one or more videos. Please try again.');
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    const handleAudioUpload = async (event) => {
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
+
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('audio', file);
+        formData.append('audioFileNames', file.name); // Use file name, or customize as needed
+      });
+
+      try {
+        setUploading(true);
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+          `${API_BASE_URL}/projects/${projectId}/upload-audio`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
+        );
+        const updatedProject = response.data; // Expecting the updated Project object
+        if (updatedProject) await fetchAudios();
+      } catch (error) {
+        console.error('Error uploading audio files:', error);
+        alert('Failed to upload one or more audio files. Please try again.');
+      } finally {
+        setUploading(false);
+      }
+    };
 
   const generateVideoThumbnail = async (video) => {
     if (!video || (!video.filePath && !video.filename)) return;
@@ -1627,26 +1640,32 @@ const ProjectEditor = () => {
   };
 
   const handlePhotoUpload = async (event) => {
-    const file = event.target.files[0];
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('imageFileName', file.name);
-    try {
-      setUploading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/projects/${projectId}/upload-image`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
-      );
-      const updatedProject = response.data;
-      if (updatedProject) await fetchPhotos();
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
+
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('image', file);
+        formData.append('imageFileNames', file.name); // Use file name, or customize as needed
+      });
+
+      try {
+        setUploading(true);
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+          `${API_BASE_URL}/projects/${projectId}/upload-image`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
+        );
+        const updatedProject = response.data; // Expecting the updated Project object
+        if (updatedProject) await fetchPhotos();
+      } catch (error) {
+        console.error('Error uploading images:', error);
+        alert('Failed to upload one or more images. Please try again.');
+      } finally {
+        setUploading(false);
+      }
+    };
 
   const handlePhotoClick = async (photo, isDragEvent = false) => {
     if (uploading) return;
@@ -2042,6 +2061,7 @@ const ProjectEditor = () => {
         properties = [
           { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
           { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
+          { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 }, // Added scale
           { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 }, // Added opacity
         ];
         break;
@@ -2299,10 +2319,17 @@ const ProjectEditor = () => {
               </button>
               {expandedSection === 'videos' && (
                 <div className="section-content">
-                  <input type="file" accept="video/*" onChange={handleVideoUpload} id="upload-video" className="hidden-input" />
-                  <label htmlFor="upload-video" className="upload-button">
-                    {uploading ? 'Uploading...' : 'Upload Video'}
-                  </label>
+                  <input
+                          type="file"
+                          accept="video/*"
+                          onChange={handleVideoUpload}
+                          id="upload-video"
+                          className="hidden-input"
+                          multiple // Add this
+                        />
+                        <label htmlFor="upload-video" className="upload-button">
+                          {uploading ? 'Uploading...' : 'Upload Video'}
+                        </label>
                   {videos.length === 0 ? (
                     <div className="empty-state">Pour it in, I am waiting!</div>
                   ) : (
@@ -2351,10 +2378,17 @@ const ProjectEditor = () => {
               </button>
               {expandedSection === 'photos' && (
                 <div className="section-content">
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} id="upload-photo" className="hidden-input" />
-                  <label htmlFor="upload-photo" className="upload-button">
-                    {uploading ? 'Uploading...' : 'Upload Photo'}
-                  </label>
+                  <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoUpload}
+                          id="upload-photo"
+                          className="hidden-input"
+                          multiple // Add this
+                        />
+                        <label htmlFor="upload-photo" className="upload-button">
+                          {uploading ? 'Uploading...' : 'Upload Photo'}
+                        </label>
                   {photos.length === 0 ? (
                     <div className="empty-state">Pour it in, I am waiting!</div>
                   ) : (
@@ -2382,10 +2416,17 @@ const ProjectEditor = () => {
               </button>
               {expandedSection === 'audios' && (
                 <div className="section-content">
-                  <input type="file" accept="audio/*" onChange={handleAudioUpload} id="upload-audio" className="hidden-input" />
-                  <label htmlFor="upload-audio" className="upload-button">
-                    {uploading ? 'Uploading...' : 'Upload Audio'}
-                  </label>
+                  <input
+                          type="file"
+                          accept="audio/*"
+                          onChange={handleAudioUpload}
+                          id="upload-audio"
+                          className="hidden-input"
+                          multiple // Add this
+                        />
+                        <label htmlFor="upload-audio" className="upload-button">
+                          {uploading ? 'Uploading...' : 'Upload Audio'}
+                        </label>
                   {audios.length === 0 ? (
                     <div className="empty-state">Pour it in, I am waiting!</div>
                   ) : (
@@ -2495,102 +2536,119 @@ const ProjectEditor = () => {
           </button>
         </div>
         {isToolsPanelOpen && (
-          <div className="panel-content">
-            <h2>Tools</h2>
-            <div className="tools-buttons">
-              <button className={`tool-button ${isTransformOpen ? 'active' : ''}`} onClick={toggleTransformPanel}>
-                Transform
-              </button>
-              <button className={`tool-button ${isFiltersOpen ? 'active' : ''}`} onClick={toggleFiltersPanel}>
-                Filters
-              </button>
-              <button
-                className={`tool-button ${isTextToolOpen ? 'active' : ''}`}
-                onClick={toggleTextTool}
-                disabled={!selectedSegment || selectedSegment.type !== 'text'}
-              >
-                Text
-              </button>
-              <button className={`tool-button ${isTransitionsOpen ? 'active' : ''}`} onClick={toggleTransitionsPanel}>
-              Transitions
-              </button>
-            </div>
-            {selectedSegment && isTransformOpen && (
-              <div className="transform-panel">
-                <h3>Transform</h3>
-                {renderKeyframeControls()}
-              </div>
-            )}
-            {isFiltersOpen && renderFilterControls()}
-            {isTextToolOpen && selectedSegment && selectedSegment.type === 'text' && (
-              <div className="text-tool-panel">
-                <h3>Text Settings</h3>
-                <div className="control-group">
-                  <label>Text Content</label>
-                  <input
-                    type="text"
-                    value={textSettings.text}
-                    onChange={(e) => updateTextSettings({ ...textSettings, text: e.target.value })}
-                  />
-                </div>
-                <div className="control-group">
-                  <label>Font Family</label>
-                  <select
-                    value={textSettings.fontFamily}
-                    onChange={(e) => updateTextSettings({ ...textSettings, fontFamily: e.target.value })}
-                  >
-                    <option value="Arial">Arial</option>
-                    <option value="Helvetica">Helvetica</option>
-                    <option value="Times New Roman">Times New Roman</option>
-                    <option value="Courier New">Courier New</option>
-                  </select>
-                </div>
-                <div className="control-group">
-                  <label>Font Size</label>
-                  <input
-                    type="number"
-                    value={textSettings.fontSize}
-                    onChange={(e) => updateTextSettings({ ...textSettings, fontSize: parseInt(e.target.value) || 24 })}
-                    min="1"
-                  />
-                </div>
-                <div className="control-group">
-                  <label>Font Color</label>
-                  <input
-                    type="color"
-                    value={textSettings.fontColor}
-                    onChange={(e) => updateTextSettings({ ...textSettings, fontColor: e.target.value })}
-                  />
-                </div>
-                <div className="control-group">
-                  <label>Background Color</label>
-                  <input
-                    type="color"
-                    value={textSettings.backgroundColor === 'transparent' ? '#000000' : textSettings.backgroundColor}
-                    onChange={(e) =>
-                      updateTextSettings({
-                        ...textSettings,
-                        backgroundColor: e.target.value === '#000000' ? 'transparent' : e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="control-group">
-                  <label>Duration (s)</label>
-                  <input
-                    type="number"
-                    value={textSettings.duration}
-                    onChange={(e) => updateTextSettings({ ...textSettings, duration: parseFloat(e.target.value) || 5 })}
-                    min="0.1"
-                    step="0.1"
-                  />
-                </div>
-                <button onClick={handleSaveTextSegment}>Save Text</button>
-              </div>
-            )}
-            {isTransitionsOpen && renderTransitionsPanel()}
+                  <div className="panel-content">
+                    <h2>Tools</h2>
+                    <div className="tools-sections">
+          <div className="tool-section">
+            <button
+              className={`tool-button ${isTransformOpen ? 'active' : ''}`}
+              onClick={toggleTransformPanel}
+            >
+              Transform
+            </button>
           </div>
-        )}
+          <div className="tool-section">
+            <button
+              className={`tool-button ${isFiltersOpen ? 'active' : ''}`}
+              onClick={toggleFiltersPanel}
+            >
+              Filters
+            </button>
+          </div>
+          <div className="tool-section">
+            <button
+              className={`tool-button ${isTextToolOpen ? 'active' : ''}`}
+              onClick={toggleTextTool}
+              disabled={!selectedSegment || selectedSegment.type !== 'text'}
+            >
+              Text
+            </button>
+          </div>
+          <div className="tool-section">
+            <button
+              className={`tool-button ${isTransitionsOpen ? 'active' : ''}`}
+              onClick={toggleTransitionsPanel}
+            >
+              Transitions
+            </button>
+          </div>
+        </div>
+                    {selectedSegment && isTransformOpen && (
+                      <div className="transform-panel">
+                        <h3>Transform</h3>
+                        {renderKeyframeControls()}
+                      </div>
+                    )}
+                    {isFiltersOpen && renderFilterControls()}
+                    {isTextToolOpen && selectedSegment && selectedSegment.type === 'text' && (
+                      <div className="text-tool-panel">
+                        <h3>Text Settings</h3>
+                        <div className="control-group">
+                          <label>Text Content</label>
+                          <input
+                            type="text"
+                            value={textSettings.text}
+                            onChange={(e) => updateTextSettings({ ...textSettings, text: e.target.value })}
+                          />
+                        </div>
+                        <div className="control-group">
+                          <label>Font Family</label>
+                          <select
+                            value={textSettings.fontFamily}
+                            onChange={(e) => updateTextSettings({ ...textSettings, fontFamily: e.target.value })}
+                          >
+                            <option value="Arial">Arial</option>
+                            <option value="Helvetica">Helvetica</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Courier New">Courier New</option>
+                          </select>
+                        </div>
+                        <div className="control-group">
+                          <label>Font Size</label>
+                          <input
+                            type="number"
+                            value={textSettings.fontSize}
+                            onChange={(e) => updateTextSettings({ ...textSettings, fontSize: parseInt(e.target.value) || 24 })}
+                            min="1"
+                          />
+                        </div>
+                        <div className="control-group">
+                          <label>Font Color</label>
+                          <input
+                            type="color"
+                            value={textSettings.fontColor}
+                            onChange={(e) => updateTextSettings({ ...textSettings, fontColor: e.target.value })}
+                          />
+                        </div>
+                        <div className="control-group">
+                          <label>Background Color</label>
+                          <input
+                            type="color"
+                            value={textSettings.backgroundColor === 'transparent' ? '#000000' : textSettings.backgroundColor}
+                            onChange={(e) =>
+                              updateTextSettings({
+                                ...textSettings,
+                                backgroundColor: e.target.value === '#000000' ? 'transparent' : e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="control-group">
+                          <label>Duration (s)</label>
+                          <input
+                            type="number"
+                            value={textSettings.duration}
+                            onChange={(e) => updateTextSettings({ ...textSettings, duration: parseFloat(e.target.value) || 5 })}
+                            min="0.1"
+                            step="0.1"
+                          />
+                        </div>
+                        <button onClick={handleSaveTextSegment}>Save Text</button>
+                      </div>
+                    )}
+                    {isTransitionsOpen && renderTransitionsPanel()}
+                  </div>
+                )}
       </aside>
     </div>
   );

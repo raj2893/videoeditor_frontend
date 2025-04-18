@@ -4,6 +4,9 @@ import fx from 'glfx';
 
 const API_BASE_URL = 'http://localhost:8080';
 
+// Add baseFontSize constant
+const baseFontSize = 24;
+
 const VideoPreview = ({
   videoLayers,
   audioLayers = [],
@@ -718,7 +721,7 @@ const VideoPreview = ({
                 </React.Fragment>
               );
             } else if (element.type === 'text') {
-              const fontSize = (element.fontSize || 24) * scaleFactor;
+              const fontSize = baseFontSize * scaleFactor;
               const textWidth = element.text.length * fontSize * 0.6;
               const textHeight = fontSize * 1.2;
 

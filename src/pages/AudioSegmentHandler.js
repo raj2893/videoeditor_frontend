@@ -29,24 +29,20 @@ const AudioSegmentHandler = ({
       const originalDuration = item.duration;
       const timelineEndTime = newStartTime + (newDuration || originalDuration);
 
-      // [Change] Assume item.duration is the timeline duration; fetch actual audio duration if needed
-      // For simplicity, we'll use a reasonable max duration if not available; ideally, this should come from item
-      const maxAudioDuration = item.maxDuration || 3600; // Default to 1 hour if not known; replace with actual duration if stored
+      const maxAudioDuration = item.maxDuration || 3600;
 
-      // [Change] Clamp startTimeWithinAudio and endTimeWithinAudio to valid ranges
       const clampedStartTimeWithinAudio = Math.max(0, Math.min(
         startTimeWithinAudio !== undefined ? startTimeWithinAudio : item.startTimeWithinAudio || 0,
         maxAudioDuration - (newDuration || originalDuration)
       ));
       const clampedEndTimeWithinAudio = Math.max(
-        clampedStartTimeWithinAudio + 0.001, // Ensure end > start
+        clampedStartTimeWithinAudio + 0.001,
         Math.min(
           endTimeWithinAudio !== undefined ? endTimeWithinAudio : (item.endTimeWithinAudio || clampedStartTimeWithinAudio + originalDuration),
           maxAudioDuration
         )
       );
 
-      // [Change] Adjust timelineEndTime if audio bounds were clamped
       const adjustedDuration = clampedEndTimeWithinAudio - clampedStartTimeWithinAudio;
       const adjustedTimelineEndTime = newStartTime + adjustedDuration;
 
@@ -57,7 +53,7 @@ const AudioSegmentHandler = ({
         layer: newLayer,
         startTime: clampedStartTimeWithinAudio,
         endTime: clampedEndTimeWithinAudio,
-        ...(item.volume !== undefined && { volume: item.volume }) // Include volume if available
+        ...(item.volume !== undefined && { volume: item.volume })
       };
 
       const response = await axios.put(
@@ -69,7 +65,6 @@ const AudioSegmentHandler = ({
         }
       );
 
-      // [Change] Update local item with clamped values to maintain consistency
       const updatedItem = {
         ...item,
         startTime: newStartTime,
@@ -87,9 +82,8 @@ const AudioSegmentHandler = ({
 
       console.log(`Updated audio segment ${audioSegmentId} to start at ${newStartTime}s, end at ${adjustedTimelineEndTime}s, layer ${newLayer}, startTimeWithinAudio at ${clampedStartTimeWithinAudio}s, endTimeWithinAudio at ${clampedEndTimeWithinAudio}s`);
     } catch (error) {
-      // [Change] Enhanced error logging with response data
       console.error('Error updating audio segment:', error.response?.data || error.message);
-      throw error; // Re-throw to allow caller to handle
+      throw error;
     }
   };
 
@@ -281,37 +275,194 @@ const AudioSegmentHandler = ({
       firstPart
     );
 
-    const audioFileName = item.fileName.split('/').pop();
+    // Try both full fileName and basename
+    const audioFileNames = [
+      item.fileName,
+      item.fileName.split('/').pop()
+    ];
     console.log('Original item.fileName:', item.fileName);
-    console.log('Sending audioFileName to backend:', audioFileName);
+    console.log('Trying audioFileNames for second part:', audioFileNames);
 
-    try {
-      await axios.post(
-        `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
-        {
-          audioFileName: audioFileName,
-          layer: item.layer,
-          timelineStartTime: secondPart.startTime,
-          timelineEndTime: secondPart.timelineEndTime,
-          startTime: secondPart.startTimeWithinAudio,
-          endTime: secondPart.endTimeWithinAudio,
-        },
-        {
-          params: { sessionId },
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        }
+    let success = false;
+    let lastError = null;
+    for (const audioFileName of audioFileNames) {
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
+          {
+            audioFileName,
+            layer: item.layer,
+            timelineStartTime: secondPart.startTime,
+            timelineEndTime: secondPart.timelineEndTime,
+            startTime: secondPart.startTimeWithinAudio,
+            endTime: secondPart.endTimeWithinAudio,
+          },
+          {
+            params: { sessionId },
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          }
+        );
+        console.log('Successfully added split audio to timeline:', response.data);
+        success = true;
+        break;
+      } catch (error) {
+        console.error(`Error adding split audio with fileName ${audioFileName}:`, error.response?.data || error.message);
+        lastError = error;
+      }
+    }
+
+    if (!success) {
+      console.error('Failed to add second segment after trying all fileNames');
+      // Revert frontend changes
+      newAudioLayers = [...audioLayers];
+      newAudioLayers[layerIndex] = audioLayers[layerIndex].map(a =>
+        a.id === item.id ? { ...item } : a
       );
-      console.log('Successfully added split audio to timeline');
-    } catch (error) {
-      console.error('Error adding split audio:', error.response?.data || error.message);
-      throw error;
+      setAudioLayers(newAudioLayers);
+      throw new Error(`Failed to add split audio: ${lastError.response?.data?.message || lastError.message}`);
     }
 
     autoSave([], newAudioLayers);
     await loadProjectTimeline();
   };
 
-  return { handleAudioDrop, updateAudioSegment, handleAudioSplit };
+  const handleExtractedAudioSplit = async (item, clickTime, layerIndex) => {
+    console.log('handleExtractedAudioSplit: item=', item, 'clickTime=', clickTime, 'layerIndex=', layerIndex);
+    const splitTime = clickTime - item.startTime;
+    console.log('Calculated splitTime=', splitTime, 'item.startTime=', item.startTime, 'item.duration=', item.duration);
+    if (splitTime <= 0.1 || splitTime >= item.duration - 0.1) {
+      console.log('Split time too close to start or end: splitTime=', splitTime);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+
+      // Step 1: Fetch project data
+      let projectData, extractedAudios;
+      try {
+        const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { sessionId },
+        });
+        projectData = response.data;
+        extractedAudios = projectData.extractedAudioJson
+          ? typeof projectData.extractedAudioJson === 'string'
+            ? JSON.parse(projectData.extractedAudioJson)
+            : projectData.extractedAudioJson
+          : [];
+        console.log('Extracted audios:', extractedAudios);
+      } catch (error) {
+        console.error('Error fetching project:', error.response?.data || error.message);
+        throw new Error('Failed to fetch project data');
+      }
+
+      // Step 2: Find the exact audio entry
+      const basename = item.fileName.split('/').pop();
+      const audioEntry = extractedAudios.find(a =>
+        a.audioFileName === item.fileName ||
+        a.audioFileName === basename ||
+        a.audioPath === item.fileName ||
+        a.audioPath === `audio/projects/${projectId}/extracted/${basename}`
+      );
+      if (!audioEntry) {
+        console.error('No matching extracted audio found for fileName:', item.fileName, 'basename:', basename);
+        throw new Error('Extracted audio not found in project');
+      }
+      const audioFileName = audioEntry.audioFileName; // Use the exact filename from extractedAudioJson
+      console.log('Using audioFileName:', audioFileName);
+
+      // Step 3: Calculate durations
+      const firstPartDuration = splitTime;
+      const secondPartDuration = item.duration - splitTime;
+      const startWithinAudio = item.startTimeWithinAudio || 0;
+      console.log('firstPartDuration=', firstPartDuration, 'secondPartDuration=', secondPartDuration, 'startWithinAudio=', startWithinAudio);
+
+      // Step 4: Prepare segment data
+      const firstPart = {
+        ...item,
+        duration: firstPartDuration,
+        timelineEndTime: item.startTime + firstPartDuration,
+        endTimeWithinAudio: startWithinAudio + firstPartDuration,
+      };
+      const secondPartId = `${item.id}-split-${Date.now()}`;
+      const secondPart = {
+        ...item,
+        id: secondPartId,
+        startTime: item.startTime + splitTime,
+        timelineStartTime: item.startTime + splitTime,
+        duration: secondPartDuration,
+        timelineEndTime: item.startTime + item.duration,
+        startTimeWithinAudio: startWithinAudio + firstPartDuration,
+        endTimeWithinAudio: startWithinAudio + item.duration,
+        fileName: audioFileName, // Ensure consistency
+      };
+      console.log('firstPart=', firstPart);
+      console.log('secondPart=', secondPart);
+
+      // Step 5: Update first segment
+      console.log('Calling updateAudioSegment for firstPart:', firstPart.id);
+      await updateAudioSegment(
+        item.id,
+        item.startTime,
+        item.layer,
+        firstPartDuration,
+        firstPart.startTimeWithinAudio,
+        firstPart.endTimeWithinAudio,
+        firstPart
+      );
+
+      // Step 6: Add second segment
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
+          {
+            audioFileName: audioFileName,
+            layer: item.layer,
+            timelineStartTime: secondPart.startTime,
+            timelineEndTime: secondPart.timelineEndTime,
+            startTime: secondPart.startTimeWithinAudio,
+            endTime: secondPart.endTimeWithinAudio,
+            volume: item.volume || 1.0,
+          },
+          {
+            params: { sessionId },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        console.log('Successfully added second segment:', response.data);
+      } catch (error) {
+        console.error('Failed to add second segment:', error.response?.data || error.message);
+        throw new Error('Failed to add second audio segment');
+      }
+
+      // Step 7: Update frontend state
+      let newAudioLayers = [...audioLayers];
+      const layer = [...newAudioLayers[layerIndex]];
+      const itemIndex = layer.findIndex(i => i.id === item.id);
+      layer[itemIndex] = firstPart;
+      layer.push(secondPart);
+      newAudioLayers[layerIndex] = layer;
+      setAudioLayers(newAudioLayers);
+
+      // Step 8: Save history and auto-save
+      saveHistory([], newAudioLayers);
+      autoSave([], newAudioLayers);
+
+      // Step 9: Reload timeline to sync with backend
+      await loadProjectTimeline();
+
+      console.log('Successfully split extracted audio');
+    } catch (error) {
+      console.error('Error splitting extracted audio:', error.message);
+      setAudioLayers([...audioLayers]); // Revert on error
+      alert('Failed to split audio. Please try again.');
+    }
+  };
+  return { handleAudioDrop, updateAudioSegment, handleAudioSplit, handleExtractedAudioSplit };
 };
 
 export default AudioSegmentHandler;

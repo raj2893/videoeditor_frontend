@@ -108,10 +108,14 @@ const ImageSegmentHandler = ({
     if (!sessionId || !projectId) return;
     try {
       const token = localStorage.getItem('token');
-      const layer = videoLayers[newLayer];
-      const item = layer.find(i => i.id === segmentId);
+      // Find the item in any layer
+      let item;
+      for (const layer of videoLayers) {
+        item = layer.find(i => i.id === segmentId);
+        if (item) break;
+      }
       if (!item) {
-        console.error(`Image segment with ID ${segmentId} not found in layer ${newLayer}`);
+        console.error(`Image segment with ID ${segmentId} not found`);
         return;
       }
       const duration = newDuration || item.duration;
@@ -148,29 +152,24 @@ const ImageSegmentHandler = ({
   const handleImageDrop = async (e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!sessionId) return;
-    if (!timelineRef.current) {
-      console.error('Timeline ref is not available');
+    if (!sessionId || !timelineRef.current) {
+      console.error('Session ID or timeline ref is not available');
       return;
     }
+
     const timelineRect = timelineRef.current.getBoundingClientRect();
-    const layerHeight = 40;
+    const layerHeight = 40; // Ensure this matches the CSS height of .timeline-layer
     const relativeMouseY = mouseY - timelineRect.top;
-    const timelineLayers = timelineRef.current.querySelectorAll('.timeline-layer');
-    if (!timelineLayers) {
-      console.error('Timeline layers not found');
-      return;
-    }
     const totalVideoLayers = videoLayers.length;
+
+    // Calculate target layer
     const reversedIndex = Math.floor(relativeMouseY / layerHeight);
-    let targetLayer;
-    if (reversedIndex <= totalVideoLayers) {
-      targetLayer = totalVideoLayers - reversedIndex;
-    } else {
-      console.log('Cannot drop image in audio layers');
-      return;
-    }
-    targetLayer = Math.max(0, Math.min(targetLayer, videoLayers.length - 1));
+    let targetLayer = totalVideoLayers - reversedIndex; // Adjust for top-down layer order
+
+    // Allow new layer creation if dragging above the topmost layer
+    targetLayer = Math.max(0, reversedIndex < 0 ? totalVideoLayers : targetLayer);
+
+    // Handle new photo drop from media panel
     if (!draggingItem) {
       const dataString = e.dataTransfer.getData('application/json');
       if (dataString) {
@@ -180,68 +179,84 @@ const ImageSegmentHandler = ({
           let dropTimePosition = (mouseX - timelineRect.left) / timeScale;
           let adjustedStartTime = Math.max(0, dropTimePosition);
           const duration = photo.duration || 5;
+
           let newVideoLayers = [...videoLayers];
           while (newVideoLayers.length <= targetLayer) newVideoLayers.push([]);
           const targetLayerItems = newVideoLayers[targetLayer];
+
+          // Adjust start time to avoid overlaps
           let hasOverlap = true;
           while (hasOverlap) {
-            hasOverlap = targetLayerItems.some(existingItem => {
+            hasOverlap = targetLayerItems.some((existingItem) => {
               const existingStart = existingItem.startTime;
               const existingEnd = existingStart + existingItem.duration;
               const newEnd = adjustedStartTime + duration;
               return adjustedStartTime < existingEnd && newEnd > existingStart;
             });
             if (hasOverlap) {
-              const overlappingItem = targetLayerItems.find(existingItem => {
+              const overlappingItem = targetLayerItems.find((existingItem) => {
                 const existingStart = existingItem.startTime;
-                const existingEnd = existingStart + existingItem.duration;
+                const existingEnd = existingItem.startTime + existingItem.duration;
                 const newEnd = adjustedStartTime + duration;
                 return adjustedStartTime < existingEnd && newEnd > existingStart;
               });
               if (overlappingItem) {
                 adjustedStartTime = overlappingItem.startTime + overlappingItem.duration;
-              } else break;
+              } else {
+                break;
+              }
             }
           }
-          const imageFileName = photo.fileName; // Must be the full unique name (e.g., "60_1743673221228_WhatsApp Image 2025-02-17 at 10.43.28 AM.jpeg")
-          console.log('Drag data photo:', JSON.stringify(photo));
-          console.log('Sending imageFileName to backend:', imageFileName);
+
+          const imageFileName = photo.fileName;
+          console.log('Dropping new photo:', { imageFileName, targetLayer, adjustedStartTime });
           await addImageToTimeline(imageFileName, targetLayer, adjustedStartTime, adjustedStartTime + duration);
         }
       }
       return;
     }
-    if (draggingItem.type !== 'image') return;
-    let actualLayerIndex = targetLayer;
+
+    // Handle moving existing image segment
+    if (draggingItem.type !== 'image') {
+      console.log('Only image segments can be moved');
+      return;
+    }
+
     const newStartTime = snapIndicators.length > 0
       ? snapIndicators[0].time - (snapIndicators[0].edge === 'end' ? draggingItem.duration : 0)
       : (mouseX - timelineRect.left) / timeScale - dragOffset;
     const adjustedStartTime = Math.max(0, newStartTime);
-    let newVideoLayers = [...videoLayers];
-    while (newVideoLayers.length <= actualLayerIndex) newVideoLayers.push([]);
 
-    const hasOverlap = newVideoLayers[actualLayerIndex].some(item => {
-      if (draggingItem && item.id === draggingItem.id) return false;
+    let newVideoLayers = [...videoLayers];
+    while (newVideoLayers.length <= targetLayer) newVideoLayers.push([]);
+
+    // Check for overlaps in the target layer
+    const hasOverlap = newVideoLayers[targetLayer].some((item) => {
+      if (item.id === draggingItem.id) return false; // Ignore the dragging item itself
       const itemStart = item.startTime;
       const itemEnd = itemStart + item.duration;
       const newEnd = adjustedStartTime + draggingItem.duration;
       return adjustedStartTime < itemEnd && newEnd > itemStart;
     });
+
     if (hasOverlap) {
-      console.log('Overlap detected. Cannot place item here.');
+      console.log('Cannot move image: Overlap detected in target layer');
       return;
     }
-    if (actualLayerIndex === dragLayer) {
-      newVideoLayers[actualLayerIndex] = newVideoLayers[actualLayerIndex].filter(v => v.id !== draggingItem.id);
-    } else {
-      newVideoLayers[dragLayer] = newVideoLayers[dragLayer].filter(v => v.id !== draggingItem.id);
-    }
-    const updatedItem = { ...draggingItem, startTime: adjustedStartTime, layer: actualLayerIndex };
-    newVideoLayers[actualLayerIndex].push(updatedItem);
+
+    // Remove from source layer
+    newVideoLayers[dragLayer] = newVideoLayers[dragLayer].filter((v) => v.id !== draggingItem.id);
+
+    // Add to target layer
+    const updatedItem = { ...draggingItem, startTime: adjustedStartTime, layer: targetLayer };
+    newVideoLayers[targetLayer].push(updatedItem);
+
     setVideoLayers(newVideoLayers);
     saveHistory(newVideoLayers, []);
     autoSave(newVideoLayers, []);
-    await updateImageSegment(draggingItem.id, adjustedStartTime, actualLayerIndex, draggingItem.duration, {
+
+    // Update backend
+    await updateImageSegment(draggingItem.id, adjustedStartTime, targetLayer, draggingItem.duration, {
       positionX: draggingItem.positionX,
       positionY: draggingItem.positionY,
       scale: draggingItem.scale,

@@ -6,6 +6,8 @@ const VideoSegmentHandler = ({
   sessionId,
   videoLayers,
   setVideoLayers,
+  audioLayers,
+  setAudioLayers,
   addVideoToTimeline,
   saveHistory,
   autoSave,
@@ -20,7 +22,7 @@ const VideoSegmentHandler = ({
     newDuration,
     startTimeWithinVideo,
     endTimeWithinVideo,
-    layers = videoLayers // Default to videoLayers, override with newVideoLayers if provided
+    layers = videoLayers
   ) => {
     if (!projectId || !sessionId) return;
     try {
@@ -79,7 +81,6 @@ const VideoSegmentHandler = ({
     }
 
     const totalVideoLayers = videoLayers.length;
-    const totalAudioLayers = timelineLayers.length - totalVideoLayers - 2;
     const reversedIndex = Math.floor(relativeMouseY / layerHeight);
     let targetLayer;
 
@@ -90,7 +91,6 @@ const VideoSegmentHandler = ({
       return;
     }
 
-    // Allow dropping into new layer
     targetLayer = Math.max(0, reversedIndex < 0 ? totalVideoLayers : targetLayer);
 
     if (!draggingItem) {
@@ -168,12 +168,10 @@ const VideoSegmentHandler = ({
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
 
-    // Update state first
     setVideoLayers(newVideoLayers);
     saveHistory(newVideoLayers, []);
     autoSave(newVideoLayers, []);
 
-    // Pass newVideoLayers to updateSegmentPosition
     await updateSegmentPosition(
       draggingItem.id,
       adjustedStartTime,
@@ -189,70 +187,205 @@ const VideoSegmentHandler = ({
     const splitTime = clickTime - item.startTime;
     if (splitTime <= 0.1 || splitTime >= item.duration - 0.1) return;
 
-    const firstPartDuration = splitTime;
-    const secondPartDuration = item.duration - splitTime;
-    let newVideoLayers = [...videoLayers];
-    const layer = newVideoLayers[layerIndex];
-    const itemIndex = layer.findIndex(i => i.id === item.id);
+    try {
+      const token = localStorage.getItem('token');
 
-    const originalVideoStartTime = item.startTimeWithinVideo || 0;
-    const originalVideoEndTime = item.endTimeWithinVideo || item.duration;
+      // Step 1: Fetch the original VideoSegment and its AudioSegment
+      const response = await axios.get(
+        `${API_BASE_URL}/projects/${projectId}/get-segment`,
+        {
+          params: { sessionId, segmentId: item.id },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const { videoSegment, audioSegment } = response.data;
+      if (!videoSegment) {
+        throw new Error(`Video segment ${item.id} not found`);
+      }
 
-    const firstPart = {
-      ...item,
-      duration: firstPartDuration,
-      endTimeWithinVideo: originalVideoStartTime + firstPartDuration,
-    };
-    layer[itemIndex] = firstPart;
+      // Preserve original audio timings
+      const originalAudioTimings = audioSegment
+        ? {
+            id: audioSegment.id,
+            timelineStartTime: audioSegment.timelineStartTime,
+            timelineEndTime: audioSegment.timelineEndTime,
+            startTime: audioSegment.startTime,
+            endTime: audioSegment.endTime,
+            layer: audioSegment.layer,
+            audioPath: audioSegment.audioPath || audioSegment.audioFileName,
+            displayName: audioSegment.audioPath
+              ? audioSegment.audioPath.split('/').pop()
+              : audioSegment.audioFileName,
+          }
+        : null;
 
-    const secondPart = {
-      ...item,
-      id: `${item.id}-split-${Date.now()}`,
-      startTime: item.startTime + splitTime,
-      duration: secondPartDuration,
-      startTimeWithinVideo: originalVideoStartTime + firstPartDuration,
-      endTimeWithinVideo: originalVideoEndTime,
-    };
-    layer.push(secondPart);
+      // Step 2: Calculate split parameters
+      const firstPartDuration = splitTime;
+      const secondPartDuration = item.duration - splitTime;
+      let newVideoLayers = [...videoLayers];
+      const layer = newVideoLayers[layerIndex];
+      const itemIndex = layer.findIndex(i => i.id === item.id);
 
-    newVideoLayers[layerIndex] = layer;
-    setVideoLayers(newVideoLayers);
-    saveHistory(newVideoLayers, []);
+      const originalVideoStartTime = item.startTimeWithinVideo || 0;
+      const originalVideoEndTime = item.endTimeWithinVideo || item.duration;
 
-    // Use updated newVideoLayers for consistency
-    await updateSegmentPosition(
-      item.id,
-      item.startTime,
-      layerIndex,
-      firstPartDuration,
-      undefined,
-      undefined,
-      newVideoLayers
-    );
-    await addVideoToTimeline(
-      item.filePath || item.filename,
-      layerIndex,
-      secondPart.startTime,
-      secondPart.startTime + secondPartDuration,
-      secondPart.startTimeWithinVideo,
-      secondPart.endTimeWithinVideo
-    );
-    autoSave(newVideoLayers, []);
-    await loadProjectTimeline();
+      // Update first part (video segment)
+      const firstPart = {
+        ...item,
+        duration: firstPartDuration,
+        endTimeWithinVideo: originalVideoStartTime + firstPartDuration,
+        audioSegmentId: audioSegment ? audioSegment.id : null,
+      };
+      layer[itemIndex] = firstPart;
+
+      // Create second part (video segment)
+      const secondPart = {
+        ...item,
+        id: `${item.id}-split-${Date.now()}`,
+        startTime: item.startTime + splitTime,
+        duration: secondPartDuration,
+        startTimeWithinVideo: originalVideoStartTime + firstPartDuration,
+        endTimeWithinVideo: originalVideoEndTime,
+        audioSegmentId: audioSegment ? audioSegment.id : null,
+      };
+      layer.push(secondPart);
+
+      // Update video layers
+      newVideoLayers[layerIndex] = layer;
+      setVideoLayers(newVideoLayers);
+
+      // Step 3: Update first video segment
+      await axios.put(
+        `${API_BASE_URL}/projects/${projectId}/update-segment`,
+        {
+          segmentId: item.id,
+          timelineStartTime: item.startTime,
+          timelineEndTime: item.startTime + firstPartDuration,
+          layer: layerIndex,
+          startTime: originalVideoStartTime,
+          endTime: originalVideoStartTime + firstPartDuration,
+        },
+        {
+          params: { sessionId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Step 4: Restore original AudioSegment timings if it exists
+      if (audioSegment && originalAudioTimings) {
+        await axios.put(
+          `${API_BASE_URL}/projects/${projectId}/update-audio`,
+          {
+            audioSegmentId: audioSegment.id,
+            timelineStartTime: originalAudioTimings.timelineStartTime,
+            timelineEndTime: originalAudioTimings.timelineEndTime,
+            layer: originalAudioTimings.layer,
+            startTime: originalAudioTimings.startTime,
+            endTime: originalAudioTimings.endTime,
+          },
+          {
+            params: { sessionId },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        console.log(`Restored audio segment ${audioSegment.id} to original timings`);
+      }
+
+      // Step 5: Add second video segment without creating a new AudioSegment
+      const addResponse = await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/add-to-timeline`,
+        {
+          videoPath: item.filePath || item.filename,
+          layer: layerIndex,
+          timelineStartTime: secondPart.startTime,
+          timelineEndTime: secondPart.startTime + secondPartDuration,
+          startTime: secondPart.startTimeWithinVideo,
+          endTime: secondPart.endTimeWithinVideo,
+          createAudioSegment: false, // Prevent audio creation
+        },
+        {
+          params: { sessionId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const { videoSegmentId, audioSegmentId } = addResponse.data;
+
+      // Update second part with backend videoSegmentId
+      newVideoLayers = [...newVideoLayers];
+      newVideoLayers[layerIndex] = newVideoLayers[layerIndex].map(v =>
+        v.id === secondPart.id ? { ...v, id: videoSegmentId, audioSegmentId: audioSegment ? audioSegment.id : null } : v
+      );
+      setVideoLayers(newVideoLayers);
+
+      // Step 6: Rebuild audioLayers based on all video segments
+      let newAudioLayers = [...audioLayers];
+      const validAudioSegments = new Map();
+
+      // Collect all valid audio segments from video segments
+      newVideoLayers.forEach(layer => {
+        layer.forEach(video => {
+          if (video.audioSegmentId) {
+            validAudioSegments.set(video.audioSegmentId, {
+              videoLayer: video.layer,
+              videoStartTime: video.startTime,
+              videoDuration: video.duration,
+            });
+          }
+        });
+      });
+
+      // Rebuild audioLayers
+      if (audioSegment && originalAudioTimings) {
+        const audioLayerIndex = Math.abs(originalAudioTimings.layer) - 1;
+        while (newAudioLayers.length <= audioLayerIndex) newAudioLayers.push([]);
+        newAudioLayers[audioLayerIndex] = newAudioLayers[audioLayerIndex].filter(a => a.id !== audioSegment.id);
+        newAudioLayers[audioLayerIndex].push({
+          id: audioSegment.id,
+          type: 'audio',
+          fileName: originalAudioTimings.audioPath,
+          startTime: originalAudioTimings.timelineStartTime,
+          duration: originalAudioTimings.timelineEndTime - originalAudioTimings.timelineStartTime,
+          timelineStartTime: originalAudioTimings.timelineStartTime,
+          timelineEndTime: originalAudioTimings.timelineEndTime,
+          startTimeWithinAudio: originalAudioTimings.startTime,
+          endTimeWithinAudio: originalAudioTimings.endTime,
+          layer: originalAudioTimings.layer,
+          displayName: originalAudioTimings.displayName,
+          waveformImage: '/images/audio.jpeg',
+        });
+      }
+
+      // Filter audioLayers to only include audio segments linked to video segments
+      newAudioLayers = newAudioLayers.map(layer =>
+        layer.filter(a => validAudioSegments.has(a.id))
+      );
+
+      setAudioLayers(newAudioLayers);
+      console.log('Updated audioLayers:', newAudioLayers);
+
+      // Step 7: Save history and auto-save
+      saveHistory(newVideoLayers, newAudioLayers);
+      autoSave(newVideoLayers, newAudioLayers);
+
+      // Step 8: Reload timeline to ensure consistency
+      await loadProjectTimeline();
+
+    } catch (error) {
+      console.error('Error splitting video:', error.response?.data || error.message);
+    }
   };
 
-  // Fetch video duration from backend
   const fetchVideoDuration = async (filePath) => {
     try {
       const token = localStorage.getItem('token');
-      const filename = filePath.split('/').pop(); // Extract filename from path
+      const filename = filePath.split('/').pop();
       const response = await axios.get(`${API_BASE_URL}/videos/duration/${encodeURIComponent(filename)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return response.data; // Duration in seconds
+      return response.data;
     } catch (error) {
       console.error('Error fetching video duration:', error);
-      return null; // Fallback to prevent breaking
+      return null;
     }
   };
 

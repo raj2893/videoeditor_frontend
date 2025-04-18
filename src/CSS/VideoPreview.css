@@ -79,3 +79,10 @@
   font-size: 12px;
   pointer-events: none;
 }
+
+.preview-video,
+.preview-text,
+img,
+canvas {
+  transition: opacity 0.016s linear, left 0.016s linear, top 0.016s linear, clip-path 0.016s linear;
+}

@@ -772,6 +772,15 @@
  opacity: 0.5;
 }
 
+.transitions-panel .control-group select {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 14px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .project-editor {

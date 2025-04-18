@@ -52,9 +52,12 @@ const ProjectEditor = () => {
   const [isTransitionsOpen, setIsTransitionsOpen] = useState(false);
   const [transitions, setTransitions] = useState([]);
   const [availableTransitions] = useState([
-   { type: 'Fade', label: 'Fade', icon : '/icons/fade.png' },
-   { type: 'Slide', label: 'Slide', icon: '/icons/slide.png' },
-   { type: 'Wipe', label: 'Wipe', icon: '/icons/wipe.png' },
+    { type: 'Fade', label: 'Fade', icon: '/icons/fade.png' },
+    { type: 'Slide', label: 'Slide', icon: '/icons/slide.png' },
+    { type: 'Wipe', label: 'Wipe', icon: '/icons/wipe.png' },
+    { type: 'Zoom', label: 'Zoom', icon: '/icons/zoom.png' },
+    { type: 'Rotate', label: 'Rotate', icon: '/icons/rotate.png' },
+    { type: 'Push', label: 'Push', icon: '/icons/push.png' },
   ]);
   const [selectedTransition, setSelectedTransition] = useState(null); // NEW: State for selected transition
 
@@ -91,6 +94,8 @@ const ProjectEditor = () => {
           fromSegmentId: selectedTransition.fromSegmentId,
           toSegmentId: selectedTransition.toSegmentId,
           layer: selectedTransition.layer,
+          timelineStartTime: selectedTransition.timelineStartTime,
+          parameters: selectedTransition.parameters || {},
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -103,6 +108,37 @@ const ProjectEditor = () => {
     } catch (error) {
       console.error('Error updating transition duration:', error);
       alert('Failed to update transition duration');
+    }
+  };
+
+  const handleTransitionDirectionChange = async (direction) => {
+    if (!selectedTransition || !sessionId || !projectId) return;
+    try {
+      const token = localStorage.getItem('token');
+      const updatedParameters = { ...selectedTransition.parameters, direction };
+      await axios.put(
+        `${API_BASE_URL}/projects/${projectId}/update-transition`,
+        {
+          transitionId: selectedTransition.id,
+          type: selectedTransition.type,
+          duration: selectedTransition.duration,
+          fromSegmentId: selectedTransition.fromSegmentId,
+          toSegmentId: selectedTransition.toSegmentId,
+          layer: selectedTransition.layer,
+          timelineStartTime: selectedTransition.timelineStartTime,
+          parameters: updatedParameters,
+        },
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTransitions((prev) =>
+        prev.map((t) =>
+          t.id === selectedTransition.id ? { ...t, parameters: updatedParameters } : t
+        )
+      );
+      setSelectedTransition((prev) => ({ ...prev, parameters: updatedParameters }));
+    } catch (error) {
+      console.error('Error updating transition direction:', error);
+      alert('Failed to update transition direction');
     }
   };
 
@@ -359,7 +395,7 @@ const ProjectEditor = () => {
         await fetchVideos();
         await fetchAudios();
         await fetchPhotos();
-//        await fetchTransitions();
+        await fetchTransitions();
         const token = localStorage.getItem('token');
         const sessionResponse = await axios.post(
           `${API_BASE_URL}/projects/${projectId}/session`,
@@ -523,12 +559,25 @@ const ProjectEditor = () => {
     }
     try {
       const token = localStorage.getItem('token');
+      let parameters = {};
+      // Set default direction based on transition type
+      if (transitionType === 'Zoom') {
+        parameters.direction = 'in';
+      } else if (transitionType === 'Rotate') {
+        parameters.direction = 'clockwise';
+      } else if (['Slide', 'Push'].includes(transitionType)) {
+        parameters.direction = 'right';
+      } else if (transitionType === 'Wipe') {
+        parameters.direction = 'left';
+      }
       const payload = {
         type: transitionType,
-        duration: 1, // Default duration
-        fromSegmentId: fromSegmentId || null, // Allow null for transitions at segment start
+        duration: 1,
+        fromSegmentId: fromSegmentId || null,
         toSegmentId: toSegmentId,
         layer: layer,
+        timelineStartTime: timelinePosition,
+        parameters,
       };
       const response = await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-transition`,
@@ -537,7 +586,7 @@ const ProjectEditor = () => {
       );
       const newTransition = response.data;
       setTransitions((prev) => [...prev, newTransition]);
-      await fetchTransitions(); // Refresh transitions to ensure consistency
+      await fetchTransitions();
     } catch (error) {
       console.error('Error adding transition:', error.response?.data || error.message);
       alert('Failed to add transition. Please try again.');
@@ -2139,6 +2188,38 @@ const ProjectEditor = () => {
   };
 
     const renderTransitionsPanel = () => {
+      const getDirectionOptions = (transitionType) => {
+        switch (transitionType) {
+          case 'Zoom':
+            return [
+              { value: 'in', label: 'Zoom In' },
+              { value: 'out', label: 'Zoom Out' },
+            ];
+          case 'Rotate':
+            return [
+              { value: 'clockwise', label: 'Clockwise' },
+              { value: 'counterclockwise', label: 'Counterclockwise' },
+            ];
+          case 'Slide':
+          case 'Push':
+            return [
+              { value: 'right', label: 'Right' },
+              { value: 'left', label: 'Left' },
+              { value: 'top', label: 'Top' },
+              { value: 'bottom', label: 'Bottom' },
+            ];
+          case 'Wipe':
+            return [
+              { value: 'left', label: 'Left' },
+              { value: 'right', label: 'Right' },
+              { value: 'top', label: 'Top' },
+              { value: 'bottom', label: 'Bottom' },
+            ];
+          default:
+            return [];
+        }
+      };
+
       return (
         <div className="transitions-panel">
           <h3>Transitions</h3>
@@ -2172,6 +2253,21 @@ const ProjectEditor = () => {
                   step="0.1"
                 />
               </div>
+              {getDirectionOptions(selectedTransition.type).length > 0 && (
+                <div className="control-group">
+                  <label>Direction</label>
+                  <select
+                    value={selectedTransition.parameters?.direction || getDirectionOptions(selectedTransition.type)[0].value}
+                    onChange={(e) => handleTransitionDirectionChange(e.target.value)}
+                  >
+                    {getDirectionOptions(selectedTransition.type).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <button className="delete-button" onClick={handleTransitionDelete}>
                 🗑️ Delete Transition
               </button>
@@ -2319,6 +2415,7 @@ const ProjectEditor = () => {
               containerHeight={previewHeight}
               videos={videos}
               photos={photos}
+              transitions={transitions}
             />
           </div>
           <div className={`resize-preview-section ${isDraggingHandle ? 'dragging' : ''}`} onMouseDown={handleMouseDown}></div>

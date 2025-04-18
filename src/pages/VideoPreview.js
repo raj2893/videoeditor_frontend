@@ -16,6 +16,7 @@ const VideoPreview = ({
   containerHeight,
   videos = [],
   photos = [],
+  transitions = [],
 }) => {
   const [loadingVideos, setLoadingVideos] = useState(new Set());
   const [preloadComplete, setPreloadComplete] = useState(false);
@@ -54,7 +55,131 @@ const VideoPreview = ({
     return defaultValue;
   };
 
-  const computeFilterStyle = (filters, relativeTime) => {
+  const computeTransitionEffects = (element, localTime) => {
+    const relevantTransitions = transitions.filter(
+      (t) =>
+        (t.toSegmentId === element.id || t.fromSegmentId === element.id) &&
+        element.layer === t.layer &&
+        currentTime >= t.timelineStartTime &&
+        currentTime <= t.timelineStartTime + t.duration
+    );
+
+    let effects = {
+      opacity: null,
+      positionX: 0,
+      positionY: 0,
+      clipPath: null,
+      scale: null,
+      rotate: null,
+    };
+
+    for (const transition of relevantTransitions) {
+      const progress = (currentTime - transition.timelineStartTime) / transition.duration;
+      const parameters = transition.parameters || {};
+
+      if (transition.type === 'Fade') {
+        if (transition.toSegmentId === element.id && transition.fromSegmentId === null) {
+          effects.opacity = lerp(0, 1, progress);
+        } else if (transition.fromSegmentId === element.id) {
+          effects.opacity = lerp(1, 0, progress);
+        }
+      } else if (transition.type === 'Slide') {
+        const direction = parameters.direction || 'right';
+        const canvasWidth = canvasDimensions.width;
+        const canvasHeight = canvasDimensions.height;
+
+        if (transition.toSegmentId === element.id) {
+          if (direction === 'right') {
+            effects.positionX = lerp(canvasWidth, 0, progress);
+          } else if (direction === 'left') {
+            effects.positionX = lerp(-canvasWidth, 0, progress);
+          } else if (direction === 'top') {
+            effects.positionY = lerp(-canvasHeight, 0, progress);
+          } else if (direction === 'bottom') {
+            effects.positionY = lerp(canvasHeight, 0, progress);
+          }
+        } else if (transition.fromSegmentId === element.id) {
+          if (direction === 'right') {
+            effects.positionX = lerp(0, -canvasWidth, progress);
+          } else if (direction === 'left') {
+            effects.positionX = lerp(0, canvasWidth, progress);
+          } else if (direction === 'top') {
+            effects.positionY = lerp(0, canvasHeight, progress);
+          } else if (direction === 'bottom') {
+            effects.positionY = lerp(0, -canvasHeight, progress);
+          }
+        }
+      } else if (transition.type === 'Wipe') {
+        const direction = parameters.direction || 'left';
+        if (transition.toSegmentId === element.id) {
+          if (direction === 'left') {
+            effects.clipPath = `inset(0 calc((1 - ${progress}) * 100%) 0 0)`;
+          } else if (direction === 'right') {
+            effects.clipPath = `inset(0 0 0 calc((1 - ${progress}) * 100%))`;
+          } else if (direction === 'top') {
+            effects.clipPath = `inset(calc((1 - ${progress}) * 100%) 0 0 0)`;
+          } else if (direction === 'bottom') {
+            effects.clipPath = `inset(0 0 calc((1 - ${progress}) * 100%) 0)`;
+          }
+        } else if (transition.fromSegmentId === element.id) {
+          if (direction === 'left') {
+            effects.clipPath = `inset(0 calc(${progress} * 100%) 0 0)`;
+          } else if (direction === 'right') {
+            effects.clipPath = `inset(0 0 0 calc(${progress} * 100%))`;
+          } else if (direction === 'top') {
+            effects.clipPath = `inset(calc(${progress} * 100%) 0 0 0)`;
+          } else if (direction === 'bottom') {
+            effects.clipPath = `inset(0 0 calc(${progress} * 100%) 0)`;
+          }
+        }
+      } else if (transition.type === 'Zoom') {
+        const direction = parameters.direction || 'in';
+        if (transition.toSegmentId === element.id) {
+          effects.scale = direction === 'in' ? lerp(0.1, 1, progress) : lerp(2, 1, progress);
+        } else if (transition.fromSegmentId === element.id) {
+          effects.scale = direction === 'in' ? lerp(1, 2, progress) : lerp(1, 0.1, progress);
+        }
+      } else if (transition.type === 'Rotate') {
+        const direction = parameters.direction || 'clockwise';
+        const angle = direction === 'clockwise' ? 90 : -90;
+        if (transition.toSegmentId === element.id) {
+          effects.rotate = lerp(angle, 0, progress);
+        } else if (transition.fromSegmentId === element.id) {
+          effects.rotate = lerp(0, angle, progress);
+        }
+      } else if (transition.type === 'Push') {
+        const direction = parameters.direction || 'right';
+        const canvasWidth = canvasDimensions.width;
+        const canvasHeight = canvasDimensions.height;
+
+        if (transition.toSegmentId === element.id) {
+          if (direction === 'right') {
+            effects.positionX = lerp(-canvasWidth, 0, progress);
+          } else if (direction === 'left') {
+            effects.positionX = lerp(canvasWidth, 0, progress);
+          } else if (direction === 'top') {
+            effects.positionY = lerp(canvasHeight, 0, progress);
+          } else if (direction === 'bottom') {
+            effects.positionY = lerp(-canvasHeight, 0, progress);
+          }
+        } else if (transition.fromSegmentId === element.id) {
+          if (direction === 'right') {
+            effects.positionX = lerp(0, canvasWidth, progress);
+          } else if (direction === 'left') {
+            effects.positionX = lerp(0, -canvasWidth, progress);
+          } else if (direction === 'top') {
+            effects.positionY = lerp(0, -canvasHeight, progress);
+          } else if (direction === 'bottom') {
+            effects.positionY = lerp(0, canvasHeight, progress);
+          }
+        }
+      }
+    }
+
+    return effects;
+  };
+
+  const computeFilterStyle = (filters, localTime) => {
     if (!filters || !Array.isArray(filters)) return { css: '', webgl: [] };
 
     const cssFilterMap = {
@@ -88,7 +213,7 @@ const VideoPreview = ({
 
     return {
       css: cssStyles.length > 0 ? cssStyles.join(' ') : '',
-      webgl: [], // No WebGL filters needed for allowed set
+      webgl: [],
     };
   };
 
@@ -100,7 +225,6 @@ const VideoPreview = ({
       .join('|');
   }, [videoLayers]);
 
-  // Initialize WebGL canvas
   useEffect(() => {
     try {
       fxCanvasRef.current = fx.canvas();
@@ -120,7 +244,6 @@ const VideoPreview = ({
     };
   }, []);
 
-  // Preload videos and initialize WebGL textures
   useEffect(() => {
     const preloadVideos = () => {
       const allVideoItems = videoLayers.flat().filter((item) => item.type === 'video');
@@ -134,7 +257,7 @@ const VideoPreview = ({
           const video = document.createElement('video');
           video.preload = 'auto';
           video.src = videoUrl;
-          video.crossOrigin = 'anonymous'; // Set crossOrigin to handle CORS
+          video.crossOrigin = 'anonymous';
           video.muted = true;
           video.style.display = 'none';
           document.body.appendChild(video);
@@ -142,7 +265,6 @@ const VideoPreview = ({
 
           return new Promise((resolve) => {
             video.onloadeddata = () => {
-              // Attempt to initialize WebGL texture
               try {
                 if (fxCanvasRef.current) {
                   const texture = fxCanvasRef.current.texture(video);
@@ -150,7 +272,6 @@ const VideoPreview = ({
                 }
               } catch (e) {
                 console.error(`Failed to create WebGL texture for video ${item.id}:`, e);
-                // Continue without WebGL texture to avoid blocking
               }
               setLoadingVideos((prev) => {
                 const newSet = new Set(prev);
@@ -194,14 +315,13 @@ const VideoPreview = ({
     };
   }, [videoLayerIds]);
 
-  // Preload images and initialize WebGL textures
   useEffect(() => {
     const preloadImages = () => {
       const allImageItems = videoLayers.flat().filter((item) => item.type === 'image');
       allImageItems.forEach((item) => {
         if (!glTextureRefs.current[item.id]) {
           const img = new Image();
-          img.crossOrigin = 'anonymous'; // Set crossOrigin for images
+          img.crossOrigin = 'anonymous';
           img.src = item.filePath;
           img.onload = () => {
             try {
@@ -223,38 +343,6 @@ const VideoPreview = ({
     preloadImages();
   }, [videoLayers]);
 
-//  // Preload audio
-//  useEffect(() => {
-//    const preloadAudio = () => {
-//      audioLayers.flat().forEach((segment) => {
-//        if (segment.type === 'audio' && !audioRefs.current[segment.id]) {
-//          const audioUrl = `${API_BASE_URL}/projects/${segment.projectId || '77'}/audio/${encodeURIComponent(segment.fileName)}`;
-//          const audio = document.createElement('audio');
-//          audio.preload = 'auto';
-//          audio.src = audioUrl;
-//          audio.crossOrigin = 'anonymous'; // Set crossOrigin for audio
-//          audioRefs.current[segment.id] = audio;
-//
-//          audio.onloadeddata = () => {
-//            console.log(`Audio ${segment.fileName} loaded`);
-//          };
-//          audio.onerror = () => {
-//            console.error(`Failed to load audio ${segment.fileName}`);
-//          };
-//        }
-//      });
-//    };
-//
-//    preloadAudio();
-//
-//    return () => {
-//      Object.values(audioRefs.current).forEach((audio) => {
-//        audio.pause();
-//      });
-//    };
-//  }, [audioLayers]);
-
-  // Sync video playback
   useEffect(() => {
     const visibleElements = getVisibleElements();
 
@@ -275,7 +363,7 @@ const VideoPreview = ({
 
           if (!videoRef.src) {
             videoRef.src = videoUrl;
-            videoRef.crossOrigin = 'anonymous'; // Ensure crossOrigin is set
+            videoRef.crossOrigin = 'anonymous';
             videoRef.load();
           }
 
@@ -322,40 +410,6 @@ const VideoPreview = ({
     };
   }, [currentTime, isPlaying, videoLayers, preloadComplete]);
 
-//  // Sync audio playback
-//  useEffect(() => {
-//    audioLayers.flat().forEach((segment) => {
-//      const audio = audioRefs.current[segment.id];
-//      if (!audio) return;
-//
-//      const start = segment.startTime || 0;
-//      const end = start + segment.duration;
-//      const relativeTime = currentTime - start;
-//
-//      const volume = getKeyframeValue(
-//        segment.keyframes && segment.keyframes.volume,
-//        relativeTime,
-//        segment.volume || 1
-//      );
-//
-//      if (currentTime >= start && currentTime < end) {
-//        if (audio.paused && isPlaying) {
-//          audio.currentTime = relativeTime + (segment.startTimeWithinAudio || 0);
-//          audio.volume = volume;
-//          audio.play().catch((e) => console.error('Audio play error:', e));
-//        } else if (!audio.paused) {
-//          audio.volume = volume;
-//          if (Math.abs(audio.currentTime - (relativeTime + (segment.startTimeWithinAudio || 0))) > 0.05) {
-//            audio.currentTime = relativeTime + (segment.startTimeWithinAudio || 0);
-//          }
-//        }
-//      } else if (!audio.paused) {
-//        audio.pause();
-//      }
-//    });
-//  }, [currentTime, isPlaying, audioLayers]);
-
-  // Update playhead
   useEffect(() => {
     const updatePlayhead = (timestamp) => {
       if (isPlaying) {
@@ -383,7 +437,6 @@ const VideoPreview = ({
     };
   }, [isPlaying, currentTime, onTimeUpdate, totalDuration, setIsPlaying]);
 
-  // Update canvas size and scale
   useEffect(() => {
     if (previewContainerRef.current) {
       const calculateSize = () => {
@@ -445,7 +498,6 @@ const VideoPreview = ({
   };
 
   const applyWebGLFilters = (element, sourceElement) => {
-    // No WebGL filters are needed since all allowed filters are handled via CSS
     return sourceElement;
   };
 
@@ -466,30 +518,38 @@ const VideoPreview = ({
           }}
         >
           {visibleElements.map((element) => {
-            const relativeTime = currentTime - (element.startTime || 0);
-
             const positionX = getKeyframeValue(
               element.keyframes && element.keyframes.positionX,
-              relativeTime,
+              element.localTime,
               element.positionX || 0
             );
             const positionY = getKeyframeValue(
               element.keyframes && element.keyframes.positionY,
-              relativeTime,
+              element.localTime,
               element.positionY || 0
             );
             const scaleFactor = getKeyframeValue(
               element.keyframes && element.keyframes.scale,
-              relativeTime,
+              element.localTime,
               element.scale || 1
             );
-            const opacity = getKeyframeValue(
+            let opacity = getKeyframeValue(
               element.keyframes && element.keyframes.opacity,
-              relativeTime,
+              element.localTime,
               element.opacity || 1
             );
 
-            const { css: filterStyle, webgl: webglFilters } = computeFilterStyle(element.filters, relativeTime);
+            const transitionEffects = computeTransitionEffects(element, element.localTime);
+            if (transitionEffects.opacity !== null) {
+              opacity = transitionEffects.opacity;
+            }
+            const transitionPosX = transitionEffects.positionX;
+            const transitionPosY = transitionEffects.positionY;
+            const clipPath = transitionEffects.clipPath;
+            const transitionScale = transitionEffects.scale;
+            const transitionRotate = transitionEffects.rotate;
+
+            const { css: filterStyle, webgl: webglFilters } = computeFilterStyle(element.filters, element.localTime);
 
             let transform = '';
             const rotateFilter = element.filters?.find((f) => f.filterName === 'rotate');
@@ -504,6 +564,12 @@ const VideoPreview = ({
                 transform += 'scaleY(-1) ';
               }
             }
+            if (transitionScale !== null) {
+              transform += `scale(${transitionScale}) `;
+            }
+            if (transitionRotate !== null) {
+              transform += `rotate(${transitionRotate}deg) `;
+            }
 
             if (element.type === 'video') {
               const videoWidth = element.width || 1080;
@@ -512,8 +578,8 @@ const VideoPreview = ({
               let displayWidth = videoWidth * scaleFactor;
               let displayHeight = videoHeight * scaleFactor;
 
-              const posX = (canvasDimensions.width - displayWidth) / 2 + positionX;
-              const posY = (canvasDimensions.height - displayHeight) / 2 + positionY;
+              const posX = (canvasDimensions.width - displayWidth) / 2 + positionX + transitionPosX;
+              const posY = (canvasDimensions.height - displayHeight) / 2 + positionY + transitionPosY;
 
               return (
                 <React.Fragment key={element.id}>
@@ -533,6 +599,7 @@ const VideoPreview = ({
                       objectFit: 'contain',
                       filter: filterStyle,
                       transform: transform.trim(),
+                      clipPath,
                       display: webglFilters.length > 0 ? 'none' : 'block',
                     }}
                     onError={(e) => console.error(`Error loading video ${element.filePath}:`, e)}
@@ -550,6 +617,7 @@ const VideoPreview = ({
                         zIndex: element.layerIndex,
                         opacity,
                         transform: transform.trim(),
+                        clipPath,
                       }}
                       ref={(canvas) => {
                         if (canvas && videoRefs.current[element.id]) {
@@ -577,9 +645,8 @@ const VideoPreview = ({
               const displayWidth = imgWidth * scaleFactor;
               const displayHeight = imgHeight * scaleFactor;
 
-              // Center the image like the video segment
-              const posX = (canvasDimensions.width - displayWidth) / 2 + positionX;
-              const posY = (canvasDimensions.height - displayHeight) / 2 + positionY;
+              const posX = (canvasDimensions.width - displayWidth) / 2 + positionX + transitionPosX;
+              const posY = (canvasDimensions.height - displayHeight) / 2 + positionY + transitionPosY;
 
               const photo = photos.find((p) => p.fileName === element.fileName) || {
                 filePath: element.filePath,
@@ -601,6 +668,7 @@ const VideoPreview = ({
                       zIndex: element.layerIndex,
                       filter: filterStyle,
                       transform: transform.trim(),
+                      clipPath,
                       display: webglFilters.length > 0 ? 'none' : 'block',
                     }}
                   />
@@ -615,6 +683,7 @@ const VideoPreview = ({
                         zIndex: element.layerIndex,
                         opacity,
                         transform: transform.trim(),
+                        clipPath,
                       }}
                       ref={(canvas) => {
                         if (canvas) {
@@ -642,8 +711,8 @@ const VideoPreview = ({
               const textWidth = element.text.length * fontSize * 0.6;
               const textHeight = fontSize * 1.2;
 
-              const posX = (canvasDimensions.width - textWidth) / 2 + positionX;
-              const posY = (canvasDimensions.height - textHeight) / 2 + positionY;
+              const posX = (canvasDimensions.width - textWidth) / 2 + positionX + transitionPosX;
+              const posY = (canvasDimensions.height - textHeight) / 2 + positionY + transitionPosY;
 
               return (
                 <div
@@ -666,6 +735,7 @@ const VideoPreview = ({
                     opacity,
                     filter: filterStyle,
                     transform: transform.trim(),
+                    clipPath,
                   }}
                 >
                   {element.text}

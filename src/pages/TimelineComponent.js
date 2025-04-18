@@ -458,6 +458,7 @@ const TimelineComponent = ({
     const layer = videoLayers[layerIndex];
     let fromSegment = null;
     let toSegment = null;
+    const ADJACENCY_THRESHOLD = 0.01; // Small threshold for floating-point comparison
 
     // Sort segments by startTime to ensure correct ordering
     const sortedSegments = [...layer].sort((a, b) => a.startTime - b.startTime);
@@ -470,9 +471,14 @@ const TimelineComponent = ({
       // If the drop position is within or at the start of a segment
       if (timelinePosition >= segmentStart && timelinePosition <= segmentEnd) {
         toSegment = segment;
-        // If this is not the first segment, the previous one is fromSegment
+        // Check if there is a previous segment and if it is adjacent
         if (i > 0) {
-          fromSegment = sortedSegments[i - 1];
+          const prevSegment = sortedSegments[i - 1];
+          const prevSegmentEnd = prevSegment.startTime + prevSegment.duration;
+          // Only set fromSegment if the previous segment's end time matches the current segment's start time
+          if (Math.abs(prevSegmentEnd - segmentStart) <= ADJACENCY_THRESHOLD) {
+            fromSegment = prevSegment;
+          }
         }
         break;
       }
@@ -482,8 +488,13 @@ const TimelineComponent = ({
         timelinePosition > segmentEnd &&
         timelinePosition < sortedSegments[i + 1].startTime
       ) {
-        fromSegment = segment;
         toSegment = sortedSegments[i + 1];
+        // Only set fromSegment if the current segment's end time matches the next segment's start time
+        const nextSegment = sortedSegments[i + 1];
+        const segmentEnd = segment.startTime + segment.duration;
+        if (Math.abs(segmentEnd - nextSegment.startTime) <= ADJACENCY_THRESHOLD) {
+          fromSegment = segment;
+        }
         break;
       }
       // If the drop position is before the first segment
@@ -494,6 +505,7 @@ const TimelineComponent = ({
       // If the drop position is after the last segment
       else if (i === sortedSegments.length - 1 && timelinePosition > segmentEnd) {
         fromSegment = segment;
+        // Do not set toSegment unless explicitly needed (e.g., for future segments)
         break;
       }
     }

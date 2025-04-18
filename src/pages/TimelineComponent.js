@@ -820,7 +820,6 @@ const TimelineComponent = ({
       if (item) {
         selected = { ...item, layerIndex: i };
         setSelectedSegment(selected);
-        if (onVideoSelect && item.type !== 'text') onVideoSelect(item.startTime, item);
         break;
       }
     }

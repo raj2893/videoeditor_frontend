@@ -17,6 +17,7 @@ const VideoPreview = ({
   videos = [],
   photos = [],
   transitions = [],
+  fps=25,
 }) => {
   const [loadingVideos, setLoadingVideos] = useState(new Set());
   const [preloadComplete, setPreloadComplete] = useState(false);
@@ -411,22 +412,32 @@ const VideoPreview = ({
   }, [currentTime, isPlaying, videoLayers, preloadComplete]);
 
   useEffect(() => {
+    const frameDuration = 1 / fps; // Duration of one frame in seconds
+
     const updatePlayhead = (timestamp) => {
       if (isPlaying) {
-        const delta = (timestamp - lastUpdateTimeRef.current) / 1000;
-        lastUpdateTimeRef.current = timestamp;
-        const newTime = Math.min(totalDuration, currentTime + delta);
+        if (!lastUpdateTimeRef.current) {
+          lastUpdateTimeRef.current = timestamp;
+        }
+        const deltaMs = timestamp - lastUpdateTimeRef.current;
+        const framesElapsed = Math.floor(deltaMs / (1000 / fps)); // Number of frames based on FPS
+        const deltaTime = framesElapsed * frameDuration; // Time advanced in seconds
+        lastUpdateTimeRef.current = timestamp - (deltaMs % (1000 / fps)); // Align to frame boundary
+
+        const newTime = Math.min(totalDuration, currentTime + deltaTime);
         onTimeUpdate(newTime);
         if (newTime >= totalDuration) {
           if (setIsPlaying) setIsPlaying(false);
           onTimeUpdate(0);
         }
+      } else {
+        lastUpdateTimeRef.current = timestamp; // Reset timestamp when paused
       }
       animationFrameRef.current = requestAnimationFrame(updatePlayhead);
     };
 
     if (isPlaying) {
-      lastUpdateTimeRef.current = performance.now();
+      lastUpdateTimeRef.current = null; // Reset on play
       animationFrameRef.current = requestAnimationFrame(updatePlayhead);
     }
 
@@ -435,7 +446,7 @@ const VideoPreview = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isPlaying, currentTime, onTimeUpdate, totalDuration, setIsPlaying]);
+  }, [isPlaying, currentTime, onTimeUpdate, totalDuration, setIsPlaying, fps]);
 
   useEffect(() => {
     if (previewContainerRef.current) {

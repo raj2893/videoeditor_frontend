@@ -144,13 +144,14 @@ const VideoPreview = ({
           effects.scale = direction === 'in' ? lerp(1, 2, progress) : lerp(1, 0.1, progress);
         }
       } else if (transition.type === 'Rotate') {
-        const direction = parameters.direction || 'clockwise';
-        const angle = direction === 'clockwise' ? 90 : -90;
-        if (transition.toSegmentId === element.id) {
-          effects.rotate = lerp(angle, 0, progress);
-        } else if (transition.fromSegmentId === element.id) {
-          effects.rotate = lerp(0, angle, progress);
-        }
+          const direction = parameters.direction || 'clockwise';
+          const rotationSpeed = direction === 'clockwise' ? 720 : -720; // 720 deg/s
+          const angle = rotationSpeed * transition.duration; // Total angle for transition duration
+          if (transition.toSegmentId === element.id) {
+              effects.rotate = lerp(angle, 0, progress); // From angle to 0
+          } else if (transition.fromSegmentId === element.id) {
+              effects.rotate = lerp(0, angle, progress); // From 0 to angle
+          }
       } else if (transition.type === 'Push') {
         const direction = parameters.direction || 'right';
         const canvasWidth = canvasDimensions.width;

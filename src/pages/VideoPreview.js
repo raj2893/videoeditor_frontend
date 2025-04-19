@@ -139,7 +139,7 @@ const VideoPreview = ({
       } else if (transition.type === 'Zoom') {
         const direction = parameters.direction || 'in';
         if (transition.toSegmentId === element.id) {
-          effects.scale = direction === 'in' ? lerp(0.1, 1, progress) : lerp(2, 1, progress);
+          effects.scale = direction === 'in' ? lerp(0., 1, progress) : lerp(2, 1, progress);
         } else if (transition.fromSegmentId === element.id) {
           effects.scale = direction === 'in' ? lerp(1, 2, progress) : lerp(1, 0.1, progress);
         }

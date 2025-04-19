@@ -787,30 +787,26 @@ const ProjectEditor = () => {
   }, [videoLayers, audioLayers]);
 
   const handleVideoUpload = async (event) => {
-      const files = Array.from(event.target.files);
-      if (files.length === 0) return;
-
+      const files = Array.from(event.target.files); // Get all selected files
       const formData = new FormData();
       files.forEach((file) => {
-        formData.append('files', file);
-        formData.append('titles', file.name); // Use file name as title, or customize as needed
+          formData.append('files', file); // Append each file to 'files'
+          formData.append('titles', file.name); // Append file name as title
       });
-
       try {
-        setUploading(true);
-        const token = localStorage.getItem('token');
-        const response = await axios.post(`${API_BASE_URL}/videos/upload`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
-        });
-        const newVideos = response.data; // Expecting an array of Video objects
-        if (newVideos && newVideos.length > 0) await fetchVideos();
+          setUploading(true);
+          const token = localStorage.getItem('token');
+          const response = await axios.post(`${API_BASE_URL}/videos/upload/${projectId}`, formData, {
+              headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
+          });
+          const newVideos = response.data; // Expecting an array of Video objects
+          if (newVideos) await fetchVideos();
       } catch (error) {
-        console.error('Error uploading videos:', error);
-        alert('Failed to upload one or more videos. Please try again.');
+          console.error('Error uploading video:', error);
       } finally {
-        setUploading(false);
+          setUploading(false);
       }
-    };
+  };
 
     const handleAudioUpload = async (event) => {
       const files = Array.from(event.target.files);

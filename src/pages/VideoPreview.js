@@ -3,8 +3,6 @@ import '../CSS/VideoPreview.css';
 import fx from 'glfx';
 
 const API_BASE_URL = 'http://localhost:8080';
-
-// Add baseFontSize constant
 const baseFontSize = 24;
 
 const VideoPreview = ({
@@ -20,20 +18,24 @@ const VideoPreview = ({
   videos = [],
   photos = [],
   transitions = [],
-  fps=25,
+  fps = 25,
+  projectId,
 }) => {
   const [loadingVideos, setLoadingVideos] = useState(new Set());
+  const [loadingAudios, setLoadingAudios] = useState(new Set());
   const [preloadComplete, setPreloadComplete] = useState(false);
   const [scale, setScale] = useState(1);
   const previewContainerRef = useRef(null);
   const videoRefs = useRef({});
-  const preloadRefs = useRef({});
   const audioRefs = useRef({});
+  const preloadRefs = useRef({});
   const animationFrameRef = useRef(null);
   const lastUpdateTimeRef = useRef(0);
   const glCanvasRef = useRef(null);
   const glTextureRefs = useRef({});
   const fxCanvasRef = useRef(null);
+  const lastAudioTimes = useRef({}); // Cache last set times for audio elements
+  const audioSyncIntervalRef = useRef(null); // Interval for audio sync
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -57,6 +59,450 @@ const VideoPreview = ({
       }
     }
     return defaultValue;
+  };
+
+  useEffect(() => {
+    try {
+      fxCanvasRef.current = fx.canvas();
+      glCanvasRef.current = fxCanvasRef.current;
+      glCanvasRef.current.style.display = 'none';
+      document.body.appendChild(glCanvasRef.current);
+    } catch (e) {
+      console.error('Failed to initialize WebGL:', e);
+    }
+
+    return () => {
+      if (glCanvasRef.current) {
+        glCanvasRef.current.remove();
+        glCanvasRef.current = null;
+        fxCanvasRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const preloadVideos = () => {
+      const allVideoItems = videoLayers.flat().filter((item) => item.type === 'video');
+      const preloadPromises = allVideoItems.map((item) => {
+        const normalizedFilePath = item.filePath.startsWith('videos/')
+          ? item.filePath.substring(7)
+          : item.filePath;
+        const videoUrl = `${API_BASE_URL}/videos/${encodeURIComponent(normalizedFilePath)}`;
+
+        if (!preloadRefs.current[item.id]) {
+          const video = document.createElement('video');
+          video.preload = 'auto';
+          video.src = videoUrl;
+          video.crossOrigin = 'anonymous';
+          video.muted = true;
+          video.style.display = 'none';
+          document.body.appendChild(video);
+          preloadRefs.current[item.id] = video;
+
+          return new Promise((resolve) => {
+            video.onloadeddata = () => {
+              try {
+                if (fxCanvasRef.current) {
+                  const texture = fxCanvasRef.current.texture(video);
+                  glTextureRefs.current[item.id] = texture;
+                }
+              } catch (e) {
+                console.error(`Failed to create WebGL texture for video ${item.id}:`, e);
+              }
+              setLoadingVideos((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(item.id);
+                return newSet;
+              });
+              resolve();
+            };
+            video.onerror = () => {
+              console.error(`Failed to preload video ${item.filePath}`);
+              resolve();
+            };
+          });
+        }
+        return Promise.resolve();
+      });
+
+      setLoadingVideos(new Set(allVideoItems.map((item) => item.id)));
+      return preloadPromises;
+    };
+
+    const preloadAudios = () => {
+      const allAudioItems = audioLayers.flat().filter((item) => item.type === 'audio');
+      const preloadPromises = allAudioItems.map((item) => {
+        const audioUrl = `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(item.fileName)}`;
+
+        if (!preloadRefs.current[item.id]) {
+          const audio = document.createElement('audio');
+          audio.crossOrigin = 'anonymous';
+          audio.preload = 'auto';
+          audio.src = audioUrl;
+          audio.style.display = 'none';
+          document.body.appendChild(audio);
+          preloadRefs.current[item.id] = audio;
+
+          audio.load();
+          console.log(`Preloading audio: ${item.fileName}, URL: ${audioUrl}`);
+
+          return new Promise((resolve) => {
+            audio.onloadeddata = () => {
+              console.log(`Audio ${item.fileName} loaded successfully, readyState: ${audio.readyState}`);
+              setLoadingAudios((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(item.id);
+                return newSet;
+              });
+              resolve();
+            };
+            audio.onerror = (e) => {
+              console.error(`Failed to preload audio ${item.fileName}:`, e);
+              setLoadingAudios((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(item.id);
+                return newSet;
+              });
+              resolve();
+            };
+            setTimeout(() => {
+              if (audio.readyState < 2) {
+                console.warn(`Audio ${item.fileName} preload timed out`);
+                resolve();
+              }
+            }, 10000);
+          });
+        }
+        return Promise.resolve();
+      });
+
+      setLoadingAudios(new Set(allAudioItems.map((item) => item.id)));
+      return preloadPromises;
+    };
+
+    Promise.all([...preloadVideos(), ...preloadAudios()]).then(() => {
+      setPreloadComplete(true);
+      console.log('All videos and audios preloaded');
+    });
+
+    return () => {
+      Object.values(preloadRefs.current).forEach((element) => {
+        if (element.tagName === 'VIDEO' || element.tagName === 'AUDIO') {
+          element.pause();
+          document.body.removeChild(element);
+        }
+      });
+      Object.values(glTextureRefs.current).forEach((texture) => {
+        try {
+          texture.destroy();
+        } catch (e) {
+          console.error('Error destroying texture:', e);
+        }
+      });
+      preloadRefs.current = {};
+      glTextureRefs.current = {};
+    };
+  }, [videoLayers, audioLayers, projectId]);
+
+  useEffect(() => {
+    const preloadImages = () => {
+      const allImageItems = videoLayers.flat().filter((item) => item.type === 'image');
+      allImageItems.forEach((item) => {
+        if (!glTextureRefs.current[item.id]) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = item.filePath;
+          img.onload = () => {
+            try {
+              if (fxCanvasRef.current) {
+                const texture = fxCanvasRef.current.texture(img);
+                glTextureRefs.current[item.id] = texture;
+              }
+            } catch (e) {
+              console.error(`Failed to create WebGL texture for image ${item.id}:`, e);
+            }
+          };
+          img.onerror = () => {
+            console.error(`Failed to preload image ${item.filePath}`);
+          };
+        }
+      });
+    };
+
+    preloadImages();
+  }, [videoLayers]);
+
+  // Audio synchronization interval
+  useEffect(() => {
+    const syncAudio = () => {
+      const visibleAudioElements = getVisibleAudioElements();
+
+      visibleAudioElements.forEach((element) => {
+        const audioRef = audioRefs.current[element.id];
+        if (audioRef) {
+          const audioUrl = `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(element.fileName)}`;
+
+          if (!audioRef.src) {
+            audioRef.src = audioUrl;
+            audioRef.crossOrigin = 'anonymous';
+            audioRef.load();
+            console.log(`Initialized audio ${element.fileName} with src ${audioUrl}`);
+          }
+
+          const targetTime = element.localTime + (element.startTimeWithinAudio || 0);
+          const lastSetTime = lastAudioTimes.current[element.id] || 0;
+
+          // Only seek if time difference is significant (>100ms) or audio is not playing
+          if (
+            Math.abs(audioRef.currentTime - targetTime) > 0.1 &&
+            (Math.abs(targetTime - lastSetTime) > 0.1 || audioRef.paused)
+          ) {
+            if (audioRef.readyState >= 2) {
+              audioRef.currentTime = targetTime;
+              lastAudioTimes.current[element.id] = targetTime;
+              console.log(`Set audio ${element.fileName} to time ${targetTime}`);
+            } else {
+              audioRef.addEventListener(
+                'loadeddata',
+                () => {
+                  audioRef.currentTime = targetTime;
+                  lastAudioTimes.current[element.id] = targetTime;
+                  console.log(`Audio ${element.fileName} loadeddata, set to time ${targetTime}`);
+                },
+                { once: true }
+              );
+            }
+          }
+
+          // Apply volume
+          const volume = getKeyframeValue(
+            element.keyframes && element.keyframes.volume,
+            element.localTime,
+            element.volume || 1.0
+          );
+          audioRef.volume = Math.max(0, Math.min(1, volume));
+
+          // Play or pause based on state and readiness
+          if (isPlaying && preloadComplete && audioRef.readyState >= 4 && audioRef.paused) {
+            audioRef
+              .play()
+              .then(() => console.log(`Audio ${element.fileName} started playing`))
+              .catch((error) => console.error(`Audio playback error for ${element.fileName}:`, error));
+          } else if (!isPlaying && !audioRef.paused) {
+            audioRef.pause();
+            console.log(`Audio ${element.fileName} paused`);
+          }
+        } else {
+          console.warn(`No audioRef found for element ID ${element.id}`);
+        }
+      });
+
+      // Pause non-visible audios
+      const visibleAudioIds = visibleAudioElements.map((el) => el.id);
+      Object.entries(audioRefs.current).forEach(([id, audioRef]) => {
+        if (!visibleAudioIds.includes(id) && audioRef && !audioRef.paused) {
+          audioRef.pause();
+          console.log(`Paused non-visible audio ID ${id}`);
+        }
+      });
+    };
+
+    // Run audio sync every 100ms
+    if (audioLayers.length > 0) {
+      audioSyncIntervalRef.current = setInterval(syncAudio, 100);
+    }
+
+    return () => {
+      if (audioSyncIntervalRef.current) {
+        clearInterval(audioSyncIntervalRef.current);
+        audioSyncIntervalRef.current = null;
+      }
+      // Pause all audios on cleanup
+      Object.values(audioRefs.current).forEach((audioRef) => {
+        if (audioRef && !audioRef.paused) {
+          audioRef.pause();
+        }
+      });
+    };
+  }, [isPlaying, preloadComplete, audioLayers, projectId]);
+
+  // Video playback (unchanged from previous, included for completeness)
+  useEffect(() => {
+    const visibleElements = getVisibleElements();
+
+    const setVideoTimeFunctions = new Map();
+
+    visibleElements.forEach((element) => {
+      if (element.type === 'video') {
+        const videoRef = videoRefs.current[element.id];
+        if (videoRef) {
+          const normalizedFilePath = element.filePath.startsWith('videos/')
+            ? element.filePath.substring(7)
+            : element.filePath;
+          const videoUrl = `${API_BASE_URL}/videos/${encodeURIComponent(normalizedFilePath)}`;
+
+          if (!videoRef.src) {
+            videoRef.src = videoUrl;
+            videoRef.crossOrigin = 'anonymous';
+            videoRef.load();
+          }
+
+          const setVideoTime = () => {
+            const targetTime = element.localTime + (element.startTimeWithinVideo || 0);
+            if (Math.abs(videoRef.currentTime - targetTime) > 0.05) {
+              videoRef.currentTime = targetTime;
+            }
+          };
+          setVideoTimeFunctions.set(element.id, setVideoTime);
+
+          if (videoRef.readyState >= 2) {
+            setVideoTime();
+          } else {
+            videoRef.addEventListener('loadeddata', setVideoTime, { once: true });
+          }
+
+          videoRef.muted = true;
+
+          if (isPlaying && preloadComplete) {
+            videoRef.play().catch((error) => console.error('Video playback error:', error));
+          } else {
+            videoRef.pause();
+          }
+        }
+      }
+    });
+
+    const visibleIds = visibleElements.map((el) => el.id);
+    Object.entries(videoRefs.current).forEach(([id, videoRef]) => {
+      if (!visibleIds.includes(id) && videoRef) {
+        videoRef.pause();
+        videoRef.muted = true;
+      }
+    });
+
+    return () => {
+      setVideoTimeFunctions.forEach((setVideoTime, id) => {
+        const videoRef = videoRefs.current[id];
+        if (videoRef) {
+          videoRef.removeEventListener('loadeddata', setVideoTime);
+        }
+      });
+    };
+  }, [currentTime, isPlaying, videoLayers, preloadComplete]);
+
+  useEffect(() => {
+    const frameDuration = 1 / fps;
+
+    const updatePlayhead = (timestamp) => {
+      if (isPlaying) {
+        if (!lastUpdateTimeRef.current) {
+          lastUpdateTimeRef.current = timestamp;
+        }
+        const deltaMs = timestamp - lastUpdateTimeRef.current;
+        const framesElapsed = Math.floor(deltaMs / (1000 / fps));
+        const deltaTime = framesElapsed * frameDuration;
+        lastUpdateTimeRef.current = timestamp - (deltaMs % (1000 / fps));
+
+        const newTime = Math.min(totalDuration, currentTime + deltaTime);
+        onTimeUpdate(newTime);
+        if (newTime >= totalDuration) {
+          if (setIsPlaying) setIsPlaying(false);
+          onTimeUpdate(0);
+        }
+      } else {
+        lastUpdateTimeRef.current = timestamp;
+      }
+      animationFrameRef.current = requestAnimationFrame(updatePlayhead);
+    };
+
+    if (isPlaying) {
+      lastUpdateTimeRef.current = null;
+      animationFrameRef.current = requestAnimationFrame(updatePlayhead);
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying, currentTime, onTimeUpdate, totalDuration, setIsPlaying, fps]);
+
+  useEffect(() => {
+    if (previewContainerRef.current) {
+      const calculateSize = () => {
+        const containerWidth = previewContainerRef.current.clientWidth;
+        const containerHeightPx =
+          containerHeight && containerHeight !== 'auto'
+            ? parseFloat(containerHeight)
+            : previewContainerRef.current.clientHeight;
+        const canvasAspectRatio = canvasDimensions.width / canvasDimensions.height;
+
+        let newScale = Math.min(
+          containerWidth / canvasDimensions.width,
+          containerHeightPx / canvasDimensions.height
+        );
+
+        const minPreviewHeight = 100;
+        const minScale = minPreviewHeight / canvasDimensions.height;
+        const maxScale = 1.0;
+
+        newScale = Math.max(minScale, Math.min(maxScale, newScale));
+        setScale(newScale);
+
+        const canvasWrapper = document.querySelector('.canvas-wrapper');
+        if (canvasWrapper) {
+          canvasWrapper.style.transform = `scale(${newScale})`;
+          canvasWrapper.style.width = `${canvasDimensions.width}px`;
+          canvasWrapper.style.height = `${canvasDimensions.height}px`;
+        }
+
+        const previewArea = document.querySelector('.preview-area');
+        if (previewArea) {
+          previewArea.style.width = `${canvasDimensions.width * newScale}px`;
+          previewArea.style.height = `${canvasDimensions.height * newScale}px`;
+        }
+      };
+
+      calculateSize();
+      window.addEventListener('resize', calculateSize);
+      return () => window.removeEventListener('resize', calculateSize);
+    }
+  }, [canvasDimensions, containerHeight]);
+
+  const getVisibleElements = () => {
+    const visibleElements = [];
+    videoLayers.forEach((layer, layerIndex) => {
+      layer.forEach((item) => {
+        const itemStartTime = item.startTime || 0;
+        const itemEndTime = itemStartTime + item.duration;
+        if (currentTime >= itemStartTime && currentTime < itemEndTime) {
+          visibleElements.push({
+            ...item,
+            layerIndex,
+            localTime: currentTime - itemStartTime,
+          });
+        }
+      });
+    });
+    return visibleElements.sort((a, b) => a.layerIndex - b.layerIndex);
+  };
+
+  const getVisibleAudioElements = () => {
+    const visibleAudioElements = [];
+    audioLayers.forEach((layer, layerIndex) => {
+      layer.forEach((item) => {
+        const itemStartTime = item.startTime || 0;
+        const itemEndTime = itemStartTime + item.duration;
+        if (currentTime >= itemStartTime && currentTime < itemEndTime) {
+          visibleAudioElements.push({
+            ...item,
+            layerIndex,
+            localTime: currentTime - itemStartTime,
+          });
+        }
+      });
+    });
+    return visibleAudioElements;
   };
 
   const computeTransitionEffects = (element, localTime) => {
@@ -139,19 +585,19 @@ const VideoPreview = ({
       } else if (transition.type === 'Zoom') {
         const direction = parameters.direction || 'in';
         if (transition.toSegmentId === element.id) {
-          effects.scale = direction === 'in' ? lerp(0., 1, progress) : lerp(2, 1, progress);
+          effects.scale = direction === 'in' ? lerp(0.1, 1, progress) : lerp(2, 1, progress);
         } else if (transition.fromSegmentId === element.id) {
           effects.scale = direction === 'in' ? lerp(1, 2, progress) : lerp(1, 0.1, progress);
         }
       } else if (transition.type === 'Rotate') {
-          const direction = parameters.direction || 'clockwise';
-          const rotationSpeed = direction === 'clockwise' ? 720 : -720; // 720 deg/s
-          const angle = rotationSpeed * transition.duration; // Total angle for transition duration
-          if (transition.toSegmentId === element.id) {
-              effects.rotate = lerp(angle, 0, progress); // From angle to 0
-          } else if (transition.fromSegmentId === element.id) {
-              effects.rotate = lerp(0, angle, progress); // From 0 to angle
-          }
+        const direction = parameters.direction || 'clockwise';
+        const rotationSpeed = direction === 'clockwise' ? 720 : -720;
+        const angle = rotationSpeed * transition.duration;
+        if (transition.toSegmentId === element.id) {
+          effects.rotate = lerp(angle, 0, progress);
+        } else if (transition.fromSegmentId === element.id) {
+          effects.rotate = lerp(0, angle, progress);
+        }
       } else if (transition.type === 'Push') {
         const direction = parameters.direction || 'right';
         const canvasWidth = canvasDimensions.width;
@@ -220,296 +666,6 @@ const VideoPreview = ({
       css: cssStyles.length > 0 ? cssStyles.join(' ') : '',
       webgl: [],
     };
-  };
-
-  const videoLayerIds = useMemo(() => {
-    return videoLayers
-      .flat()
-      .filter((item) => item.type === 'video')
-      .map((item) => `${item.id}-${item.filePath}`)
-      .join('|');
-  }, [videoLayers]);
-
-  useEffect(() => {
-    try {
-      fxCanvasRef.current = fx.canvas();
-      glCanvasRef.current = fxCanvasRef.current;
-      glCanvasRef.current.style.display = 'none';
-      document.body.appendChild(glCanvasRef.current);
-    } catch (e) {
-      console.error('Failed to initialize WebGL:', e);
-    }
-
-    return () => {
-      if (glCanvasRef.current) {
-        glCanvasRef.current.remove();
-        glCanvasRef.current = null;
-        fxCanvasRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const preloadVideos = () => {
-      const allVideoItems = videoLayers.flat().filter((item) => item.type === 'video');
-      const preloadPromises = allVideoItems.map((item) => {
-        const normalizedFilePath = item.filePath.startsWith('videos/')
-          ? item.filePath.substring(7)
-          : item.filePath;
-        const videoUrl = `${API_BASE_URL}/videos/${encodeURIComponent(normalizedFilePath)}`;
-
-        if (!preloadRefs.current[item.id]) {
-          const video = document.createElement('video');
-          video.preload = 'auto';
-          video.src = videoUrl;
-          video.crossOrigin = 'anonymous';
-          video.muted = true;
-          video.style.display = 'none';
-          document.body.appendChild(video);
-          preloadRefs.current[item.id] = video;
-
-          return new Promise((resolve) => {
-            video.onloadeddata = () => {
-              try {
-                if (fxCanvasRef.current) {
-                  const texture = fxCanvasRef.current.texture(video);
-                  glTextureRefs.current[item.id] = texture;
-                }
-              } catch (e) {
-                console.error(`Failed to create WebGL texture for video ${item.id}:`, e);
-              }
-              setLoadingVideos((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(item.id);
-                return newSet;
-              });
-              resolve();
-            };
-            video.onerror = () => {
-              console.error(`Failed to preload video ${item.filePath}`);
-              resolve();
-            };
-          });
-        }
-        return Promise.resolve();
-      });
-
-      setLoadingVideos(new Set(allVideoItems.map((item) => item.id)));
-      Promise.all(preloadPromises).then(() => {
-        setPreloadComplete(true);
-        console.log('All videos preloaded');
-      });
-    };
-
-    preloadVideos();
-
-    return () => {
-      Object.values(preloadRefs.current).forEach((video) => {
-        video.pause();
-        document.body.removeChild(video);
-      });
-      Object.values(glTextureRefs.current).forEach((texture) => {
-        try {
-          texture.destroy();
-        } catch (e) {
-          console.error('Error destroying texture:', e);
-        }
-      });
-      preloadRefs.current = {};
-      glTextureRefs.current = {};
-    };
-  }, [videoLayerIds]);
-
-  useEffect(() => {
-    const preloadImages = () => {
-      const allImageItems = videoLayers.flat().filter((item) => item.type === 'image');
-      allImageItems.forEach((item) => {
-        if (!glTextureRefs.current[item.id]) {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.src = item.filePath;
-          img.onload = () => {
-            try {
-              if (fxCanvasRef.current) {
-                const texture = fxCanvasRef.current.texture(img);
-                glTextureRefs.current[item.id] = texture;
-              }
-            } catch (e) {
-              console.error(`Failed to create WebGL texture for image ${item.id}:`, e);
-            }
-          };
-          img.onerror = () => {
-            console.error(`Failed to preload image ${item.filePath}`);
-          };
-        }
-      });
-    };
-
-    preloadImages();
-  }, [videoLayers]);
-
-  useEffect(() => {
-    const visibleElements = getVisibleElements();
-
-    const topmostVideo = visibleElements
-      .filter((el) => el.type === 'video')
-      .sort((a, b) => b.layerIndex - a.layerIndex)[0];
-
-    const setVideoTimeFunctions = new Map();
-
-    visibleElements.forEach((element) => {
-      if (element.type === 'video') {
-        const videoRef = videoRefs.current[element.id];
-        if (videoRef) {
-          const normalizedFilePath = element.filePath.startsWith('videos/')
-            ? element.filePath.substring(7)
-            : element.filePath;
-          const videoUrl = `${API_BASE_URL}/videos/${encodeURIComponent(normalizedFilePath)}`;
-
-          if (!videoRef.src) {
-            videoRef.src = videoUrl;
-            videoRef.crossOrigin = 'anonymous';
-            videoRef.load();
-          }
-
-          const setVideoTime = () => {
-            const targetTime = element.localTime + (element.startTimeWithinVideo || 0);
-            if (Math.abs(videoRef.currentTime - targetTime) > 0.05) {
-              videoRef.currentTime = targetTime;
-            }
-          };
-          setVideoTimeFunctions.set(element.id, setVideoTime);
-
-          if (videoRef.readyState >= 2) {
-            setVideoTime();
-          } else {
-            videoRef.addEventListener('loadeddata', setVideoTime, { once: true });
-          }
-
-          videoRef.muted = topmostVideo && topmostVideo.id !== element.id;
-
-          if (isPlaying && preloadComplete) {
-            videoRef.play().catch((error) => console.error('Playback error:', error));
-          } else {
-            videoRef.pause();
-          }
-        }
-      }
-    });
-
-    const visibleIds = visibleElements.map((el) => el.id);
-    Object.entries(videoRefs.current).forEach(([id, videoRef]) => {
-      if (!visibleIds.includes(id) && videoRef) {
-        videoRef.pause();
-        videoRef.muted = true;
-      }
-    });
-
-    return () => {
-      setVideoTimeFunctions.forEach((setVideoTime, id) => {
-        const videoRef = videoRefs.current[id];
-        if (videoRef) {
-          videoRef.removeEventListener('loadeddata', setVideoTime);
-        }
-      });
-    };
-  }, [currentTime, isPlaying, videoLayers, preloadComplete]);
-
-  useEffect(() => {
-    const frameDuration = 1 / fps; // Duration of one frame in seconds
-
-    const updatePlayhead = (timestamp) => {
-      if (isPlaying) {
-        if (!lastUpdateTimeRef.current) {
-          lastUpdateTimeRef.current = timestamp;
-        }
-        const deltaMs = timestamp - lastUpdateTimeRef.current;
-        const framesElapsed = Math.floor(deltaMs / (1000 / fps)); // Number of frames based on FPS
-        const deltaTime = framesElapsed * frameDuration; // Time advanced in seconds
-        lastUpdateTimeRef.current = timestamp - (deltaMs % (1000 / fps)); // Align to frame boundary
-
-        const newTime = Math.min(totalDuration, currentTime + deltaTime);
-        onTimeUpdate(newTime);
-        if (newTime >= totalDuration) {
-          if (setIsPlaying) setIsPlaying(false);
-          onTimeUpdate(0);
-        }
-      } else {
-        lastUpdateTimeRef.current = timestamp; // Reset timestamp when paused
-      }
-      animationFrameRef.current = requestAnimationFrame(updatePlayhead);
-    };
-
-    if (isPlaying) {
-      lastUpdateTimeRef.current = null; // Reset on play
-      animationFrameRef.current = requestAnimationFrame(updatePlayhead);
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isPlaying, currentTime, onTimeUpdate, totalDuration, setIsPlaying, fps]);
-
-  useEffect(() => {
-    if (previewContainerRef.current) {
-      const calculateSize = () => {
-        const containerWidth = previewContainerRef.current.clientWidth;
-        const containerHeightPx =
-          containerHeight && containerHeight !== 'auto'
-            ? parseFloat(containerHeight)
-            : previewContainerRef.current.clientHeight;
-        const canvasAspectRatio = canvasDimensions.width / canvasDimensions.height;
-
-        let newScale = Math.min(
-          containerWidth / canvasDimensions.width,
-          containerHeightPx / canvasDimensions.height
-        );
-
-        const minPreviewHeight = 100;
-        const minScale = minPreviewHeight / canvasDimensions.height;
-        const maxScale = 1.0;
-
-        newScale = Math.max(minScale, Math.min(maxScale, newScale));
-        setScale(newScale);
-
-        const canvasWrapper = document.querySelector('.canvas-wrapper');
-        if (canvasWrapper) {
-          canvasWrapper.style.transform = `scale(${newScale})`;
-          canvasWrapper.style.width = `${canvasDimensions.width}px`;
-          canvasWrapper.style.height = `${canvasDimensions.height}px`;
-        }
-
-        const previewArea = document.querySelector('.preview-area');
-        if (previewArea) {
-          previewArea.style.width = `${canvasDimensions.width * newScale}px`;
-          previewArea.style.height = `${canvasDimensions.height * newScale}px`;
-        }
-      };
-
-      calculateSize();
-      window.addEventListener('resize', calculateSize);
-      return () => window.removeEventListener('resize', calculateSize);
-    }
-  }, [canvasDimensions, containerHeight]);
-
-  const getVisibleElements = () => {
-    const visibleElements = [];
-    videoLayers.forEach((layer, layerIndex) => {
-      layer.forEach((item) => {
-        const itemStartTime = item.startTime || 0;
-        const itemEndTime = itemStartTime + item.duration;
-        if (currentTime >= itemStartTime && currentTime < itemEndTime) {
-          visibleElements.push({
-            ...item,
-            layerIndex,
-            localTime: currentTime - itemStartTime,
-          });
-        }
-      });
-    });
-    return visibleElements.sort((a, b) => a.layerIndex - b.layerIndex);
   };
 
   const applyWebGLFilters = (element, sourceElement) => {
@@ -601,7 +757,7 @@ const VideoPreview = ({
                   <video
                     ref={(el) => (videoRefs.current[element.id] = el)}
                     className="preview-video"
-                    muted={false}
+                    muted={true}
                     crossOrigin="anonymous"
                     style={{
                       position: 'absolute',
@@ -759,11 +915,21 @@ const VideoPreview = ({
             }
             return null;
           })}
+          {getVisibleAudioElements().map((element) => (
+            <audio
+              key={element.id}
+              ref={(el) => (audioRefs.current[element.id] = el)}
+              preload="auto"
+              crossOrigin="anonymous"
+              onError={(e) => console.error(`Error loading audio ${element.fileName}:`, e)}
+              onLoadedData={() => console.log(`Audio ${element.fileName} loaded, readyState: ${audioRefs.current[element.id]?.readyState}`)}
+            />
+          ))}
         </div>
 
         {visibleElements.length === 0 && <div className="preview-empty-state"></div>}
 
-        {loadingVideos.size > 0 && (
+        {(loadingVideos.size > 0 || loadingAudios.size > 0) && (
           <div className="preview-loading">
             <div className="preview-spinner"></div>
           </div>

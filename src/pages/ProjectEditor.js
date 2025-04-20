@@ -462,6 +462,7 @@ const ProjectEditor = () => {
             fileName: audio.audioFileName,
             displayName: audio.audioFileName.split('/').pop(),
             waveformImage: '/images/audio.jpeg',
+            url: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(audio.audioFileName)}`,
           }));
           setAudios(updatedAudios);
         } else {
@@ -599,7 +600,7 @@ const ProjectEditor = () => {
   };
 
 
-  // New function to preload media
+  // In ProjectEditor.js, update the preloadMedia function
   const preloadMedia = () => {
     // Clear any existing preloaded elements to avoid memory leaks
     const existingPreloadElements = document.querySelectorAll('.preload-media');
@@ -615,8 +616,12 @@ const ProjectEditor = () => {
       layer.forEach((segment) => {
         if (segment.type === 'video' && segment.filePath) {
           const video = document.createElement('video');
-          video.src = `${API_BASE_URL}/videos/${encodeURIComponent(segment.filePath)}`;
+          const normalizedFilePath = segment.filePath.startsWith('videos/')
+            ? segment.filePath.substring(7)
+            : segment.filePath;
+          video.src = `${API_BASE_URL}/videos/${encodeURIComponent(normalizedFilePath)}`;
           video.preload = 'auto';
+          video.muted = true; // Mute videos during preload
           video.className = 'preload-media';
           preloadContainer.appendChild(video);
           video.load(); // Start loading
@@ -640,6 +645,7 @@ const ProjectEditor = () => {
           audio.className = 'preload-media';
           preloadContainer.appendChild(audio);
           audio.load();
+          console.log(`Preloading audio for project ${projectId}: ${segment.fileName}`);
         }
       });
     });
@@ -748,7 +754,8 @@ const ProjectEditor = () => {
               newAudioLayers[layerIndex].push({
                 id: audioSegment.id,
                 type: 'audio',
-                fileName: audioSegment.audioPath.split('/').pop(),
+                audioPath: audioSegment.audioPath, // Preserve full audioPath
+                fileName: audioSegment.audioPath.split('/').pop(), // Optional for display
                 startTime: audioSegment.timelineStartTime || 0,
                 duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
                 layer: backendLayer,
@@ -815,7 +822,7 @@ const ProjectEditor = () => {
       const formData = new FormData();
       files.forEach((file) => {
         formData.append('audio', file);
-        formData.append('audioFileNames', file.name); // Use file name, or customize as needed
+        formData.append('audioFileNames', file.name);
       });
 
       try {
@@ -826,8 +833,23 @@ const ProjectEditor = () => {
           formData,
           { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
         );
-        const updatedProject = response.data; // Expecting the updated Project object
-        if (updatedProject) await fetchAudios();
+        const updatedProject = response.data;
+        if (updatedProject && updatedProject.audioJson) {
+          let audioFiles =
+            typeof updatedProject.audioJson === 'string'
+              ? JSON.parse(updatedProject.audioJson)
+              : updatedProject.audioJson;
+          if (Array.isArray(audioFiles)) {
+            const updatedAudios = audioFiles.map((audio) => ({
+              id: audio.audioPath || `audio-${audio.audioFileName}-${Date.now()}`,
+              fileName: audio.audioFileName,
+              displayName: audio.audioFileName.split('/').pop(),
+              audioPath: `${API_BASE_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.audioFileName)}`, // Add audioPath
+              waveformImage: '/images/audio.jpeg',
+            }));
+            setAudios(updatedAudios);
+          }
+        }
       } catch (error) {
         console.error('Error uploading audio files:', error);
         alert('Failed to upload one or more audio files. Please try again.');
@@ -2459,6 +2481,7 @@ const ProjectEditor = () => {
               photos={photos}
               transitions={transitions}
               fps={projectFps}
+              projectId={projectId} // Add projectId prop
             />
           </div>
           <div className={`resize-preview-section ${isDraggingHandle ? 'dragging' : ''}`} onMouseDown={handleMouseDown}></div>
@@ -2505,6 +2528,9 @@ const ProjectEditor = () => {
                 setTransitions={setTransitions} // Add this
                 handleTransitionDrop={handleTransitionDrop} // Add this
                 onTransitionSelect={handleTransitionSelect} // NEW: Pass transition select handler
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
+                fps={projectFps}
               />
             ) : (
               <div className="loading-message">Loading timeline...</div>

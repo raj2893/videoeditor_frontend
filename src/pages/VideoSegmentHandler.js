@@ -241,7 +241,7 @@ const VideoSegmentHandler = ({
       // Create second part (video segment)
       const secondPart = {
         ...item,
-        id: `${item.id}-split-${Date.now()}`,
+        id: `${item.id}-split-${Date.now()}`, // Temporary ID
         startTime: item.startTime + splitTime,
         duration: secondPartDuration,
         startTimeWithinVideo: originalVideoStartTime + firstPartDuration,
@@ -295,7 +295,7 @@ const VideoSegmentHandler = ({
       const addResponse = await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-to-timeline`,
         {
-          videoPath: item.filePath || item.filename,
+          videoPath: item.filePath || videoSegment.filename, // Use videoSegment.filename from GET response
           layer: layerIndex,
           timelineStartTime: secondPart.startTime,
           timelineEndTime: secondPart.startTime + secondPartDuration,
@@ -310,14 +310,38 @@ const VideoSegmentHandler = ({
       );
       const { videoSegmentId, audioSegmentId } = addResponse.data;
 
-      // Update second part with backend videoSegmentId
+      // Step 6: Fetch the newly created video segment to ensure correct data
+      const newSegmentResponse = await axios.get(
+        `${API_BASE_URL}/projects/${projectId}/get-segment`,
+        {
+          params: { sessionId, segmentId: videoSegmentId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const newVideoSegment = newSegmentResponse.data.videoSegment;
+      if (!newVideoSegment) {
+        throw new Error(`Newly created video segment ${videoSegmentId} not found`);
+      }
+
+      // Update second part with backend videoSegmentId and verified data
       newVideoLayers = [...newVideoLayers];
       newVideoLayers[layerIndex] = newVideoLayers[layerIndex].map(v =>
-        v.id === secondPart.id ? { ...v, id: videoSegmentId, audioSegmentId: audioSegment ? audioSegment.id : null } : v
+        v.id === secondPart.id
+          ? {
+              ...v,
+              id: videoSegmentId,
+              startTime: newVideoSegment.timelineStartTime,
+              duration: newVideoSegment.timelineEndTime - newVideoSegment.timelineStartTime,
+              startTimeWithinVideo: newVideoSegment.startTime,
+              endTimeWithinVideo: newVideoSegment.endTime,
+              audioSegmentId: audioSegment ? audioSegment.id : null,
+              filePath: newVideoSegment.filename || item.filePath,
+            }
+          : v
       );
       setVideoLayers(newVideoLayers);
 
-      // Step 6: Rebuild audioLayers based on all video segments
+      // Step 7: Rebuild audioLayers based on all video segments
       let newAudioLayers = [...audioLayers];
       const validAudioSegments = new Map();
 
@@ -363,11 +387,11 @@ const VideoSegmentHandler = ({
       setAudioLayers(newAudioLayers);
       console.log('Updated audioLayers:', newAudioLayers);
 
-      // Step 7: Save history and auto-save
+      // Step 8: Save history and auto-save
       saveHistory(newVideoLayers, newAudioLayers);
       autoSave(newVideoLayers, newAudioLayers);
 
-      // Step 8: Reload timeline to ensure consistency
+      // Step 9: Reload timeline to ensure consistency
       await loadProjectTimeline();
 
     } catch (error) {

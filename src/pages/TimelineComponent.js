@@ -38,10 +38,13 @@ const TimelineComponent = ({
   setTransitions,
   handleTransitionDrop,
   onTransitionSelect,
+  isPlaying,
+  setIsPlaying, // Destructure setIsPlaying
+  fps = 25, // Add fps prop
 }) => {
   const [timelineVideos, setTimelineVideos] = useState([]);
   const [playhead, setPlayhead] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [localIsPlaying, setLocalIsPlaying] = useState(false);
   const [draggingItem, setDraggingItem] = useState(null);
   const [dragLayer, setDragLayer] = useState(null);
   const [dragOffset, setDragOffset] = useState(0);
@@ -64,6 +67,11 @@ const TimelineComponent = ({
   const timelineRef = useRef(null);
   const playheadRef = useRef(null);
   const playIntervalRef = useRef(null);
+
+  // Sync localIsPlaying with isPlaying prop
+  useEffect(() => {
+    setLocalIsPlaying(isPlaying);
+  }, [isPlaying]);
 
   const saveHistory = useCallback(
     (newVideoLayers, newAudioLayers) => {
@@ -208,151 +216,164 @@ const TimelineComponent = ({
   };
 
   const loadProjectTimeline = async () => {
-    if (!projectId || !sessionId) return;
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const project = response.data;
-      if (project && project.timelineState) {
-        const timelineState = typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
-        const newVideoLayers = [[], [], []];
-        const newAudioLayers = [[], [], []];
+      if (!projectId || !sessionId) return;
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const project = response.data;
+        if (project && project.timelineState) {
+          const timelineState = typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
+          const newVideoLayers = [[], [], []];
+          const newAudioLayers = [[], [], []];
 
-        if (timelineState.segments && timelineState.segments.length > 0) {
-          for (const segment of timelineState.segments) {
-            const layerIndex = segment.layer || 0;
-            if (layerIndex < 0) continue;
-            if (segment.sourceVideoPath) {
-              while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
-              let videoFileName = segment.sourceVideoPath;
-              const normalizedVideoPath = videoFileName.startsWith('videos/') ? videoFileName.substring(7) : videoFileName;
-              let video = videos.find((v) => {
-                const vPath = v.filePath || v.filename;
-                const normalizedVPath = vPath.startsWith('videos/') ? vPath.substring(7) : vPath;
-                return normalizedVPath === normalizedVideoPath;
-              });
-              if (video) {
-                const thumbnail = await generateVideoThumbnail(normalizedVideoPath);
-                newVideoLayers[layerIndex].push({
-                  ...video,
-                  type: 'video',
-                  id: segment.id,
-                  startTime: segment.timelineStartTime,
-                  duration: segment.timelineEndTime - segment.timelineStartTime,
-                  layer: layerIndex,
-                  filePath: normalizedVideoPath,
-                  positionX: segment.positionX || 0,
-                  positionY: segment.positionY || 0,
-                  scale: segment.scale || 1,
-                  startTimeWithinVideo: segment.startTime,
-                  endTimeWithinVideo: segment.endTime,
-                  thumbnail,
+          if (timelineState.segments && timelineState.segments.length > 0) {
+            for (const segment of timelineState.segments) {
+              const layerIndex = segment.layer || 0;
+              if (layerIndex < 0) continue;
+              if (segment.sourceVideoPath) {
+                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+                let videoFileName = segment.sourceVideoPath;
+                const normalizedVideoPath = videoFileName.startsWith('videos/') ? videoFileName.substring(7) : videoFileName;
+                let video = videos.find((v) => {
+                  const vPath = v.filePath || v.filename;
+                  const normalizedVPath = vPath.startsWith('videos/') ? vPath.substring(7) : vPath;
+                  return normalizedVPath === normalizedVideoPath;
                 });
+                if (video) {
+                  const thumbnail = await generateVideoThumbnail(normalizedVideoPath);
+                  newVideoLayers[layerIndex].push({
+                    ...video,
+                    type: 'video',
+                    id: segment.id,
+                    startTime: segment.timelineStartTime,
+                    duration: segment.timelineEndTime - segment.timelineStartTime,
+                    layer: layerIndex,
+                    filePath: normalizedVideoPath,
+                    positionX: segment.positionX || 0,
+                    positionY: segment.positionY || 0,
+                    scale: segment.scale || 1,
+                    startTimeWithinVideo: segment.startTime,
+                    endTimeWithinVideo: segment.endTime,
+                    thumbnail,
+                  });
+                }
               }
             }
           }
-        }
 
-        if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
-          for (const imageSegment of timelineState.imageSegments) {
-            const layerIndex = imageSegment.layer || 0;
-            if (layerIndex < 0) continue;
-            while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
-            const filename = imageSegment.imagePath.split('/').pop();
-            const filePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
-            const thumbnail = await generateImageThumbnail(imageSegment.imagePath);
-            newVideoLayers[layerIndex].push({
-              id: imageSegment.id,
-              type: 'image',
-              fileName: filename,
-              filePath,
-              thumbnail,
-              startTime: imageSegment.timelineStartTime,
-              duration: imageSegment.timelineEndTime - imageSegment.timelineStartTime,
-              layer: layerIndex,
-              positionX: imageSegment.positionX || 0,
-              positionY: imageSegment.positionY || 0,
-              scale: imageSegment.scale || 1,
-              opacity: imageSegment.opacity || 1.0,
-              width: imageSegment.width,
-              height: imageSegment.height,
-              effectiveWidth: imageSegment.effectiveWidth,
-              effectiveHeight: imageSegment.effectiveHeight,
-              maintainAspectRatio: imageSegment.maintainAspectRatio,
-            });
+          if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
+            for (const imageSegment of timelineState.imageSegments) {
+              const layerIndex = imageSegment.layer || 0;
+              if (layerIndex < 0) continue;
+              while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+              const filename = imageSegment.imagePath.split('/').pop();
+              const filePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+              const thumbnail = await generateImageThumbnail(imageSegment.imagePath);
+              newVideoLayers[layerIndex].push({
+                id: imageSegment.id,
+                type: 'image',
+                fileName: filename,
+                filePath,
+                thumbnail,
+                startTime: imageSegment.timelineStartTime,
+                duration: imageSegment.timelineEndTime - imageSegment.timelineStartTime,
+                layer: layerIndex,
+                positionX: imageSegment.positionX || 0,
+                positionY: imageSegment.positionY || 0,
+                scale: imageSegment.scale || 1,
+                opacity: imageSegment.opacity || 1.0,
+                width: imageSegment.width,
+                height: imageSegment.height,
+                effectiveWidth: imageSegment.effectiveWidth,
+                effectiveHeight: imageSegment.effectiveHeight,
+                maintainAspectRatio: imageSegment.maintainAspectRatio,
+              });
+            }
           }
-        }
 
-        if (timelineState.textSegments && timelineState.textSegments.length > 0) {
-          for (const textSegment of timelineState.textSegments) {
-            const layerIndex = textSegment.layer || 0;
-            if (layerIndex < 0) continue;
-            while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
-            newVideoLayers[layerIndex].push({
-              id: textSegment.id,
-              type: 'text',
-              text: textSegment.text,
-              startTime: textSegment.timelineStartTime,
-              duration: textSegment.timelineEndTime - textSegment.timelineStartTime,
-              layer: layerIndex,
-              fontFamily: textSegment.fontFamily || 'Arial',
-              fontSize: textSegment.fontSize || 24,
-              fontColor: textSegment.fontColor || '#FFFFFF',
-              backgroundColor: textSegment.backgroundColor || 'transparent',
-              positionX: textSegment.positionX || 0,
-              positionY: textSegment.positionY || 0,
-            });
+          if (timelineState.textSegments && timelineState.textSegments.length > 0) {
+            for (const textSegment of timelineState.textSegments) {
+              const layerIndex = textSegment.layer || 0;
+              if (layerIndex < 0) continue;
+              while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+              newVideoLayers[layerIndex].push({
+                id: textSegment.id,
+                type: 'text',
+                text: textSegment.text,
+                startTime: textSegment.timelineStartTime,
+                duration: textSegment.timelineEndTime - textSegment.timelineStartTime,
+                layer: layerIndex,
+                fontFamily: textSegment.fontFamily || 'Arial',
+                fontSize: textSegment.fontSize || 24,
+                fontColor: textSegment.fontColor || '#FFFFFF',
+                backgroundColor: textSegment.backgroundColor || 'transparent',
+                positionX: textSegment.positionX || 0,
+                positionY: textSegment.positionY || 0,
+              });
+            }
           }
-        }
 
-        if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
-          for (const audioSegment of timelineState.audioSegments) {
-            const backendLayer = audioSegment.layer || -1;
-            const layerIndex = Math.abs(backendLayer) - 1;
-            while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
-            newAudioLayers[layerIndex].push({
-              id: audioSegment.id,
-              type: 'audio',
-              fileName: audioSegment.audioFileName || audioSegment.audioPath.split('/').pop(),
-              startTime: audioSegment.timelineStartTime || 0,
-              duration: audioSegment.timelineEndTime - audioSegment.timelineStartTime || 0,
-              timelineStartTime: audioSegment.timelineStartTime || 0,
-              timelineEndTime: audioSegment.timelineEndTime || 0,
-              layer: backendLayer,
-              startTimeWithinAudio: audioSegment.startTime || 0,
-              endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
-              displayName: audioSegment.audioFileName ? audioSegment.audioFileName.split('/').pop() : audioSegment.audioPath.split('/').pop(),
-              waveformImage: '/images/audio.jpeg',
-            });
+          if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
+            console.log('Processing audioSegments:', timelineState.audioSegments);
+            for (const audioSegment of timelineState.audioSegments) {
+              const backendLayer = audioSegment.layer || -1;
+              const layerIndex = Math.abs(backendLayer) - 1;
+              while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
+              const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
+              const audioUrl = `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(filename)}`;
+              const newSegment = {
+                id: audioSegment.id,
+                type: 'audio',
+                fileName: filename,
+                url: audioUrl, // Ensure url is set
+                startTime: audioSegment.timelineStartTime || 0,
+                duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+                timelineStartTime: audioSegment.timelineStartTime || 0,
+                timelineEndTime: audioSegment.timelineEndTime || 0,
+                layer: backendLayer,
+                startTimeWithinAudio: audioSegment.startTime || 0,
+                endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+                displayName: filename,
+                waveformImage: '/images/audio.jpeg',
+                volume: audioSegment.volume || 1.0,
+                keyframes: audioSegment.keyframes || {},
+              };
+              console.log(`Created audio segment, ${audioSegment.id} with URL: ${audioUrl}`, newSegment);
+              newAudioLayers[layerIndex].push(newSegment);
+            }
+          } else {
+            console.warn('No audioSegments found in timelineState');
           }
-        }
 
-        // Fetch transitions
-        const transitionsResponse = await axios.get(
-          `${API_BASE_URL}/projects/${projectId}/transitions`,
-          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-        );
-        setTransitions(transitionsResponse.data || []);
+          // Fetch transitions
+          const transitionsResponse = await axios.get(
+            `${API_BASE_URL}/projects/${projectId}/transitions`,
+            { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+          );
 
-        setVideoLayers(newVideoLayers);
-        setAudioLayers(newAudioLayers);
-        setHistory([]);
-        setHistoryIndex(-1);
-        let maxEndTime = 0;
-        [...newVideoLayers, ...newAudioLayers].forEach((layer) => {
-          layer.forEach((item) => {
-            const endTime = item.startTime + item.duration;
-            if (endTime > maxEndTime) maxEndTime = endTime;
+          console.log('Setting audioLayers:', JSON.stringify(newAudioLayers, null, 2));
+          setVideoLayers(newVideoLayers);
+          setAudioLayers(newAudioLayers);
+          setTransitions(transitionsResponse.data || []);
+          setHistory([]);
+          setHistoryIndex(-1);
+          let maxEndTime = 0;
+          [...newVideoLayers, ...newAudioLayers].forEach((layer) => {
+            layer.forEach((item) => {
+              const endTime = item.startTime + item.duration;
+              if (endTime > maxEndTime) maxEndTime = endTime;
+            });
           });
-        });
-        setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
+          setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
+        }// } else {
+        //   console.warn('No timelineState found in project data');
+        // }
+      } catch (error) {
+        console.error('Error loading project timeline:', error);
       }
-    } catch (error) {
-      console.error('Error loading project timeline:', error);
-    }
-  };
+    };
 
   useEffect(() => {
     if (projectId && sessionId && videos.length > 0 && thumbnailsGenerated) loadProjectTimeline();
@@ -784,25 +805,54 @@ const TimelineComponent = ({
       if (!isSplitMode && onVideoSelect) onVideoSelect(clickTime);
     };
 
-  const togglePlayback = () => {
-    if (isPlaying) {
-      clearInterval(playIntervalRef.current);
-    } else {
-      playIntervalRef.current = setInterval(() => {
-        updatePlayheadAndTime((prev) => {
-          const newPosition = prev + 0.1;
-          if (newPosition >= totalDuration) {
-            clearInterval(playIntervalRef.current);
-            setIsPlaying(false);
-            updatePlayheadAndTime(0);
-            return 0;
+const togglePlayback = () => {
+      if (localIsPlaying) {
+        clearInterval(playIntervalRef.current); // Clear any existing interval
+        cancelAnimationFrame(playIntervalRef.current); // Clear animation frame
+        setLocalIsPlaying(false);
+        setIsPlaying(false);
+      } else {
+        const frameDuration = 1 / fps; // Duration of one frame in seconds
+        let lastUpdateTime = null;
+
+        const updatePlayhead = (timestamp) => {
+          if (!localIsPlaying) return; // Stop if paused
+
+          if (!lastUpdateTime) {
+            lastUpdateTime = timestamp;
           }
-          return newPosition;
-        });
-      }, 100);
-    }
-    setIsPlaying(!isPlaying);
-  };
+
+          const deltaMs = timestamp - lastUpdateTime;
+          const framesElapsed = Math.floor(deltaMs / (1000 / fps)); // Number of frames
+          const deltaTime = framesElapsed * frameDuration; // Time advanced in seconds
+          lastUpdateTime = timestamp - (deltaMs % (1000 / fps)); // Align to frame boundary
+
+          updatePlayheadAndTime((prev) => {
+            const newPosition = prev + deltaTime;
+            if (newPosition >= totalDuration) {
+              cancelAnimationFrame(playIntervalRef.current);
+              setLocalIsPlaying(false);
+              setIsPlaying(false);
+              updatePlayheadAndTime(0);
+              return 0;
+            }
+            return newPosition;
+          });
+
+          playIntervalRef.current = requestAnimationFrame(updatePlayhead);
+        };
+
+        setLocalIsPlaying(true);
+        setIsPlaying(true);
+        playIntervalRef.current = requestAnimationFrame(updatePlayhead);
+      }
+    };
+    useEffect(() => {
+      return () => {
+        clearInterval(playIntervalRef.current);
+        cancelAnimationFrame(playIntervalRef.current);
+      };
+    }, []);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);

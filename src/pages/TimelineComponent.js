@@ -904,6 +904,7 @@ const togglePlayback = () => {
             backgroundColor: item.backgroundColor,
             positionX: item.positionX,
             positionY: item.positionY,
+            keyframes: item.keyframes || {}, // Ensure keyframes are included
           });
         } else if (item.type === 'video') {
           segments.push({
@@ -918,6 +919,7 @@ const togglePlayback = () => {
             positionX: item.positionX,
             positionY: item.positionY,
             scale: item.scale,
+            keyframes: item.keyframes || {}, // Ensure keyframes are included
           });
         } else if (item.type === 'image') {
           segments.push({
@@ -930,6 +932,7 @@ const togglePlayback = () => {
             positionX: item.positionX,
             positionY: item.positionY,
             scale: item.scale,
+            keyframes: item.keyframes || {}, // Ensure keyframes are included
           });
         } else if (item.type === 'audio') {
           segments.push({
@@ -941,6 +944,7 @@ const togglePlayback = () => {
             timelineEndTime: item.startTime + item.duration,
             startTime: item.startTimeWithinAudio || 0,
             endTime: item.endTimeWithinAudio || item.duration,
+            keyframes: item.keyframes || {}, // Ensure keyframes are included
           });
         }
       });

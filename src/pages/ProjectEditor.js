@@ -62,6 +62,109 @@ const ProjectEditor = () => {
   const [selectedTransition, setSelectedTransition] = useState(null); // NEW: State for selected transition
   const [projectFps, setProjectFps] = useState(25); // Default to 25 as per backend
 
+  // Add this function near the top of ProjectEditor.js, after state declarations
+  const autoSaveProject = async (updatedVideoLayers = videoLayers, updatedAudioLayers = audioLayers) => {
+    if (!projectId || !sessionId) {
+      console.warn('Cannot auto-save: Missing projectId or sessionId');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      // Prepare timeline state
+      const segments = [];
+      updatedVideoLayers.forEach((layer, layerIndex) => {
+        layer.forEach((item) => {
+          if (item.type === 'video') {
+            segments.push({
+              id: item.id,
+              type: 'video',
+              sourceVideoPath: item.filePath,
+              layer: item.layer,
+              timelineStartTime: item.startTime,
+              timelineEndTime: item.startTime + item.duration,
+              startTime: item.startTimeWithinVideo || 0,
+              endTime: item.endTimeWithinVideo || item.duration,
+              positionX: item.positionX,
+              positionY: item.positionY,
+              scale: item.scale,
+              opacity: item.opacity,
+              filters: item.filters || [],
+              keyframes: item.keyframes || {},
+            });
+          } else if (item.type === 'image') {
+            segments.push({
+              id: item.id,
+              type: 'image',
+              imagePath: item.fileName,
+              layer: item.layer,
+              timelineStartTime: item.startTime,
+              timelineEndTime: item.startTime + item.duration,
+              positionX: item.positionX,
+              positionY: item.positionY,
+              scale: item.scale,
+              opacity: item.opacity,
+              filters: item.filters || [],
+              keyframes: item.keyframes || {},
+            });
+          } else if (item.type === 'text') {
+            segments.push({
+              id: item.id,
+              type: 'text',
+              text: item.text,
+              layer: item.layer,
+              timelineStartTime: item.startTime,
+              timelineEndTime: item.startTime + item.duration,
+              fontFamily: item.fontFamily,
+              fontSize: item.fontSize,
+              fontColor: item.fontColor,
+              backgroundColor: item.backgroundColor,
+              positionX: item.positionX,
+              positionY: item.positionY,
+              opacity: item.opacity,
+              keyframes: item.keyframes || {},
+            });
+          }
+        });
+      });
+      updatedAudioLayers.forEach((layer, layerIndex) => {
+        layer.forEach((item) => {
+          segments.push({
+            id: item.id,
+            type: 'audio',
+            audioPath: item.fileName,
+            layer: item.layer,
+            timelineStartTime: item.startTime,
+            timelineEndTime: item.startTime + item.duration,
+            startTime: item.startTimeWithinAudio || 0,
+            endTime: item.endTimeWithinAudio || item.duration,
+            volume: item.volume,
+            keyframes: item.keyframes || {},
+          });
+        });
+      });
+
+      // Send save request
+      await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/save`,
+        {
+          timelineState: {
+            segments,
+            textSegments: segments.filter((s) => s.type === 'text'),
+            imageSegments: segments.filter((s) => s.type === 'image'),
+            audioSegments: segments.filter((s) => s.type === 'audio'),
+          },
+        },
+        {
+          params: { sessionId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      console.log('Project auto-saved successfully');
+    } catch (error) {
+      console.error('Error during auto-save:', error);
+    }
+  };
+
   // Add a baseFontSize constant (used in VideoPreview.js for rendering)
   const baseFontSize = 24;
 
@@ -1435,6 +1538,8 @@ const ProjectEditor = () => {
     setKeyframes(updatedKeyframes);
 
     // Update the appropriate layers with new keyframes
+    let updatedVideoLayers = videoLayers;
+    let updatedAudioLayers = audioLayers;
     if (selectedSegment.type === 'audio') {
       setAudioLayers((prevLayers) => {
         const newLayers = [...prevLayers];
@@ -1442,6 +1547,7 @@ const ProjectEditor = () => {
         newLayers[layerIndex] = newLayers[layerIndex].map((item) =>
           item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
         );
+        updatedAudioLayers = newLayers; // Capture updated layers for auto-save
         return newLayers;
       });
     } else {
@@ -1450,6 +1556,7 @@ const ProjectEditor = () => {
         newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
           item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
         );
+        updatedVideoLayers = newLayers; // Capture updated layers for auto-save
         return newLayers;
       });
     }
@@ -1476,8 +1583,11 @@ const ProjectEditor = () => {
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Save segment changes to persist the updated keyframes
-      await saveSegmentChanges(updatedKeyframes);
+      // Auto-save the project with updated layers
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+      }, 1000); // Debounce for 1 second
     } catch (error) {
       console.error('Error adding keyframe:', error);
     }
@@ -1502,6 +1612,38 @@ const ProjectEditor = () => {
         [property]: (keyframes[property] || []).filter((kf) => !areTimesEqual(kf.time, time)),
       };
       setKeyframes(updatedKeyframes);
+
+      // Update the appropriate layers with new keyframes
+      let updatedVideoLayers = videoLayers;
+      let updatedAudioLayers = audioLayers;
+      if (selectedSegment.type === 'audio') {
+        setAudioLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          const layerIndex = Math.abs(selectedSegment.layer) - 1;
+          newLayers[layerIndex] = newLayers[layerIndex].map((item) =>
+            item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+          );
+          updatedAudioLayers = newLayers; // Capture updated layers for auto-save
+          return newLayers;
+        });
+      } else {
+        setVideoLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
+            item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+          );
+          updatedVideoLayers = newLayers; // Capture updated layers for auto-save
+          return newLayers;
+        });
+      }
+
+      // Auto-save the project with updated layers
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+      }, 1000); // Debounce for 1 second
+
+      // Refresh keyframes
       await fetchKeyframes(selectedSegment.id, selectedSegment.type);
     } catch (error) {
       console.error('Error removing keyframe:', error);

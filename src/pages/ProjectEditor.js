@@ -61,6 +61,7 @@ const ProjectEditor = () => {
   ]);
   const [selectedTransition, setSelectedTransition] = useState(null); // NEW: State for selected transition
   const [projectFps, setProjectFps] = useState(25); // Default to 25 as per backend
+  const [elements, setElements] = useState([]);
 
   // Add this function near the top of ProjectEditor.js, after state declarations
   const autoSaveProject = async (updatedVideoLayers = videoLayers, updatedAudioLayers = audioLayers) => {
@@ -501,6 +502,7 @@ const ProjectEditor = () => {
         await fetchAudios();
         await fetchPhotos();
         await fetchTransitions();
+        await fetchElements();
         const token = localStorage.getItem('token');
         const sessionResponse = await axios.post(
           `${API_BASE_URL}/projects/${projectId}/session`,
@@ -918,6 +920,114 @@ const ProjectEditor = () => {
       }
   };
 
+    const fetchElements = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error('No token found in localStorage');
+                setElements([]);
+                return;
+            }
+
+            const response = await axios.get(`${API_BASE_URL}/projects/elements`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const updatedElements = await Promise.all(
+                response.data.map(async (element) => {
+                    const thumbnail = await new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        // Use the actual projectId from useParams
+                        img.src = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(element.fileName)}`;
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            const maxWidth = 120;
+                            const maxHeight = 80;
+                            let width = img.width;
+                            let height = img.height;
+                            if (width > height) {
+                                if (width > maxWidth) {
+                                    height = (height * maxWidth) / width;
+                                    width = maxWidth;
+                                }
+                            } else {
+                                if (height > maxHeight) {
+                                    width = (width * maxHeight) / height;
+                                    height = maxHeight;
+                                }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx.drawImage(img, 0, 0, width, height);
+                            resolve(canvas.toDataURL('image/jpeg'));
+                        };
+                        img.onerror = () => resolve(null);
+                    });
+                    return {
+                        id: element.id || `element-${element.fileName}-${Date.now()}`,
+                        fileName: element.fileName,
+                        displayName: element.fileName.split('/').pop(),
+                        filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(element.fileName)}`,
+                        thumbnail,
+                    };
+                })
+            );
+            setElements(updatedElements);
+        } catch (error) {
+            console.error('Error fetching elements:', error);
+            if (error.response?.status === 401) {
+                alert('Session expired. Please log in again.');
+                navigate('/login');
+            } else if (error.response?.status === 403) {
+                alert('You do not have permission to fetch elements. Please contact support.');
+            } else {
+                alert('Failed to fetch elements. Please try again.');
+            }
+            setElements([]);
+        }
+    };
+
+  const handleElementUpload = async (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+
+        const formData = new FormData();
+        files.forEach((file) => {
+            console.log('Appending file:', file.name);
+            formData.append('files', file);
+        });
+
+        try {
+            setUploading(true);
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            await axios.post(`${API_BASE_URL}/projects/elements/upload`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            await fetchElements();
+        } catch (error) {
+            console.error('Error uploading elements:', error);
+            if (error.response?.status === 403) {
+                alert('You do not have permission to upload elements. Please contact support.');
+            } else if (error.response?.status === 401) {
+                alert('Session expired. Please log in again.');
+                navigate('/login');
+            } else {
+                alert('Failed to upload one or more elements. Please try again.');
+            }
+        } finally {
+            setUploading(false);
+        }
+    };
+
     const handleAudioUpload = async (event) => {
       const files = Array.from(event.target.files);
       if (files.length === 0) return;
@@ -960,6 +1070,83 @@ const ProjectEditor = () => {
         setUploading(false);
       }
     };
+
+  const handleElementClick = async (element, isDragEvent = false) => {
+      if (uploading) return;
+      try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+              params: { sessionId },
+              headers: { Authorization: `Bearer ${token}` },
+          });
+          let timelineState =
+              response.data.timelineState
+                  ? typeof response.data.timelineState === 'string'
+                      ? JSON.parse(response.data.timelineState)
+                      : response.data.timelineState
+                  : { segments: [], textSegments: [], imageSegments: [] };
+          let endTime = 0;
+          const layer0Items = [
+              ...(timelineState.segments || []).filter((seg) => seg.layer === 0),
+              ...(timelineState.textSegments || []).filter((seg) => seg.layer === 0),
+              ...(timelineState.imageSegments || []).filter((seg) => seg.layer === 0),
+          ];
+          if (layer0Items.length > 0) {
+              layer0Items.forEach((item) => {
+                  const segmentEndTime = item.timelineStartTime + (item.timelineEndTime - item.timelineStartTime);
+                  if (segmentEndTime > endTime) endTime = segmentEndTime;
+              });
+          }
+          await axios.post(
+              `${API_BASE_URL}/projects/${projectId}/add-project-image-to-timeline`,
+              {
+                  imageFileName: element.fileName,
+                  layer: 0,
+                  timelineStartTime: endTime,
+                  timelineEndTime: endTime + 5,
+                  isElement: true, // Indicate this is an element
+              },
+              { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+          );
+          const updatedResponse = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+              params: { sessionId },
+              headers: { Authorization: `Bearer ${token}` },
+          });
+          const updatedTimelineState =
+              typeof updatedResponse.data.timelineState === 'string'
+                  ? JSON.parse(updatedResponse.data.timelineState)
+                  : updatedResponse.data.timelineState;
+          const newImageSegment = updatedTimelineState.imageSegments.find(
+              (seg) => seg.imagePath && seg.timelineStartTime === endTime && seg.layer === 0
+          );
+          if (newImageSegment) {
+              const filename = newImageSegment.imagePath.split('/').pop();
+              setVideoLayers((prevLayers) => {
+                  const newLayers = [...prevLayers];
+                  newLayers[0].push({
+                      id: newImageSegment.id,
+                      type: 'image',
+                      fileName: element.fileName,
+                      filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`, // Updated URL
+                      thumbnail: element.thumbnail,
+                      startTime: newImageSegment.timelineStartTime,
+                      duration: newImageSegment.timelineEndTime - newImageSegment.timelineStartTime,
+                      layer: 0,
+                      positionX: newImageSegment.positionX || 50,
+                      positionY: newImageSegment.positionY || 50,
+                      scale: newImageSegment.scale || 1,
+                      filters: newImageSegment.filters || [],
+                  });
+                  return newLayers;
+              });
+              setTotalDuration((prev) => Math.max(prev, endTime + 5));
+              preloadMedia(); // Preload after adding element
+          }
+      } catch (error) {
+          console.error('Error adding element to timeline:', error);
+          alert('Failed to add element to timeline. Please try again.');
+      }
+  };
 
   const generateVideoThumbnail = async (video) => {
     if (!video || (!video.filePath && !video.filename)) return;
@@ -1033,25 +1220,25 @@ const ProjectEditor = () => {
   };
 
   const handleMediaDragStart = (e, media, type) => {
-    const mediaId = media.id || `media-${media.filePath || media.fileName || media.filename || media.imageFileName}-${Date.now()}`;
-    const dragData = {
-      type: type,
-      isDragOperation: true,
-      [type === 'media' ? 'video' : type === 'photo' ? 'photo' : 'audio']: {
-        id: mediaId,
-        filePath: type === 'media' ? (media.filePath || media.filename) : undefined,
-        fileName: type === 'audio' ? media.fileName : type === 'photo' ? media.fileName : undefined,
-        displayPath: media.displayPath || media.displayName || (media.filePath || media.fileName || media.filename || media.imageFileName)?.split('/').pop(),
-        duration: media.duration || 5,
-        thumbnail: media.thumbnail || (type === 'photo' ? media.filePath : undefined),
-      },
+      const mediaId = media.id || `media-${media.filePath || media.fileName || media.filename || media.imageFileName || media.displayName}-${Date.now()}`;
+      const dragData = {
+        type: type,
+        isDragOperation: true,
+        [type === 'media' ? 'video' : type === 'photo' ? 'photo' : type === 'audio' ? 'audio' : 'element']: {
+          id: mediaId,
+          filePath: type === 'media' ? (media.filePath || media.filename) : undefined,
+          fileName: type === 'audio' || type === 'photo' || type === 'element' ? media.fileName : undefined,
+          displayPath: media.displayPath || media.displayName || (media.filePath || media.fileName || media.filename || media.imageFileName || media.displayName)?.split('/').pop(),
+          duration: media.duration || 5,
+          thumbnail: media.thumbnail || (type === 'photo' || type === 'element' ? media.filePath : undefined),
+        },
+      };
+      const jsonString = JSON.stringify(dragData);
+      e.dataTransfer.setData('application/json', jsonString);
+      e.dataTransfer.setData('text/plain', jsonString);
+      e.currentTarget.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'copyMove';
     };
-    const jsonString = JSON.stringify(dragData);
-    e.dataTransfer.setData('application/json', jsonString);
-    e.dataTransfer.setData('text/plain', jsonString);
-    e.currentTarget.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'copyMove';
-  };
 
   const handleVideoClick = async (video, isDragEvent = false) => {
     if (isDragEvent) return;
@@ -2502,146 +2689,189 @@ const ProjectEditor = () => {
   return (
     <div className="project-editor">
       <aside className={`media-panel ${isMediaPanelOpen ? 'open' : 'closed'}`}>
-        <div className="panel-header">
-          <button className="toggle-button" onClick={toggleMediaPanel}>
-            {isMediaPanelOpen ? '◄' : '►'}
-          </button>
-        </div>
-        {isMediaPanelOpen && (
-          <div className="panel-content">
-            <h2 onClick={() => setExpandedSection(null)}>Media Library</h2>
-            <div className="media-section">
-              <button className="section-button" onClick={() => toggleSection('videos')}>
-                Videos
-              </button>
-              {expandedSection === 'videos' && (
-                <div className="section-content">
-                  <input
+              <div className="panel-header">
+                <button className="toggle-button" onClick={toggleMediaPanel}>
+                  {isMediaPanelOpen ? '◄' : '►'}
+                </button>
+              </div>
+              {isMediaPanelOpen && (
+                <div className="panel-content">
+                  <h2 onClick={() => setExpandedSection(null)}>Media Library</h2>
+                  <div className="media-section">
+                    <button className="section-button" onClick={() => toggleSection('videos')}>
+                      Videos
+                    </button>
+                    {expandedSection === 'videos' && (
+                      <div className="section-content">
+                        <input
                           type="file"
                           accept="video/*"
                           onChange={handleVideoUpload}
                           id="upload-video"
                           className="hidden-input"
-                          multiple // Add this
+                          multiple
                         />
                         <label htmlFor="upload-video" className="upload-button">
                           {uploading ? 'Uploading...' : 'Upload Video'}
                         </label>
-                  {videos.length === 0 ? (
-                    <div className="empty-state">Pour it in, I am waiting!</div>
-                  ) : (
-                    <div className="video-list">
-                      {videos.map((video) => (
-                        <div
-                          key={video.id || video.filePath || video.filename}
-                          className={`video-item ${
-                            selectedVideo && (selectedVideo.id === video.id || selectedVideo.filePath === video.filePath)
-                              ? 'selected'
-                              : ''
-                          }`}
-                          draggable={true}
-                          onDragStart={(e) => handleMediaDragStart(e, video, 'media')}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleVideoClick(video);
-                          }}
-                          onDragEnd={(e) => e.stopPropagation()}
-                        >
-                          {video.thumbnail ? (
-                            <div
-                              className="video-thumbnail"
-                              style={{
-                                backgroundImage: `url(${video.thumbnail})`,
-                                height: '130px',
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center',
-                                borderRadius: '4px',
-                              }}
-                            ></div>
-                          ) : (
-                            <div className="video-thumbnail-placeholder"></div>
-                          )}
-                          {video.title || (video.displayPath ? video.displayPath.split('/').pop().replace(/^\d+_/, '') : 'Untitled Video')}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="media-section">
-              <button className="section-button" onClick={() => toggleSection('photos')}>
-                Photos
-              </button>
-              {expandedSection === 'photos' && (
-                <div className="section-content">
-                  <input
+                        {videos.length === 0 ? (
+                          <div className="empty-state">Pour it in, I am waiting!</div>
+                        ) : (
+                          <div className="video-list">
+                            {videos.map((video) => (
+                              <div
+                                key={video.id || video.filePath || video.filename}
+                                className={`video-item ${
+                                  selectedVideo && (selectedVideo.id === video.id || selectedVideo.filePath === video.filePath)
+                                    ? 'selected'
+                                    : ''
+                                }`}
+                                draggable={true}
+                                onDragStart={(e) => handleMediaDragStart(e, video, 'media')}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleVideoClick(video);
+                                }}
+                                onDragEnd={(e) => e.stopPropagation()}
+                              >
+                                {video.thumbnail ? (
+                                  <div
+                                    className="video-thumbnail"
+                                    style={{
+                                      backgroundImage: `url(${video.thumbnail})`,
+                                      height: '130px',
+                                      backgroundSize: 'cover',
+                                      backgroundPosition: 'center',
+                                      borderRadius: '4px',
+                                    }}
+                                  ></div>
+                                ) : (
+                                  <div className="video-thumbnail-placeholder"></div>
+                                )}
+                                {video.title || (video.displayPath ? video.displayPath.split('/').pop().replace(/^\d+_/, '') : 'Untitled Video')}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="media-section">
+                    <button className="section-button" onClick={() => toggleSection('photos')}>
+                      Photos
+                    </button>
+                    {expandedSection === 'photos' && (
+                      <div className="section-content">
+                        <input
                           type="file"
                           accept="image/*"
                           onChange={handlePhotoUpload}
                           id="upload-photo"
                           className="hidden-input"
-                          multiple // Add this
+                          multiple
                         />
                         <label htmlFor="upload-photo" className="upload-button">
                           {uploading ? 'Uploading...' : 'Upload Photo'}
                         </label>
-                  {photos.length === 0 ? (
-                    <div className="empty-state">Pour it in, I am waiting!</div>
-                  ) : (
-                    <div className="photo-list">
-                      {photos.map((photo) => (
-                        <div
-                          key={photo.id}
-                          className="photo-item"
-                          draggable={true}
-                          onDragStart={(e) => handleMediaDragStart(e, photo, 'photo')}
-                          onClick={() => handlePhotoClick(photo)}
-                        >
-                          <img src={photo.filePath} alt={photo.displayName} className="photo-thumbnail" />
-                          <div className="photo-title">{photo.displayName}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="media-section">
-              <button className="section-button" onClick={() => toggleSection('audios')}>
-                Audio
-              </button>
-              {expandedSection === 'audios' && (
-                <div className="section-content">
-                  <input
+                        {photos.length === 0 ? (
+                          <div className="empty-state">Pour it in, I am waiting!</div>
+                        ) : (
+                          <div className="photo-list">
+                            {photos.map((photo) => (
+                              <div
+                                key={photo.id}
+                                className="photo-item"
+                                draggable={true}
+                                onDragStart={(e) => handleMediaDragStart(e, photo, 'photo')}
+                                onClick={() => handlePhotoClick(photo)}
+                              >
+                                <img src={photo.filePath} alt={photo.displayName} className="photo-thumbnail" />
+                                <div className="photo-title">{photo.displayName}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="media-section">
+                    <button className="section-button" onClick={() => toggleSection('audios')}>
+                      Audio
+                    </button>
+                    {expandedSection === 'audios' && (
+                      <div className="section-content">
+                        <input
                           type="file"
                           accept="audio/*"
                           onChange={handleAudioUpload}
                           id="upload-audio"
                           className="hidden-input"
-                          multiple // Add this
+                          multiple
                         />
                         <label htmlFor="upload-audio" className="upload-button">
                           {uploading ? 'Uploading...' : 'Upload Audio'}
                         </label>
-                  {audios.length === 0 ? (
-                    <div className="empty-state">Pour it in, I am waiting!</div>
-                  ) : (
-                    <div className="audio-list">
-                      {audios.map((audio) => (
-                        <div key={audio.id} className="audio-item" draggable={true} onDragStart={(e) => handleMediaDragStart(e, audio, 'audio')}>
-                          <img src={audio.waveformImage || '/images/audio.jpeg'} alt="Audio Waveform" className="audio-waveform" />
-                          <div className="audio-title">{audio.displayName}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        {audios.length === 0 ? (
+                          <div className="empty-state">Pour it in, I am waiting!</div>
+                        ) : (
+                          <div className="audio-list">
+                            {audios.map((audio) => (
+                              <div
+                                key={audio.id}
+                                className="audio-item"
+                                draggable={true}
+                                onDragStart={(e) => handleMediaDragStart(e, audio, 'audio')}
+                              >
+                                <img src={audio.waveformImage || '/images/audio.jpeg'} alt="Audio Waveform" className="audio-waveform" />
+                                <div className="audio-title">{audio.displayName}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="media-section">
+                    <button className="section-button" onClick={() => toggleSection('elements')}>
+                      Elements
+                    </button>
+                    {expandedSection === 'elements' && (
+                      <div className="section-content">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleElementUpload}
+                          id="upload-element"
+                          className="hidden-input"
+                          multiple
+                        />
+                        <label htmlFor="upload-element" className="upload-button">
+                          {uploading ? 'Uploading...' : 'Upload Element'}
+                        </label>
+                        {elements.length === 0 ? (
+                          <div className="empty-state">Pour it in, I am waiting!</div>
+                        ) : (
+                          <div className="element-list">
+                            {elements.map((element) => (
+                              <div
+                                key={element.id}
+                                className="element-item"
+                                draggable={true}
+                                onDragStart={(e) => handleMediaDragStart(e, element, 'element')}
+                                onClick={() => handleElementClick(element)}
+                              >
+                                <img src={element.thumbnail || element.filePath} alt={element.displayName} className="element-thumbnail" />
+                                <div className="element-title">{element.displayName}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-            </div>
-          </div>
-        )}
-      </aside>
+            </aside>
 
       <div className="main-content">
         <div className="content-wrapper">

@@ -534,130 +534,145 @@ const TimelineComponent = ({
     return { fromSegment, toSegment };
   };
 
-  const handleDrop = async (e) => {
-    if (isSplitMode) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const dragElements = document.querySelectorAll('.dragging');
-    dragElements.forEach((el) => el.classList.remove('dragging'));
-    if (timelineRef.current) timelineRef.current.classList.remove('showing-new-layer');
+   const handleDrop = async (e) => {
+      if (isSplitMode) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const dragElements = document.querySelectorAll('.dragging');
+      dragElements.forEach((el) => el.classList.remove('dragging'));
+      if (timelineRef.current) timelineRef.current.classList.remove('showing-new-layer');
 
-    setDraggingItem(null);
-    setDragLayer(null);
-    setDragOffset(0);
-    setSnapIndicators([]);
+      setDraggingItem(null);
+      setDragLayer(null);
+      setDragOffset(0);
+      setSnapIndicators([]);
 
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
 
-    const dataString = e.dataTransfer.getData('application/json');
-    let dragData = null;
-    if (dataString) {
-      try {
-        dragData = JSON.parse(dataString);
-      } catch (error) {
-        console.error('Error parsing drag data:', error);
-      }
-    }
-
-    if (dragData?.type === 'transition') {
-      const rect = timelineRef.current.getBoundingClientRect();
-      const clickX = mouseX - rect.left;
-      const timelinePosition = clickX / timeScale;
-      const layerHeight = 40;
-      const totalVideoLayers = videoLayers.length;
-      const totalAudioLayers = audioLayers.length;
-      const totalLayers = totalVideoLayers + totalAudioLayers + 2;
-      const reversedIndex = Math.floor((mouseY - rect.top) / layerHeight);
-      let layerIndex;
-      let isAudioLayer = false;
-
-      if (reversedIndex <= totalVideoLayers) {
-        layerIndex = totalVideoLayers - reversedIndex;
-      } else if (reversedIndex >= totalVideoLayers + 1 && reversedIndex < totalLayers - 1) {
-        layerIndex = totalLayers - 2 - reversedIndex;
-        isAudioLayer = true;
-      } else {
-        layerIndex = 0; // Default to first video layer
-      }
-
-      if (!isAudioLayer && layerIndex >= 0 && layerIndex < videoLayers.length) {
-        const { fromSegment, toSegment } = findAdjacentSegments(timelinePosition, layerIndex, videoLayers);
-        if (fromSegment && toSegment) {
-          await handleTransitionDrop(
-            fromSegment.id,
-            toSegment.id,
-            layerIndex,
-            timelinePosition,
-            dragData.transition.type // Pass the transition type from dragData
-          );
-        } else if (toSegment) {
-          await handleTransitionDrop(
-            null,
-            toSegment.id,
-            layerIndex,
-            timelinePosition,
-            dragData.transition.type // Pass the transition type from dragData
-          );
-        } else {
-          console.warn('No valid segment found for transition drop');
+      const dataString = e.dataTransfer.getData('application/json');
+      let dragData = null;
+      if (dataString) {
+        try {
+          dragData = JSON.parse(dataString);
+        } catch (error) {
+          console.error('Error parsing drag data:', error);
         }
-      } else {
-        console.warn('Transition drop ignored: Invalid layer or audio layer');
       }
 
-      setDraggingItem(null);
-      setDragLayer(null);
-      setDragOffset(0);
-      setSnapIndicators([]);
-      return;
-    }
+      if (dragData?.type === 'transition') {
+        const rect = timelineRef.current.getBoundingClientRect();
+        const clickX = mouseX - rect.left;
+        const timelinePosition = clickX / timeScale;
+        const layerHeight = 40;
+        const totalVideoLayers = videoLayers.length;
+        const totalAudioLayers = audioLayers.length;
+        const totalLayers = totalVideoLayers + totalAudioLayers + 2;
+        const reversedIndex = Math.floor((mouseY - rect.top) / layerHeight);
+        let layerIndex;
+        let isAudioLayer = false;
 
-    if (dragData?.type === 'audio' || (draggingItem && draggingItem.type === 'audio')) {
-      const audioDropResult = await audioHandler.handleAudioDrop(e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators);
-      if (audioDropResult === undefined) {
+        if (reversedIndex <= totalVideoLayers) {
+          layerIndex = totalVideoLayers - reversedIndex;
+        } else if (reversedIndex >= totalVideoLayers + 1 && reversedIndex < totalLayers - 1) {
+          layerIndex = totalLayers - 2 - reversedIndex;
+          isAudioLayer = true;
+        } else {
+          layerIndex = 0; // Default to first video layer
+        }
+
+        if (!isAudioLayer && layerIndex >= 0 && layerIndex < videoLayers.length) {
+          const { fromSegment, toSegment } = findAdjacentSegments(timelinePosition, layerIndex, videoLayers);
+          if (fromSegment && toSegment) {
+            await handleTransitionDrop(
+              fromSegment.id,
+              toSegment.id,
+              layerIndex,
+              timelinePosition,
+              dragData.transition.type
+            );
+          } else if (toSegment) {
+            await handleTransitionDrop(
+              null,
+              toSegment.id,
+              layerIndex,
+              timelinePosition,
+              dragData.transition.type
+            );
+          } else {
+            console.warn('No valid segment found for transition drop');
+          }
+        } else {
+          console.warn('Transition drop ignored: Invalid layer or audio layer');
+        }
+
         setDraggingItem(null);
         setDragLayer(null);
         setDragOffset(0);
         setSnapIndicators([]);
         return;
       }
-    }
 
-    if (dragData?.type === 'media' || (draggingItem && draggingItem.type === 'video')) {
-      await videoHandler.handleVideoDrop(e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators);
-      setDraggingItem(null);
-      setDragLayer(null);
-      setDragOffset(0);
-      setSnapIndicators([]);
-      return;
-    }
+      if (dragData?.type === 'audio' || (draggingItem && draggingItem.type === 'audio')) {
+        const audioDropResult = await audioHandler.handleAudioDrop(e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators);
+        if (audioDropResult === undefined) {
+          setDraggingItem(null);
+          setDragLayer(null);
+          setDragOffset(0);
+          setSnapIndicators([]);
+          return;
+        }
+      }
 
-    if (dragData?.type === 'photo' || (draggingItem && draggingItem.type === 'image')) {
-      const imageDropResult = await imageHandler.handleImageDrop(e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators);
-      if (imageDropResult === undefined) {
+      if (dragData?.type === 'media' || (draggingItem && draggingItem.type === 'video')) {
+        await videoHandler.handleVideoDrop(e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators);
         setDraggingItem(null);
         setDragLayer(null);
         setDragOffset(0);
         setSnapIndicators([]);
         return;
       }
-    }
 
-    const textDropResult = await textHandler.handleTextDrop(e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators);
-    if (textDropResult) {
+      if (
+        dragData?.type === 'photo' ||
+        dragData?.type === 'element' || // Handle element type
+        (draggingItem && draggingItem.type === 'image')
+      ) {
+        const isElement = dragData?.type === 'element';
+        const imageDropResult = await imageHandler.handleImageDrop(
+          e,
+          draggingItem,
+          dragLayer,
+          mouseX,
+          mouseY,
+          timeScale,
+          dragOffset,
+          snapIndicators,
+          isElement // Pass isElement flag
+        );
+        if (imageDropResult === undefined) {
+          setDraggingItem(null);
+          setDragLayer(null);
+          setDragOffset(0);
+          setSnapIndicators([]);
+          return;
+        }
+      }
+
+      const textDropResult = await textHandler.handleTextDrop(e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators);
+      if (textDropResult) {
+        setDraggingItem(null);
+        setDragLayer(null);
+        setDragOffset(0);
+        setSnapIndicators([]);
+        return;
+      }
+
       setDraggingItem(null);
       setDragLayer(null);
       setDragOffset(0);
       setSnapIndicators([]);
-      return;
-    }
-
-    setDraggingItem(null);
-    setDragLayer(null);
-    setDragOffset(0);
-    setSnapIndicators([]);
-  };
+    };
 
   const handleTimelineClick = async (e) => {
       if (!timelineRef.current) return;

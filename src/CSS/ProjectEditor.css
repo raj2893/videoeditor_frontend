@@ -801,6 +801,41 @@
   font-size: 14px;
 }
 
+  .element-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .element-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+
+  .element-item:hover {
+    background-color: #e0e0e0;
+  }
+
+  .element-thumbnail {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: 5px;
+  }
+
+  .element-title {
+    font-size: 12px;
+    text-align: center;
+    word-break: break-all;
+  }
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .project-editor {

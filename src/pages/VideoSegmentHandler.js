@@ -106,26 +106,35 @@ const VideoSegmentHandler = ({
           let adjustedStartTime = Math.max(0, dropTimePosition);
           let hasOverlap = true;
           while (hasOverlap) {
-            hasOverlap = targetLayerVideos.some(existingVideo => {
+            hasOverlap = targetLayerVideos.some((existingVideo) => {
               const existingStart = existingVideo.startTime;
               const existingEnd = existingStart + existingVideo.duration;
               const newVideoEnd = adjustedStartTime + video.duration;
-              return (adjustedStartTime < existingEnd && newVideoEnd > existingStart);
+              return adjustedStartTime < existingEnd && newVideoEnd > existingStart;
             });
             if (hasOverlap) {
-              const overlappingVideo = targetLayerVideos.find(existingVideo => {
+              const overlappingVideo = targetLayerVideos.find((existingVideo) => {
                 const existingStart = existingVideo.startTime;
-                const existingEnd = existingStart + existingVideo.duration;
+                const existingEnd = existingVideo.duration;
                 const newVideoEnd = adjustedStartTime + video.duration;
-                return (adjustedStartTime < existingEnd && newVideoEnd > existingStart);
+                return adjustedStartTime < existingEnd && newVideoEnd > existingStart;
               });
               if (overlappingVideo) {
                 adjustedStartTime = overlappingVideo.startTime + overlappingVideo.duration;
               } else break;
             }
           }
-          await addVideoToTimeline(video.filePath, targetLayer, adjustedStartTime, null);
-          loadProjectTimeline();
+
+          // Call addVideoToTimeline and get the new segment
+          const newSegment = await addVideoToTimeline(video.filePath, targetLayer, adjustedStartTime, null);
+
+          // Update videoLayers with the new segment
+          newVideoLayers[targetLayer].push(newSegment);
+          setVideoLayers(newVideoLayers);
+          saveHistory(newVideoLayers, audioLayers);
+          autoSave(newVideoLayers, audioLayers);
+
+          // No need to call loadProjectTimeline since we updated the state directly
         }
       }
       return;
@@ -141,12 +150,12 @@ const VideoSegmentHandler = ({
     let newVideoLayers = [...videoLayers];
     while (newVideoLayers.length <= actualLayerIndex) newVideoLayers.push([]);
 
-    const hasOverlap = newVideoLayers[actualLayerIndex].some(video => {
+    const hasOverlap = newVideoLayers[actualLayerIndex].some((video) => {
       if (draggingItem && video.id === draggingItem.id) return false;
       const videoStart = video.startTime;
       const videoEnd = videoStart + video.duration;
       const newVideoEnd = adjustedStartTime + draggingItem.duration;
-      return (adjustedStartTime < videoEnd && newVideoEnd > videoStart);
+      return adjustedStartTime < videoEnd && newVideoEnd > videoStart;
     });
 
     if (hasOverlap) {
@@ -155,9 +164,9 @@ const VideoSegmentHandler = ({
     }
 
     if (actualLayerIndex === dragLayer) {
-      newVideoLayers[actualLayerIndex] = newVideoLayers[actualLayerIndex].filter(v => v.id !== draggingItem.id);
+      newVideoLayers[actualLayerIndex] = newVideoLayers[actualLayerIndex].filter((v) => v.id !== draggingItem.id);
     } else {
-      newVideoLayers[dragLayer] = newVideoLayers[dragLayer].filter(v => v.id !== draggingItem.id);
+      newVideoLayers[dragLayer] = newVideoLayers[dragLayer].filter((v) => v.id !== draggingItem.id);
     }
     const updatedItem = {
       ...draggingItem,
@@ -393,6 +402,9 @@ const VideoSegmentHandler = ({
 
       // Step 9: Reload timeline to ensure consistency
       await loadProjectTimeline();
+
+      // Step 10: Final auto-save to ensure all changes are persisted
+      autoSave(newVideoLayers, newAudioLayers); // Additional auto-save after reload
 
     } catch (error) {
       console.error('Error splitting video:', error.response?.data || error.message);

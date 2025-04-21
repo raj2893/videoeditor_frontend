@@ -4,6 +4,7 @@ import axios from 'axios';
 import '../CSS/ProjectEditor.css';
 import TimelineComponent from './TimelineComponent.js';
 import VideoPreview from './VideoPreview';
+import { debounce } from 'lodash'; // Ensure lodash is installed: npm install lodash
 
 const API_BASE_URL = 'http://localhost:8080';
 
@@ -1240,7 +1241,7 @@ const ProjectEditor = () => {
       e.dataTransfer.effectAllowed = 'copyMove';
     };
 
-  const handleVideoClick = async (video, isDragEvent = false) => {
+  const handleVideoClick = debounce(async (video, isDragEvent = false) => {
     if (isDragEvent) return;
     setSelectedVideo(video);
     if (!sessionId || !projectId) return;
@@ -1264,11 +1265,28 @@ const ProjectEditor = () => {
           if (segmentEndTime > endTime) endTime = segmentEndTime;
         });
       }
-      await addVideoToTimeline(video.filePath || video.filename, 0, endTime, null);
+
+      // Add video to timeline and get the new segment
+      const newSegment = await addVideoToTimeline(video.filePath || video.filename, 0, endTime, null);
+
+      // Update videoLayers, ensuring no duplicates
+      setVideoLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        // Check if a segment with the same id already exists in layer 0
+        const exists = newLayers[0].some((segment) => segment.id === newSegment.id);
+        if (!exists) {
+          newLayers[0] = [...newLayers[0], newSegment];
+        } else {
+          console.warn(`Segment with id ${newSegment.id} already exists in layer 0`);
+        }
+        return newLayers;
+      });
+
+      // Auto-save is handled in addVideoToTimeline
     } catch (error) {
       console.error('Error adding video to timeline:', error);
     }
-  };
+  }, 300);
 
   const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineEndTime, startTimeWithinVideo, endTimeWithinVideo) => {
     try {
@@ -1285,39 +1303,95 @@ const ProjectEditor = () => {
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
-      const segment = response.data;
+      const { videoSegmentId, audioSegmentId } = response.data;
+
+      // Fetch the newly created video segment to ensure consistency
+      const segmentResponse = await axios.get(
+        `${API_BASE_URL}/projects/${projectId}/get-segment`,
+        {
+          params: { sessionId, segmentId: videoSegmentId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const videoSegment = segmentResponse.data.videoSegment;
+      if (!videoSegment) {
+        throw new Error(`Newly created video segment ${videoSegmentId} not found`);
+      }
+
       const video = videos.find((v) => (v.filePath || v.filename) === videoPath);
-      if (video && segment) {
-        const newSegment = {
-          id: segment.id || `${videoPath}-${Date.now()}`,
-          type: 'video',
-          startTime: timelineStartTime || 0,
-          duration: (timelineEndTime || segment.timelineEndTime) - (timelineStartTime || 0),
-          filePath: videoPath,
-          layer: layer || 0,
-          positionX: segment.positionX || 0,
-          positionY: segment.positionY || 0,
-          scale: segment.scale || 1,
-          thumbnail: video.thumbnail,
-          filters: segment.filters || [],
+      if (!video) {
+        throw new Error(`Video with path ${videoPath} not found in videos list`);
+      }
+
+      // Construct the new segment with backend data
+      const newSegment = {
+        id: videoSegment.id,
+        type: 'video',
+        startTime: videoSegment.timelineStartTime,
+        duration: videoSegment.timelineEndTime - videoSegment.timelineStartTime,
+        filePath: videoSegment.filename || videoPath,
+        layer: layer || 0,
+        positionX: videoSegment.positionX || 0,
+        positionY: videoSegment.positionY || 0,
+        scale: videoSegment.scale || 1,
+        startTimeWithinVideo: videoSegment.startTime || 0,
+        endTimeWithinVideo: videoSegment.endTime || (videoSegment.timelineEndTime - videoSegment.timelineStartTime),
+        thumbnail: video.thumbnail,
+        filters: videoSegment.filters || [],
+        audioSegmentId: audioSegmentId || null,
+      };
+
+      let updatedVideoLayers = videoLayers;
+      setVideoLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        while (newLayers.length <= layer) newLayers.push([]);
+        newLayers[layer] = [...newLayers[layer], newSegment];
+        updatedVideoLayers = newLayers;
+        return newLayers;
+      });
+
+      // Update audioLayers if an audio segment was created
+      let updatedAudioLayers = audioLayers;
+      if (audioSegmentId && segmentResponse.data.audioSegment) {
+        const audioSegment = segmentResponse.data.audioSegment;
+        const audioLayerIndex = Math.abs(audioSegment.layer) - 1;
+        const newAudioSegment = {
+          id: audioSegment.id,
+          type: 'audio',
+          fileName: audioSegment.audioFileName || audioSegment.audioPath.split('/').pop(),
+          startTime: audioSegment.timelineStartTime,
+          duration: audioSegment.timelineEndTime - audioSegment.timelineStartTime,
+          timelineStartTime: audioSegment.timelineStartTime,
+          timelineEndTime: audioSegment.timelineEndTime,
+          startTimeWithinAudio: audioSegment.startTime || 0,
+          endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime),
+          layer: audioSegment.layer,
+          displayName: audioSegment.audioPath
+            ? audioSegment.audioPath.split('/').pop()
+            : audioSegment.audioFileName,
+          waveformImage: '/images/audio.jpeg',
+          volume: audioSegment.volume || 1.0,
         };
-        let updatedVideoLayers = videoLayers;
-        setVideoLayers((prevLayers) => {
+
+        setAudioLayers((prevLayers) => {
           const newLayers = [...prevLayers];
-          while (newLayers.length <= layer) newLayers.push([]);
-          newLayers[layer] = [...newLayers[layer], newSegment];
-          updatedVideoLayers = newLayers; // Capture updated layers for auto-save
+          while (newLayers.length <= audioLayerIndex) newLayers.push([]);
+          newLayers[audioLayerIndex] = [...newLayers[audioLayerIndex], newAudioSegment];
+          updatedAudioLayers = newLayers;
           return newLayers;
         });
-        setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
-        preloadMedia(); // Preload after adding video
-
-        // Auto-save the project with updated layers
-        if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-        updateTimeoutRef.current = setTimeout(() => {
-          autoSaveProject(updatedVideoLayers, audioLayers);
-        }, 1000); // Debounce for 1 second
       }
+
+      setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
+      preloadMedia(); // Preload after adding video
+
+      // Auto-save the project with updated layers
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+      }, 1000); // Debounce for 1 second
+
+      return newSegment; // Return the new segment for use in handleVideoDrop
     } catch (error) {
       console.error('Error adding video to timeline:', error);
       throw error;

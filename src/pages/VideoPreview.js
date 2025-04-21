@@ -21,6 +21,7 @@ const VideoPreview = ({
   photos = [],
   transitions = [],
   fps = 25,
+  projectId,
 }) => {
   const [loadingVideos, setLoadingVideos] = useState(new Set());
   const [loadingAudios, setLoadingAudios] = useState(new Set());
@@ -316,7 +317,7 @@ const VideoPreview = ({
     const preloadAudios = () => {
       const allAudioItems = audioLayers.flat().filter((item) => item.type === 'audio');
       const preloadPromises = allAudioItems.map((item) => {
-        const audioUrl = `${API_BASE_URL}/projects/88/audio/${encodeURIComponent(item.fileName)}`;
+        const audioUrl = `${API_BASE_URL}/projects/{projectId}/audio/${encodeURIComponent(item.fileName)}`;
 
         if (!preloadRefs.current[item.id]) {
           const audio = document.createElement('audio');

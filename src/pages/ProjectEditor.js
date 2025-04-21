@@ -1112,16 +1112,24 @@ const ProjectEditor = () => {
           positionY: segment.positionY || 0,
           scale: segment.scale || 1,
           thumbnail: video.thumbnail,
-          filters: segment.filters || [], // Added from old code
+          filters: segment.filters || [],
         };
+        let updatedVideoLayers = videoLayers;
         setVideoLayers((prevLayers) => {
           const newLayers = [...prevLayers];
           while (newLayers.length <= layer) newLayers.push([]);
           newLayers[layer] = [...newLayers[layer], newSegment];
+          updatedVideoLayers = newLayers; // Capture updated layers for auto-save
           return newLayers;
         });
         setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
         preloadMedia(); // Preload after adding video
+
+        // Auto-save the project with updated layers
+        if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+        updateTimeoutRef.current = setTimeout(() => {
+          autoSaveProject(updatedVideoLayers, audioLayers);
+        }, 1000); // Debounce for 1 second
       }
     } catch (error) {
       console.error('Error adding video to timeline:', error);
@@ -1186,7 +1194,9 @@ const ProjectEditor = () => {
         }
       }
 
-      // Update local state
+      // Update local state and capture updated layers
+      let updatedVideoLayers = videoLayers;
+      let updatedAudioLayers = audioLayers;
       if (selectedSegment.type === 'audio') {
         setAudioLayers((prevLayers) => {
           const newLayers = [...prevLayers];
@@ -1194,6 +1204,7 @@ const ProjectEditor = () => {
           newLayers[layerIndex] = newLayers[layerIndex].filter(
             (item) => item.id !== selectedSegment.id
           );
+          updatedAudioLayers = newLayers;
           return newLayers;
         });
       } else {
@@ -1202,6 +1213,7 @@ const ProjectEditor = () => {
           newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].filter(
             (item) => item.id !== selectedSegment.id
           );
+          updatedVideoLayers = newLayers;
           return newLayers;
         });
       }
@@ -1216,7 +1228,7 @@ const ProjectEditor = () => {
       );
 
       // Update total duration
-      const allLayers = [...videoLayers, ...audioLayers];
+      const allLayers = [...updatedVideoLayers, ...updatedAudioLayers];
       let maxEndTime = 0;
       allLayers.forEach((layer) => {
         layer.forEach((item) => {
@@ -1232,6 +1244,12 @@ const ProjectEditor = () => {
       setIsTransformOpen(false);
       setIsFiltersOpen(false);
       preloadMedia(); // Preload after deleting segment
+
+      // Auto-save the project with updated layers
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+      }, 1000); // Debounce for 1 second
     } catch (error) {
       console.error('Error deleting segment:', error);
       alert('Failed to delete segment. Please try again.');
@@ -1925,57 +1943,66 @@ const ProjectEditor = () => {
   };
 
   // [Change] Updated the updateFilters function to use the new PUT endpoint for updating existing filters
-    const updateFilters = async (newFilterParams) => {
-      if (!selectedSegment || !sessionId || !projectId || Object.keys(newFilterParams).length === 0) return;
-      if (selectedSegment.type !== 'video' && selectedSegment.type !== 'image') return;
+   const updateFilters = async (newFilterParams) => {
+     if (!selectedSegment || !sessionId || !projectId || Object.keys(newFilterParams).length === 0) return;
+     if (selectedSegment.type !== 'video' && selectedSegment.type !== 'image') return;
 
-      try {
-        const token = localStorage.getItem('token');
-        const updatedFilters = [...appliedFilters];
+     try {
+       const token = localStorage.getItem('token');
+       const updatedFilters = [...appliedFilters];
 
-        for (const [filterName, filterValue] of Object.entries(newFilterParams)) {
-          const existingFilter = updatedFilters.find((f) => f.filterName === filterName);
-          if (existingFilter) {
-            // [Change] Update existing filter using the new PUT endpoint
-            await axios.put(
-              `${API_BASE_URL}/projects/${projectId}/update-filter`,
-              {
-                segmentId: selectedSegment.id,
-                filterId: existingFilter.filterId,
-                filterName,
-                filterValue: filterValue.toString(),
-              },
-              { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-            );
-            existingFilter.filterValue = filterValue.toString();
-          } else {
-            // [Change] Add new filter if it doesn't exist
-            const response = await axios.post(
-              `${API_BASE_URL}/projects/${projectId}/apply-filter`,
-              {
-                segmentId: selectedSegment.id,
-                filterName,
-                filterValue: filterValue.toString(),
-              },
-              { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-            );
-            updatedFilters.push(response.data);
-          }
-        }
+       for (const [filterName, filterValue] of Object.entries(newFilterParams)) {
+         const existingFilter = updatedFilters.find((f) => f.filterName === filterName);
+         if (existingFilter) {
+           // Update existing filter using the PUT endpoint
+           await axios.put(
+             `${API_BASE_URL}/projects/${projectId}/update-filter`,
+             {
+               segmentId: selectedSegment.id,
+               filterId: existingFilter.filterId,
+               filterName,
+               filterValue: filterValue.toString(),
+             },
+             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+           );
+           existingFilter.filterValue = filterValue.toString();
+         } else {
+           // Add new filter
+           const response = await axios.post(
+             `${API_BASE_URL}/projects/${projectId}/apply-filter`,
+             {
+               segmentId: selectedSegment.id,
+               filterName,
+               filterValue: filterValue.toString(),
+             },
+             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+           );
+           updatedFilters.push(response.data);
+         }
+       }
 
-        setAppliedFilters(updatedFilters);
-        setVideoLayers((prevLayers) => {
-          const newLayers = [...prevLayers];
-          newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
-            item.id === selectedSegment.id ? { ...item, filters: updatedFilters } : item
-          );
-          return newLayers;
-        });
-        setSelectedSegment((prev) => ({ ...prev, filters: updatedFilters }));
-      } catch (error) {
-        console.error('Error updating filters:', error);
-      }
-    };
+       // Update state with new filters
+       setAppliedFilters(updatedFilters);
+       let updatedVideoLayers = videoLayers;
+       setVideoLayers((prevLayers) => {
+         const newLayers = [...prevLayers];
+         newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
+           item.id === selectedSegment.id ? { ...item, filters: updatedFilters } : item
+         );
+         updatedVideoLayers = newLayers; // Capture updated layers for auto-save
+         return newLayers;
+       });
+       setSelectedSegment((prev) => ({ ...prev, filters: updatedFilters }));
+
+       // Auto-save the project with updated layers
+       if (filterUpdateTimeoutRef.current) clearTimeout(filterUpdateTimeoutRef.current);
+       filterUpdateTimeoutRef.current = setTimeout(() => {
+         autoSaveProject(updatedVideoLayers, audioLayers);
+       }, 1000); // Debounce for 1 second
+     } catch (error) {
+       console.error('Error updating filters:', error);
+     }
+   };
 
     const handleRemoveFilter = async (filterName) => {
       if (!selectedSegment || !sessionId || !projectId) return;
@@ -1992,12 +2019,16 @@ const ProjectEditor = () => {
           { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
         );
         const updatedFilters = appliedFilters.filter((f) => f.filterName !== filterName);
+
+        // Update state with new filters
         setAppliedFilters(updatedFilters);
+        let updatedVideoLayers = videoLayers;
         setVideoLayers((prevLayers) => {
           const newLayers = [...prevLayers];
           newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
             item.id === selectedSegment.id ? { ...item, filters: updatedFilters } : item
           );
+          updatedVideoLayers = newLayers; // Capture updated layers for auto-save
           return newLayers;
         });
         setSelectedSegment((prev) => ({ ...prev, filters: updatedFilters }));
@@ -2006,6 +2037,12 @@ const ProjectEditor = () => {
           delete newSettings[filterName];
           return newSettings;
         });
+
+        // Auto-save the project with updated layers
+        if (filterUpdateTimeoutRef.current) clearTimeout(filterUpdateTimeoutRef.current);
+        filterUpdateTimeoutRef.current = setTimeout(() => {
+          autoSaveProject(updatedVideoLayers, audioLayers);
+        }, 1000); // Debounce for 1 second
       } catch (error) {
         console.error('Error removing filter:', error);
       }

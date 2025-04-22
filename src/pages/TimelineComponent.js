@@ -369,6 +369,11 @@ const TimelineComponent = ({
     if (projectId && sessionId && videos.length > 0 && thumbnailsGenerated) loadProjectTimeline();
   }, [projectId, sessionId, videos]);
 
+  const roundToThreeDecimals = (value) => {
+    if (value == null || isNaN(value)) return 0;
+    return Math.round(value * 1000) / 1000;
+  };
+
   const videoHandler = VideoSegmentHandler({
     projectId,
     sessionId,
@@ -380,6 +385,7 @@ const TimelineComponent = ({
     loadProjectTimeline,
     API_BASE_URL,
     timelineRef,
+    roundToThreeDecimals,
   });
 
   const textHandler = TextSegmentHandler({
@@ -392,6 +398,7 @@ const TimelineComponent = ({
     loadProjectTimeline,
     API_BASE_URL,
     timelineRef,
+    roundToThreeDecimals
   });
 
   const imageHandler = ImageSegmentHandler({
@@ -405,6 +412,7 @@ const TimelineComponent = ({
     loadProjectTimeline,
     API_BASE_URL,
     timelineRef,
+    roundToThreeDecimals
   });
 
   const audioHandler = AudioSegmentHandler({
@@ -417,6 +425,7 @@ const TimelineComponent = ({
     loadProjectTimeline,
     API_BASE_URL,
     timelineRef,
+    roundToThreeDecimals
   });
 
   const generalHandler = GeneralSegmentHandler({
@@ -446,6 +455,7 @@ const TimelineComponent = ({
     updateImageSegment: imageHandler.updateImageSegment,
     updateAudioSegment: audioHandler.updateAudioSegment,
     fetchVideoDuration: videoHandler.fetchVideoDuration,
+    roundToThreeDecimals
   });
 
   useEffect(() => {

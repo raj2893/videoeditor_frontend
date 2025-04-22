@@ -14,6 +14,7 @@ const VideoSegmentHandler = ({
   loadProjectTimeline,
   API_BASE_URL,
   timelineRef,
+  roundToThreeDecimals, // Destructure roundToThreeDecimals
 }) => {
   const updateSegmentPosition = async (
     segmentId,
@@ -40,11 +41,15 @@ const VideoSegmentHandler = ({
       const timelineEndTime = newStartTime + newDuration;
       const requestBody = {
         segmentId,
-        timelineStartTime: newStartTime,
-        timelineEndTime: timelineEndTime,
+        timelineStartTime: roundToThreeDecimals(newStartTime), // Round
+        timelineEndTime: roundToThreeDecimals(timelineEndTime), // Round
         layer: newLayer,
-        startTime: startTimeWithinVideo !== undefined ? startTimeWithinVideo : item.startTimeWithinVideo || 0,
-        endTime: endTimeWithinVideo !== undefined ? endTimeWithinVideo : item.endTimeWithinVideo || newDuration,
+        startTime: startTimeWithinVideo !== undefined
+          ? roundToThreeDecimals(startTimeWithinVideo) // Round
+          : roundToThreeDecimals(item.startTimeWithinVideo || 0), // Round
+        endTime: endTimeWithinVideo !== undefined
+          ? roundToThreeDecimals(endTimeWithinVideo) // Round
+          : roundToThreeDecimals(item.endTimeWithinVideo || newDuration), // Round
       };
       await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-segment`,
@@ -55,7 +60,7 @@ const VideoSegmentHandler = ({
         }
       );
       console.log(
-        `Updated segment ${segmentId} to start at ${newStartTime}s, end at ${timelineEndTime}s, layer ${newLayer}, startTimeWithinVideo: ${requestBody.startTime}, endTimeWithinVideo: ${requestBody.endTime}`
+        `Updated segment ${segmentId} to start at ${requestBody.timelineStartTime}s, end at ${requestBody.timelineEndTime}s, layer ${newLayer}, startTimeWithinVideo: ${requestBody.startTime}, endTimeWithinVideo: ${requestBody.endTime}`
       );
     } catch (error) {
       console.error('Error updating segment position:', error);
@@ -125,16 +130,26 @@ const VideoSegmentHandler = ({
             }
           }
 
-          // Call addVideoToTimeline and get the new segment
-          const newSegment = await addVideoToTimeline(video.filePath, targetLayer, adjustedStartTime, null);
+          // Call addVideoToTimeline with rounded startTime
+          const newSegment = await addVideoToTimeline(
+            video.filePath,
+            targetLayer,
+            roundToThreeDecimals(adjustedStartTime), // Round
+            null
+          );
 
-          // Update videoLayers with the new segment
-          newVideoLayers[targetLayer].push(newSegment);
+          // Update videoLayers with the new segment, rounding time properties
+          newVideoLayers[targetLayer].push({
+            ...newSegment,
+            startTime: roundToThreeDecimals(newSegment.startTime), // Round
+            timelineStartTime: roundToThreeDecimals(newSegment.timelineStartTime), // Round
+            timelineEndTime: roundToThreeDecimals(newSegment.timelineEndTime), // Round
+            startTimeWithinVideo: roundToThreeDecimals(newSegment.startTimeWithinVideo || 0), // Round
+            endTimeWithinVideo: roundToThreeDecimals(newSegment.endTimeWithinVideo || newSegment.duration), // Round
+          });
           setVideoLayers(newVideoLayers);
           saveHistory(newVideoLayers, audioLayers);
           autoSave(newVideoLayers, audioLayers);
-
-          // No need to call loadProjectTimeline since we updated the state directly
         }
       }
       return;
@@ -170,10 +185,12 @@ const VideoSegmentHandler = ({
     }
     const updatedItem = {
       ...draggingItem,
-      startTime: adjustedStartTime,
+      startTime: roundToThreeDecimals(adjustedStartTime), // Round
       layer: actualLayerIndex,
-      timelineStartTime: adjustedStartTime,
-      timelineEndTime: adjustedStartTime + draggingItem.duration,
+      timelineStartTime: roundToThreeDecimals(adjustedStartTime), // Round
+      timelineEndTime: roundToThreeDecimals(adjustedStartTime + draggingItem.duration), // Round
+      startTimeWithinVideo: roundToThreeDecimals(draggingItem.startTimeWithinVideo), // Round
+      endTimeWithinVideo: roundToThreeDecimals(draggingItem.endTimeWithinVideo), // Round
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
 
@@ -183,11 +200,11 @@ const VideoSegmentHandler = ({
 
     await updateSegmentPosition(
       draggingItem.id,
-      adjustedStartTime,
+      roundToThreeDecimals(adjustedStartTime), // Round
       actualLayerIndex,
       draggingItem.duration,
-      updatedItem.startTimeWithinVideo,
-      updatedItem.endTimeWithinVideo,
+      roundToThreeDecimals(updatedItem.startTimeWithinVideo), // Round
+      roundToThreeDecimals(updatedItem.endTimeWithinVideo), // Round
       newVideoLayers
     );
   };
@@ -212,14 +229,14 @@ const VideoSegmentHandler = ({
         throw new Error(`Video segment ${item.id} not found`);
       }
 
-      // Preserve original audio timings
+      // Preserve original audio timings, rounding time properties
       const originalAudioTimings = audioSegment
         ? {
             id: audioSegment.id,
-            timelineStartTime: audioSegment.timelineStartTime,
-            timelineEndTime: audioSegment.timelineEndTime,
-            startTime: audioSegment.startTime,
-            endTime: audioSegment.endTime,
+            timelineStartTime: roundToThreeDecimals(audioSegment.timelineStartTime), // Round
+            timelineEndTime: roundToThreeDecimals(audioSegment.timelineEndTime), // Round
+            startTime: roundToThreeDecimals(audioSegment.startTime), // Round
+            endTime: roundToThreeDecimals(audioSegment.endTime), // Round
             layer: audioSegment.layer,
             audioPath: audioSegment.audioPath || audioSegment.audioFileName,
             displayName: audioSegment.audioPath
@@ -233,16 +250,18 @@ const VideoSegmentHandler = ({
       const secondPartDuration = item.duration - splitTime;
       let newVideoLayers = [...videoLayers];
       const layer = newVideoLayers[layerIndex];
-      const itemIndex = layer.findIndex(i => i.id === item.id);
+      const itemIndex = layer.findIndex((i) => i.id === item.id);
 
-      const originalVideoStartTime = item.startTimeWithinVideo || 0;
-      const originalVideoEndTime = item.endTimeWithinVideo || item.duration;
+      const originalVideoStartTime = roundToThreeDecimals(item.startTimeWithinVideo || 0); // Round
+      const originalVideoEndTime = roundToThreeDecimals(item.endTimeWithinVideo || item.duration); // Round
 
       // Update first part (video segment)
       const firstPart = {
         ...item,
         duration: firstPartDuration,
-        endTimeWithinVideo: originalVideoStartTime + firstPartDuration,
+        timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration), // Round
+        startTime: roundToThreeDecimals(item.startTime), // Round
+        endTimeWithinVideo: roundToThreeDecimals(originalVideoStartTime + firstPartDuration), // Round
         audioSegmentId: audioSegment ? audioSegment.id : null,
       };
       layer[itemIndex] = firstPart;
@@ -251,9 +270,11 @@ const VideoSegmentHandler = ({
       const secondPart = {
         ...item,
         id: `${item.id}-split-${Date.now()}`, // Temporary ID
-        startTime: item.startTime + splitTime,
+        startTime: roundToThreeDecimals(item.startTime + splitTime), // Round
         duration: secondPartDuration,
-        startTimeWithinVideo: originalVideoStartTime + firstPartDuration,
+        timelineStartTime: roundToThreeDecimals(item.startTime + splitTime), // Round
+        timelineEndTime: roundToThreeDecimals(item.startTime + splitTime + secondPartDuration), // Round
+        startTimeWithinVideo: roundToThreeDecimals(originalVideoStartTime + firstPartDuration), // Round
         endTimeWithinVideo: originalVideoEndTime,
         audioSegmentId: audioSegment ? audioSegment.id : null,
       };
@@ -268,11 +289,11 @@ const VideoSegmentHandler = ({
         `${API_BASE_URL}/projects/${projectId}/update-segment`,
         {
           segmentId: item.id,
-          timelineStartTime: item.startTime,
-          timelineEndTime: item.startTime + firstPartDuration,
+          timelineStartTime: roundToThreeDecimals(item.startTime), // Round
+          timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration), // Round
           layer: layerIndex,
           startTime: originalVideoStartTime,
-          endTime: originalVideoStartTime + firstPartDuration,
+          endTime: roundToThreeDecimals(originalVideoStartTime + firstPartDuration), // Round
         },
         {
           params: { sessionId },
@@ -304,13 +325,13 @@ const VideoSegmentHandler = ({
       const addResponse = await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-to-timeline`,
         {
-          videoPath: item.filePath || videoSegment.filename, // Use videoSegment.filename from GET response
+          videoPath: item.filePath || videoSegment.filename,
           layer: layerIndex,
-          timelineStartTime: secondPart.startTime,
-          timelineEndTime: secondPart.startTime + secondPartDuration,
-          startTime: secondPart.startTimeWithinVideo,
-          endTime: secondPart.endTimeWithinVideo,
-          createAudioSegment: false, // Prevent audio creation
+          timelineStartTime: roundToThreeDecimals(secondPart.startTime), // Round
+          timelineEndTime: roundToThreeDecimals(secondPart.startTime + secondPartDuration), // Round
+          startTime: roundToThreeDecimals(secondPart.startTimeWithinVideo), // Round
+          endTime: roundToThreeDecimals(secondPart.endTimeWithinVideo), // Round
+          createAudioSegment: false,
         },
         {
           params: { sessionId },
@@ -334,15 +355,17 @@ const VideoSegmentHandler = ({
 
       // Update second part with backend videoSegmentId and verified data
       newVideoLayers = [...newVideoLayers];
-      newVideoLayers[layerIndex] = newVideoLayers[layerIndex].map(v =>
+      newVideoLayers[layerIndex] = newVideoLayers[layerIndex].map((v) =>
         v.id === secondPart.id
           ? {
               ...v,
               id: videoSegmentId,
-              startTime: newVideoSegment.timelineStartTime,
+              startTime: roundToThreeDecimals(newVideoSegment.timelineStartTime), // Round
               duration: newVideoSegment.timelineEndTime - newVideoSegment.timelineStartTime,
-              startTimeWithinVideo: newVideoSegment.startTime,
-              endTimeWithinVideo: newVideoSegment.endTime,
+              timelineStartTime: roundToThreeDecimals(newVideoSegment.timelineStartTime), // Round
+              timelineEndTime: roundToThreeDecimals(newVideoSegment.timelineEndTime), // Round
+              startTimeWithinVideo: roundToThreeDecimals(newVideoSegment.startTime), // Round
+              endTimeWithinVideo: roundToThreeDecimals(newVideoSegment.endTime), // Round
               audioSegmentId: audioSegment ? audioSegment.id : null,
               filePath: newVideoSegment.filename || item.filePath,
             }
@@ -355,8 +378,8 @@ const VideoSegmentHandler = ({
       const validAudioSegments = new Map();
 
       // Collect all valid audio segments from video segments
-      newVideoLayers.forEach(layer => {
-        layer.forEach(video => {
+      newVideoLayers.forEach((layer) => {
+        layer.forEach((video) => {
           if (video.audioSegmentId) {
             validAudioSegments.set(video.audioSegmentId, {
               videoLayer: video.layer,
@@ -371,7 +394,7 @@ const VideoSegmentHandler = ({
       if (audioSegment && originalAudioTimings) {
         const audioLayerIndex = Math.abs(originalAudioTimings.layer) - 1;
         while (newAudioLayers.length <= audioLayerIndex) newAudioLayers.push([]);
-        newAudioLayers[audioLayerIndex] = newAudioLayers[audioLayerIndex].filter(a => a.id !== audioSegment.id);
+        newAudioLayers[audioLayerIndex] = newAudioLayers[audioLayerIndex].filter((a) => a.id !== audioSegment.id);
         newAudioLayers[audioLayerIndex].push({
           id: audioSegment.id,
           type: 'audio',
@@ -389,8 +412,8 @@ const VideoSegmentHandler = ({
       }
 
       // Filter audioLayers to only include audio segments linked to video segments
-      newAudioLayers = newAudioLayers.map(layer =>
-        layer.filter(a => validAudioSegments.has(a.id))
+      newAudioLayers = newAudioLayers.map((layer) =>
+        layer.filter((a) => validAudioSegments.has(a.id))
       );
 
       setAudioLayers(newAudioLayers);
@@ -404,8 +427,7 @@ const VideoSegmentHandler = ({
       await loadProjectTimeline();
 
       // Step 10: Final auto-save to ensure all changes are persisted
-      autoSave(newVideoLayers, newAudioLayers); // Additional auto-save after reload
-
+      autoSave(newVideoLayers, newAudioLayers);
     } catch (error) {
       console.error('Error splitting video:', error.response?.data || error.message);
     }
@@ -418,7 +440,7 @@ const VideoSegmentHandler = ({
       const response = await axios.get(`${API_BASE_URL}/videos/duration/${encodeURIComponent(filename)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return response.data;
+      return response.data; // Duration is not rounded as it is not one of the specified properties
     } catch (error) {
       console.error('Error fetching video duration:', error);
       return null;

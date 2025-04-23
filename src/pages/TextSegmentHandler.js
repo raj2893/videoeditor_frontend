@@ -28,11 +28,12 @@ const TextSegmentHandler = ({
           timelineStartTime,
           timelineEndTime,
           fontFamily: updatedTextSettings.fontFamily,
-          scale: updatedTextSettings.scale,
+          scale: updatedTextSettings.scale || 1.0, // Default scale
           fontColor: updatedTextSettings.fontColor,
           backgroundColor: updatedTextSettings.backgroundColor,
           positionX: updatedTextSettings.positionX,
           positionY: updatedTextSettings.positionY,
+          alignment: updatedTextSettings.alignment || 'center,'
         },
         {
           params: { sessionId },
@@ -53,11 +54,12 @@ const TextSegmentHandler = ({
         segmentId,
         text: updatedTextSettings.text,
         fontFamily: updatedTextSettings.fontFamily,
-        scale: updatedTextSettings.scale,
+        scale: updatedTextSettings.scale || 1.0, // Use scale
         fontColor: updatedTextSettings.fontColor,
         backgroundColor: updatedTextSettings.backgroundColor,
         positionX: updatedTextSettings.positionX,
         positionY: updatedTextSettings.positionY,
+        alignment: updatedTextSettings.alignment || 'center', // Include alignment
       };
       if (newStartTime !== null) {
         const duration = updatedTextSettings.duration || 5;
@@ -94,7 +96,7 @@ const TextSegmentHandler = ({
         const data = JSON.parse(dataString);
         if (data.type === 'text') {
           const dropTimePosition = (mouseX - timelineRect.left) / timeScale;
-          return { layer: targetLayer, startTime: dropTimePosition, isNew: true, scale: 1.0 };
+          return { layer: targetLayer, startTime: dropTimePosition, isNew: true, scale: 1.0, alignment: 'center' };
         }
       }
       return null;
@@ -134,6 +136,7 @@ const TextSegmentHandler = ({
       layer: actualLayerIndex,
       timelineStartTime: roundToThreeDecimals(adjustedStartTime), // Round
       timelineEndTime: roundToThreeDecimals(adjustedStartTime + draggingItem.duration), // Round
+      alignment: draggingItem.alignment || 'center', // Preserve or default alignment
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
     setVideoLayers(newVideoLayers);
@@ -161,11 +164,12 @@ const TextSegmentHandler = ({
         duration,
         layer: editingTextSegment.layer,
         fontFamily: updatedTextSettings.fontFamily,
-        scale: updatedTextSettings.scale,
+        scale: updatedTextSettings.scale || 1.0, // Default scale
         fontColor: updatedTextSettings.fontColor,
         backgroundColor: updatedTextSettings.backgroundColor,
         positionX: updatedTextSettings.positionX,
         positionY: updatedTextSettings.positionY,
+        alignment: updatedTextSettings.alignment || 'center', // Include alignment
         timelineStartTime: roundToThreeDecimals(startTime), // Round
         timelineEndTime: roundToThreeDecimals(startTime + duration), // Round
       };
@@ -190,11 +194,12 @@ const TextSegmentHandler = ({
                 ...item,
                 text: updatedTextSettings.text,
                 fontFamily: updatedTextSettings.fontFamily,
-                scale: updatedTextSettings.scale,
+                scale: updatedTextSettings.scale || item.scale || 1.0, // Preserve or default scale
                 fontColor: updatedTextSettings.fontColor,
                 backgroundColor: updatedTextSettings.backgroundColor,
                 positionX: updatedTextSettings.positionX,
                 positionY: updatedTextSettings.positionY,
+                alignment: updatedTextSettings.alignment || 'center', // Include alignment
                 duration,
                 timelineEndTime: roundToThreeDecimals(item.startTime + duration), // Round
               }
@@ -222,6 +227,7 @@ const TextSegmentHandler = ({
       ...item,
       duration: firstPartDuration,
       timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration), // Round
+      alignment: item.alignment || 'center', // Preserve alignment
     };
     layer[itemIndex] = firstPart;
 
@@ -232,7 +238,8 @@ const TextSegmentHandler = ({
       duration: secondPartDuration,
       timelineStartTime: roundToThreeDecimals(item.startTime + splitTime), // Round
       timelineEndTime: roundToThreeDecimals(item.startTime + item.duration), // Round
-      scale: item.scale,
+      scale: item.scale || 1.0, // Preserve scale
+      alignment: item.alignment || 'center', // Preserve alignment
     };
     layer.push(secondPart);
 
@@ -244,6 +251,8 @@ const TextSegmentHandler = ({
     await addTextToTimeline(layerIndex, secondPart.startTime, {
       ...secondPart,
       duration: secondPartDuration,
+      alignment: secondPart.alignment, // Include alignment
+      scale: secondPart.scale, // Include scale
     });
     autoSave(newVideoLayers, []);
     await loadProjectTimeline();

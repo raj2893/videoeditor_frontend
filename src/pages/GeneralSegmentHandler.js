@@ -26,8 +26,7 @@ const GeneralSegmentHandler = ({
   updateTextSegment,
   updateImageSegment,
   updateAudioSegment,
-  fetchVideoDuration,
-  roundToThreeDecimals, // Destructure roundToThreeDecimals
+  fetchVideoDuration, // Add new prop
 }) => {
   // Cache video durations
   const durationCache = useRef(new Map());
@@ -73,7 +72,7 @@ const GeneralSegmentHandler = ({
     [...videoLayers, ...audioLayers].forEach((layer, layerIdx) => {
       const isAudioLayer = layerIdx >= videoLayers.length;
       const adjustedLayerIdx = isAudioLayer ? -(layerIdx - videoLayers.length + 1) : layerIdx;
-      layer.forEach((item) => {
+      layer.forEach(item => {
         if (item.id === draggingItem.id) return;
         snapPoints.push({ time: item.startTime, layerIdx: adjustedLayerIdx, type: 'start' });
         snapPoints.push({ time: item.startTime + item.duration, layerIdx: adjustedLayerIdx, type: 'end' });
@@ -85,7 +84,7 @@ const GeneralSegmentHandler = ({
     let closestSnapPoint = null;
     let minDistance = SNAP_THRESHOLD;
 
-    snapPoints.forEach((point) => {
+    snapPoints.forEach(point => {
       const currentThreshold = point.time === 0 ? SNAP_THRESHOLD * 2 : SNAP_THRESHOLD;
 
       const distanceToStart = Math.abs(point.time - potentialStartTime);
@@ -103,16 +102,12 @@ const GeneralSegmentHandler = ({
     });
 
     if (closestSnapPoint) {
-      potentialStartTime = roundToThreeDecimals(closestSnapPoint.time); // Round
+      potentialStartTime = closestSnapPoint.time;
       newSnapIndicators.push({
-        time: closestSnapPoint.edge === 'start'
-          ? potentialStartTime
-          : roundToThreeDecimals(potentialStartTime + draggingItem.duration), // Round
+        time: closestSnapPoint.edge === 'start' ? potentialStartTime : potentialStartTime + draggingItem.duration,
         layerIdx: dragLayer,
         edge: closestSnapPoint.edge,
       });
-    } else {
-      potentialStartTime = roundToThreeDecimals(potentialStartTime); // Round
     }
 
     setSnapIndicators(newSnapIndicators);
@@ -128,7 +123,7 @@ const GeneralSegmentHandler = ({
     if (!draggingItem) return;
     setSnapIndicators([]);
     const dragElements = document.querySelectorAll('.dragging');
-    dragElements.forEach((el) => el.classList.remove('dragging'));
+    dragElements.forEach(el => el.classList.remove('dragging'));
     if (timelineRef.current) {
       timelineRef.current.classList.remove('showing-new-layer');
     }
@@ -176,14 +171,12 @@ const GeneralSegmentHandler = ({
       const item = { ...layer[itemIndex] };
 
       const originalStartTime = item.startTime ?? resizingItem.startTime ?? 0;
-      const originalStartWithin =
-        item.type === 'video'
-          ? (item.startTimeWithinVideo ?? 0)
-          : (item.startTimeWithinAudio ?? 0);
-      const originalEndWithin =
-        item.type === 'video'
-          ? (item.endTimeWithinVideo ?? item.duration)
-          : (item.endTimeWithinAudio ?? item.duration);
+      const originalStartWithin = item.type === 'video'
+        ? (item.startTimeWithinVideo ?? 0)
+        : (item.startTimeWithinAudio ?? 0);
+      const originalEndWithin = item.type === 'video'
+        ? (item.endTimeWithinVideo ?? item.duration)
+        : (item.endTimeWithinAudio ?? item.duration);
 
       let newStartTime = originalStartTime;
       let newDuration = item.duration;
@@ -208,62 +201,66 @@ const GeneralSegmentHandler = ({
 
       if (resizeEdge === 'left') {
         const originalEndTime = originalStartTime + item.duration;
-        newStartTime = roundToThreeDecimals(Math.min(newTime, originalEndTime - 0.1)); // Round
+        newStartTime = Math.min(newTime, originalEndTime - 0.1);
         if (maxLeftBound !== -Infinity) {
-          newStartTime = roundToThreeDecimals(Math.max(newStartTime, maxLeftBound)); // Round
+          newStartTime = Math.max(newStartTime, maxLeftBound);
         }
         newDuration = originalEndTime - newStartTime;
         if (item.type === 'video' || item.type === 'audio') {
           const timeShift = newStartTime - originalStartTime;
-          newStartWithin = roundToThreeDecimals(originalStartWithin + timeShift); // Round
+          newStartWithin = originalStartWithin + timeShift;
           if (item.type === 'video' && newStartWithin < 0) {
-            newStartWithin = roundToThreeDecimals(0); // Round
-            newStartTime = roundToThreeDecimals(originalStartTime - (originalStartWithin - newStartWithin)); // Round
+            newStartWithin = 0;
+            newStartTime = originalStartTime - (originalStartWithin - newStartWithin);
             newDuration = originalEndTime - newStartTime;
           }
-          newStartWithin = roundToThreeDecimals(Math.max(0, newStartWithin)); // Round
+          newStartWithin = Math.max(0, newStartWithin);
           newEndWithin = originalEndWithin;
         }
       } else if (resizeEdge === 'right') {
-        const newEndTime = roundToThreeDecimals(Math.max(newTime, originalStartTime + 0.1)); // Round
+        const newEndTime = Math.max(newTime, originalStartTime + 0.1);
         let clampedEndTime = newEndTime;
         if (minRightBound !== Infinity) {
-          clampedEndTime = roundToThreeDecimals(Math.min(newEndTime, minRightBound)); // Round
+          clampedEndTime = Math.min(newEndTime, minRightBound);
         }
         newDuration = clampedEndTime - originalStartTime;
         if (item.type === 'video' || item.type === 'audio') {
           newStartWithin = originalStartWithin;
-          newEndWithin = roundToThreeDecimals(originalStartWithin + newDuration); // Round
+          newEndWithin = originalStartWithin + newDuration;
+          // Prevent endTimeWithinVideo from exceeding source video duration
           if (item.type === 'video') {
+            // Check cached duration
             let sourceDuration = durationCache.current.get(item.filePath);
             if (sourceDuration === undefined) {
+              // Fetch duration and cache it
               fetchVideoDuration(item.filePath).then((duration) => {
                 if (duration !== null) {
                   durationCache.current.set(item.filePath, duration);
                 }
               });
-              sourceDuration = item.duration; // Use unrounded fallback
+              // Use item.duration as fallback for this resize operation
+              sourceDuration = item.duration;
             }
             if (newEndWithin > sourceDuration) {
-              newEndWithin = roundToThreeDecimals(sourceDuration); // Round
+              newEndWithin = sourceDuration;
               newDuration = newEndWithin - originalStartWithin;
-              clampedEndTime = roundToThreeDecimals(originalStartTime + newDuration); // Round
+              clampedEndTime = originalStartTime + newDuration;
             }
           }
         }
       }
 
       // Update item properties
-      item.startTime = roundToThreeDecimals(newStartTime); // Round
+      item.startTime = newStartTime;
       item.duration = newDuration;
-      item.timelineStartTime = roundToThreeDecimals(newStartTime); // Round
-      item.timelineEndTime = roundToThreeDecimals(newStartTime + newDuration); // Round
+      item.timelineStartTime = newStartTime;
+      item.timelineEndTime = newStartTime + newDuration;
       if (item.type === 'video') {
-        item.startTimeWithinVideo = roundToThreeDecimals(newStartWithin); // Round
-        item.endTimeWithinVideo = roundToThreeDecimals(newEndWithin); // Round
+        item.startTimeWithinVideo = newStartWithin;
+        item.endTimeWithinVideo = newEndWithin;
       } else if (item.type === 'audio') {
-        item.startTimeWithinAudio = roundToThreeDecimals(newStartWithin); // Round
-        item.endTimeWithinAudio = roundToThreeDecimals(newEndWithin); // Round
+        item.startTimeWithinAudio = newStartWithin;
+        item.endTimeWithinAudio = newEndWithin;
       }
       layer[itemIndex] = item;
 
@@ -283,8 +280,7 @@ const GeneralSegmentHandler = ({
       timeScale,
       setVideoLayers,
       setAudioLayers,
-      fetchVideoDuration,
-      roundToThreeDecimals, // Add to dependencies
+      fetchVideoDuration, // Add to dependencies
     ]
   );
 
@@ -295,13 +291,13 @@ const GeneralSegmentHandler = ({
     const layerArray = isAudioLayer ? audioLayers : videoLayers;
     const layerIndex = isAudioLayer ? Math.abs(resizingItem.layer) - 1 : resizingItem.layerIndex;
     const layer = layerArray[layerIndex];
-    const item = layer.find((i) => i.id === resizingItem.id);
+    const item = layer.find(i => i.id === resizingItem.id);
 
     if (item) {
       saveHistory(videoLayers, audioLayers);
       autoSave(videoLayers, audioLayers);
 
-      const newStartTime = roundToThreeDecimals(item.startTime); // Round
+      const newStartTime = item.startTime;
       const newDuration = item.duration;
 
       if (item.type === 'video') {
@@ -310,8 +306,8 @@ const GeneralSegmentHandler = ({
           newStartTime,
           item.layer,
           newDuration,
-          roundToThreeDecimals(item.startTimeWithinVideo), // Round
-          roundToThreeDecimals(item.endTimeWithinVideo) // Round
+          item.startTimeWithinVideo,
+          item.endTimeWithinVideo
         );
       } else if (item.type === 'text') {
         const updatedTextSettings = { ...item, duration: newDuration };
@@ -335,8 +331,8 @@ const GeneralSegmentHandler = ({
           newStartTime,
           item.layer,
           newDuration,
-          roundToThreeDecimals(item.startTimeWithinAudio), // Round
-          roundToThreeDecimals(item.endTimeWithinAudio) // Round
+          item.startTimeWithinAudio,
+          item.endTimeWithinAudio
         );
       }
     }
@@ -347,7 +343,7 @@ const GeneralSegmentHandler = ({
 
   useEffect(() => {
     if (resizingItem) {
-      document.addEventListener('mousemove', `handleResizeMove`);
+      document.addEventListener('mousemove', handleResizeMove);
       document.addEventListener('mouseup', handleResizeEnd);
       return () => {
         document.removeEventListener('mousemove', handleResizeMove);

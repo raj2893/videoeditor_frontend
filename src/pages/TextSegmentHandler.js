@@ -18,8 +18,8 @@ const TextSegmentHandler = ({
     try {
       const token = localStorage.getItem('token');
       const duration = updatedTextSettings.duration || 5;
-      const timelineStartTime = roundToThreeDecimals(startTime); // Round
-      const timelineEndTime = roundToThreeDecimals(startTime + duration); // Round
+      const timelineStartTime = roundToThreeDecimals(startTime);
+      const timelineEndTime = roundToThreeDecimals(startTime + duration);
       await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-text`,
         {
@@ -28,12 +28,20 @@ const TextSegmentHandler = ({
           timelineStartTime,
           timelineEndTime,
           fontFamily: updatedTextSettings.fontFamily,
-          scale: updatedTextSettings.scale || 1.0, // Default scale
+          scale: updatedTextSettings.scale || 1.0,
           fontColor: updatedTextSettings.fontColor,
           backgroundColor: updatedTextSettings.backgroundColor,
           positionX: updatedTextSettings.positionX,
           positionY: updatedTextSettings.positionY,
-          alignment: updatedTextSettings.alignment || 'center,'
+          alignment: updatedTextSettings.alignment || 'center',
+          backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0, // New
+          backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0, // New
+          backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000', // New
+          backgroundPadding: updatedTextSettings.backgroundPadding ?? 0, // New
+          shadowColor: updatedTextSettings.shadowColor || 'transparent', // New
+          shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0, // New
+          shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0, // New
+          shadowAngle: updatedTextSettings.shadowAngle ?? 0, // New
         },
         {
           params: { sessionId },
@@ -54,17 +62,29 @@ const TextSegmentHandler = ({
         segmentId,
         text: updatedTextSettings.text,
         fontFamily: updatedTextSettings.fontFamily,
-        scale: updatedTextSettings.scale || 1.0, // Use scale
+        scale: updatedTextSettings.scale || 1.0,
         fontColor: updatedTextSettings.fontColor,
         backgroundColor: updatedTextSettings.backgroundColor,
         positionX: updatedTextSettings.positionX,
         positionY: updatedTextSettings.positionY,
-        alignment: updatedTextSettings.alignment || 'center', // Include alignment
+        alignment: updatedTextSettings.alignment || 'center',
+        backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0, // New
+        backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0, // New
+        backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000', // New
+        backgroundPadding: updatedTextSettings.backgroundPadding ?? 0, // New
+        shadowColor: updatedTextSettings.shadowColor || 'transparent', // New
+        shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0, // New
+        shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0, // New
+        shadowAngle: updatedTextSettings.shadowAngle ?? 0, // New
       };
+      // Only include keyframes if explicitly provided (e.g., from Transform panel)
+      if (updatedTextSettings.keyframes) {
+        requestBody.keyframes = updatedTextSettings.keyframes;
+      }
       if (newStartTime !== null) {
         const duration = updatedTextSettings.duration || 5;
-        requestBody.timelineStartTime = roundToThreeDecimals(newStartTime); // Round
-        requestBody.timelineEndTime = roundToThreeDecimals(newStartTime + duration); // Round
+        requestBody.timelineStartTime = roundToThreeDecimals(newStartTime);
+        requestBody.timelineEndTime = roundToThreeDecimals(newStartTime + duration);
       }
       if (newLayer !== null) requestBody.layer = newLayer;
       await axios.put(
@@ -96,7 +116,21 @@ const TextSegmentHandler = ({
         const data = JSON.parse(dataString);
         if (data.type === 'text') {
           const dropTimePosition = (mouseX - timelineRect.left) / timeScale;
-          return { layer: targetLayer, startTime: dropTimePosition, isNew: true, scale: 1.0, alignment: 'center' };
+          return {
+            layer: targetLayer,
+            startTime: dropTimePosition,
+            isNew: true,
+            scale: 1.0,
+            alignment: 'center',
+            backgroundOpacity: 1.0, // New
+            backgroundBorderWidth: 0, // New
+            backgroundBorderColor: '#000000', // New
+            backgroundPadding: 0, // New
+            shadowColor: 'transparent', // New
+            shadowOffsetX: 0, // New
+            shadowOffsetY: 0, // New
+            shadowAngle: 0, // New
+          };
         }
       }
       return null;
@@ -134,15 +168,23 @@ const TextSegmentHandler = ({
       ...draggingItem,
       startTime: adjustedStartTime,
       layer: actualLayerIndex,
-      timelineStartTime: roundToThreeDecimals(adjustedStartTime), // Round
-      timelineEndTime: roundToThreeDecimals(adjustedStartTime + draggingItem.duration), // Round
-      alignment: draggingItem.alignment || 'center', // Preserve or default alignment
+      timelineStartTime: roundToThreeDecimals(adjustedStartTime),
+      timelineEndTime: roundToThreeDecimals(adjustedStartTime + draggingItem.duration),
+      alignment: draggingItem.alignment || 'center',
+      backgroundOpacity: draggingItem.backgroundOpacity ?? 1.0, // New
+      backgroundBorderWidth: draggingItem.backgroundBorderWidth ?? 0, // New
+      backgroundBorderColor: draggingItem.backgroundBorderColor || '#000000', // New
+      backgroundPadding: draggingItem.backgroundPadding ?? 0, // New
+      shadowColor: draggingItem.shadowColor || 'transparent', // New
+      shadowOffsetX: draggingItem.shadowOffsetX ?? 0, // New
+      shadowOffsetY: draggingItem.shadowOffsetY ?? 0, // New
+      shadowAngle: draggingItem.shadowAngle ?? 0, // New
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
     setVideoLayers(newVideoLayers);
     saveHistory(newVideoLayers, []);
     autoSave(newVideoLayers, []);
-    await updateTextSegment(draggingItem.id, updatedItem, roundToThreeDecimals(adjustedStartTime), actualLayerIndex); // Round
+    await updateTextSegment(draggingItem.id, updatedItem, roundToThreeDecimals(adjustedStartTime), actualLayerIndex);
     return null;
   };
 
@@ -164,14 +206,22 @@ const TextSegmentHandler = ({
         duration,
         layer: editingTextSegment.layer,
         fontFamily: updatedTextSettings.fontFamily,
-        scale: updatedTextSettings.scale || 1.0, // Default scale
+        scale: updatedTextSettings.scale || 1.0,
         fontColor: updatedTextSettings.fontColor,
         backgroundColor: updatedTextSettings.backgroundColor,
         positionX: updatedTextSettings.positionX,
         positionY: updatedTextSettings.positionY,
-        alignment: updatedTextSettings.alignment || 'center', // Include alignment
-        timelineStartTime: roundToThreeDecimals(startTime), // Round
-        timelineEndTime: roundToThreeDecimals(startTime + duration), // Round
+        alignment: updatedTextSettings.alignment || 'center',
+        backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0, // New
+        backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0, // New
+        backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000', // New
+        backgroundPadding: updatedTextSettings.backgroundPadding ?? 0, // New
+        shadowColor: updatedTextSettings.shadowColor || 'transparent', // New
+        shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0, // New
+        shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0, // New
+        shadowAngle: updatedTextSettings.shadowAngle ?? 0, // New
+        timelineStartTime: roundToThreeDecimals(startTime),
+        timelineEndTime: roundToThreeDecimals(startTime + duration),
       };
       const newVideoLayers = [...videoLayers];
       while (newVideoLayers.length <= editingTextSegment.layer) newVideoLayers.push([]);
@@ -194,14 +244,22 @@ const TextSegmentHandler = ({
                 ...item,
                 text: updatedTextSettings.text,
                 fontFamily: updatedTextSettings.fontFamily,
-                scale: updatedTextSettings.scale || item.scale || 1.0, // Preserve or default scale
+                scale: updatedTextSettings.scale || item.scale || 1.0,
                 fontColor: updatedTextSettings.fontColor,
                 backgroundColor: updatedTextSettings.backgroundColor,
                 positionX: updatedTextSettings.positionX,
                 positionY: updatedTextSettings.positionY,
-                alignment: updatedTextSettings.alignment || 'center', // Include alignment
+                alignment: updatedTextSettings.alignment || 'center',
+                backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0, // New
+                backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0, // New
+                backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000', // New
+                backgroundPadding: updatedTextSettings.backgroundPadding ?? 0, // New
+                shadowColor: updatedTextSettings.shadowColor || 'transparent', // New
+                shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0, // New
+                shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0, // New
+                shadowAngle: updatedTextSettings.shadowAngle ?? 0, // New
                 duration,
-                timelineEndTime: roundToThreeDecimals(item.startTime + duration), // Round
+                timelineEndTime: roundToThreeDecimals(item.startTime + duration),
               }
             : item
         )
@@ -226,8 +284,16 @@ const TextSegmentHandler = ({
     const firstPart = {
       ...item,
       duration: firstPartDuration,
-      timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration), // Round
-      alignment: item.alignment || 'center', // Preserve alignment
+      timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration),
+      alignment: item.alignment || 'center',
+      backgroundOpacity: item.backgroundOpacity ?? 1.0, // New
+      backgroundBorderWidth: item.backgroundBorderWidth ?? 0, // New
+      backgroundBorderColor: item.backgroundBorderColor || '#000000', // New
+      backgroundPadding: item.backgroundPadding ?? 0, // New
+      shadowColor: item.shadowColor || 'transparent', // New
+      shadowOffsetX: item.shadowOffsetX ?? 0, // New
+      shadowOffsetY: item.shadowOffsetY ?? 0, // New
+      shadowAngle: item.shadowAngle ?? 0, // New
     };
     layer[itemIndex] = firstPart;
 
@@ -236,10 +302,18 @@ const TextSegmentHandler = ({
       id: `${item.id}-split-${Date.now()}`,
       startTime: item.startTime + splitTime,
       duration: secondPartDuration,
-      timelineStartTime: roundToThreeDecimals(item.startTime + splitTime), // Round
-      timelineEndTime: roundToThreeDecimals(item.startTime + item.duration), // Round
-      scale: item.scale || 1.0, // Preserve scale
-      alignment: item.alignment || 'center', // Preserve alignment
+      timelineStartTime: roundToThreeDecimals(item.startTime + splitTime),
+      timelineEndTime: roundToThreeDecimals(item.startTime + item.duration),
+      scale: item.scale || 1.0,
+      alignment: item.alignment || 'center',
+      backgroundOpacity: item.backgroundOpacity ?? 1.0, // New
+      backgroundBorderWidth: item.backgroundBorderWidth ?? 0, // New
+      backgroundBorderColor: item.backgroundBorderColor || '#000000', // New
+      backgroundPadding: item.backgroundPadding ?? 0, // New
+      shadowColor: item.shadowColor || 'transparent', // New
+      shadowOffsetX: item.shadowOffsetX ?? 0, // New
+      shadowOffsetY: item.shadowOffsetY ?? 0, // New
+      shadowAngle: item.shadowAngle ?? 0, // New
     };
     layer.push(secondPart);
 
@@ -251,8 +325,16 @@ const TextSegmentHandler = ({
     await addTextToTimeline(layerIndex, secondPart.startTime, {
       ...secondPart,
       duration: secondPartDuration,
-      alignment: secondPart.alignment, // Include alignment
-      scale: secondPart.scale, // Include scale
+      alignment: secondPart.alignment,
+      scale: secondPart.scale,
+      backgroundOpacity: secondPart.backgroundOpacity, // New
+      backgroundBorderWidth: secondPart.backgroundBorderWidth, // New
+      backgroundBorderColor: secondPart.backgroundBorderColor, // New
+      backgroundPadding: secondPart.backgroundPadding, // New
+      shadowColor: secondPart.shadowColor, // New
+      shadowOffsetX: secondPart.shadowOffsetX, // New
+      shadowOffsetY: secondPart.shadowOffsetY, // New
+      shadowAngle: secondPart.shadowAngle, // New
     });
     autoSave(newVideoLayers, []);
     await loadProjectTimeline();

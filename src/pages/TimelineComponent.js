@@ -316,18 +316,25 @@ const TimelineComponent = ({
               id: textSegment.id,
               type: 'text',
               text: textSegment.text,
-              startTime: textSegment.timelineStartTime,
-              duration: textSegment.timelineEndTime - textSegment.timelineStartTime,
+              startTime: textSegment.timelineStartTime || 0,
+              duration: (textSegment.timelineEndTime - textSegment.timelineStartTime) || 0,
               layer: layerIndex,
               fontFamily: textSegment.fontFamily || 'Arial',
-              scale: textSegment.scale || 1.0, // Use scale instead of fontSize
+              scale: textSegment.scale || 1.0,
               fontColor: textSegment.fontColor || '#FFFFFF',
               backgroundColor: textSegment.backgroundColor || 'transparent',
               positionX: textSegment.positionX || 0,
               positionY: textSegment.positionY || 0,
-              keyframes: textSegment.keyframes || {},
-              filters: [],
               alignment: textSegment.alignment || 'center',
+              backgroundOpacity: textSegment.backgroundOpacity ?? 1.0, // New
+              backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0, // New
+              backgroundBorderColor: textSegment.backgroundBorderColor || '#000000', // New
+              backgroundPadding: textSegment.backgroundPadding ?? 0, // New
+              shadowColor: textSegment.shadowColor || 'transparent', // New
+              shadowOffsetX: textSegment.shadowOffsetX ?? 0, // New
+              shadowOffsetY: textSegment.shadowOffsetY ?? 0, // New
+              shadowAngle: textSegment.shadowAngle ?? 0, // New
+              keyframes: textSegment.keyframes || {},
             });
           }
         }
@@ -947,11 +954,20 @@ const TimelineComponent = ({
             timelineStartTime: item.startTime,
             timelineEndTime: item.startTime + item.duration,
             fontFamily: item.fontFamily,
-            fontSize: item.fontSize,
+            scale: item.scale,
             fontColor: item.fontColor,
             backgroundColor: item.backgroundColor,
             positionX: item.positionX,
             positionY: item.positionY,
+            alignment: item.alignment,
+            backgroundOpacity: item.backgroundOpacity, // New
+            backgroundBorderWidth: item.backgroundBorderWidth, // New
+            backgroundBorderColor: item.backgroundBorderColor, // New
+            backgroundPadding: item.backgroundPadding, // New
+            shadowColor: item.shadowColor, // New
+            shadowOffsetX: item.shadowOffsetX, // New
+            shadowOffsetY: item.shadowOffsetY, // New
+            shadowAngle: item.shadowAngle, // New
             keyframes: item.keyframes || {},
           });
         } else if (item.type === 'video') {

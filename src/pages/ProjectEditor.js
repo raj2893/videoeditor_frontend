@@ -41,6 +41,14 @@
         backgroundColor: 'transparent',
         duration: 5,
         alignment: 'center', // Add alignment with default value
+        backgroundOpacity: 1.0, // New: Default to fully opaque
+        backgroundBorderWidth: 0, // New: No border by default
+        backgroundBorderColor: '#000000', // New: Black border color
+        backgroundPadding: 0, // New: No padding by default
+        shadowColor: 'transparent', // New: No shadow by default
+        shadowOffsetX: 0, // New: No horizontal offset
+        shadowOffsetY: 0, // New: No vertical offset
+        shadowAngle: 0, // New: 0 degrees for shadow angle
       });
       const [isFiltersOpen, setIsFiltersOpen] = useState(false);
       const [filterParams, setFilterParams] = useState({});
@@ -161,12 +169,21 @@
                     timelineStartTime: item.startTime,
                     timelineEndTime: item.startTime + item.duration,
                     fontFamily: item.fontFamily,
-                    fontSize: item.fontSize,
+                    scale: item.scale,
                     fontColor: item.fontColor,
                     backgroundColor: item.backgroundColor,
                     positionX: item.positionX,
                     positionY: item.positionY,
                     opacity: item.opacity,
+                    alignment: item.alignment,
+                    backgroundOpacity: item.backgroundOpacity, // New
+                    backgroundBorderWidth: item.backgroundBorderWidth, // New
+                    backgroundBorderColor: item.backgroundBorderColor, // New
+                    backgroundPadding: item.backgroundPadding, // New
+                    shadowColor: item.shadowColor, // New
+                    shadowOffsetX: item.shadowOffsetX, // New
+                    shadowOffsetY: item.shadowOffsetY, // New
+                    shadowAngle: item.shadowAngle, // New
                     keyframes: item.keyframes || {},
                   });
                 }
@@ -342,14 +359,22 @@
                   timelineStartTime: item.startTime,
                   timelineEndTime: item.startTime + item.duration,
                   fontFamily: item.fontFamily,
-                  scale: item.scale, // Use scale instead of fontSize
+                  scale: item.scale,
                   fontColor: item.fontColor,
                   backgroundColor: item.backgroundColor,
                   positionX: item.positionX,
                   positionY: item.positionY,
                   opacity: item.opacity,
-                  keyframes: item.keyframes || {},
                   alignment: item.alignment,
+                  backgroundOpacity: item.backgroundOpacity, // New
+                  backgroundBorderWidth: item.backgroundBorderWidth, // New
+                  backgroundBorderColor: item.backgroundBorderColor, // New
+                  backgroundPadding: item.backgroundPadding, // New
+                  shadowColor: item.shadowColor, // New
+                  shadowOffsetX: item.shadowOffsetX, // New
+                  shadowOffsetY: item.shadowOffsetY, // New
+                  shadowAngle: item.shadowAngle, // New
+                  keyframes: item.keyframes || {},
                 });
               }
             });
@@ -592,7 +617,15 @@
             fontColor: segment.fontColor || '#FFFFFF',
             backgroundColor: segment.backgroundColor || 'transparent',
             duration: segment.duration || 5,
-            alignment: segment.alignment || 'center', // Include alignment
+            alignment: segment.alignment || 'center',
+            backgroundOpacity: segment.backgroundOpacity ?? 1.0, // New
+            backgroundBorderWidth: segment.backgroundBorderWidth ?? 0, // New
+            backgroundBorderColor: segment.backgroundBorderColor || '#000000', // New
+            backgroundPadding: segment.backgroundPadding ?? 0, // New
+            shadowColor: segment.shadowColor || 'transparent', // New
+            shadowOffsetX: segment.shadowOffsetX ?? 0, // New
+            shadowOffsetY: segment.shadowOffsetY ?? 0, // New
+            shadowAngle: segment.shadowAngle ?? 0, // New
           });
           setIsTextToolOpen(true);
         } else {
@@ -611,11 +644,20 @@
                     ...item,
                     text: newSettings.text,
                     fontFamily: newSettings.fontFamily,
+                    scale: newSettings.scale,
                     fontColor: newSettings.fontColor,
                     backgroundColor: newSettings.backgroundColor,
                     duration: newSettings.duration,
                     timelineEndTime: item.startTime + newSettings.duration,
                     alignment: newSettings.alignment,
+                    backgroundOpacity: newSettings.backgroundOpacity, // New
+                    backgroundBorderWidth: newSettings.backgroundBorderWidth, // New
+                    backgroundBorderColor: newSettings.backgroundBorderColor, // New
+                    backgroundPadding: newSettings.backgroundPadding, // New
+                    shadowColor: newSettings.shadowColor, // New
+                    shadowOffsetX: newSettings.shadowOffsetX, // New
+                    shadowOffsetY: newSettings.shadowOffsetY, // New
+                    shadowAngle: newSettings.shadowAngle, // New
                   }
                 : item
             );
@@ -637,12 +679,20 @@
             ...editingTextSegment,
             text: textSettings.text,
             fontFamily: textSettings.fontFamily,
-            scale: editingTextSegment.scale || 1.0, // Preserve existing scale or default
+            scale: textSettings.scale || 1.0,
             fontColor: textSettings.fontColor,
             backgroundColor: textSettings.backgroundColor,
             timelineStartTime: editingTextSegment.startTime,
             timelineEndTime: editingTextSegment.startTime + textSettings.duration,
             alignment: textSettings.alignment,
+            backgroundOpacity: textSettings.backgroundOpacity, // New
+            backgroundBorderWidth: textSettings.backgroundBorderWidth, // New
+            backgroundBorderColor: textSettings.backgroundBorderColor, // New
+            backgroundPadding: textSettings.backgroundPadding, // New
+            shadowColor: textSettings.shadowColor, // New
+            shadowOffsetX: textSettings.shadowOffsetX, // New
+            shadowOffsetY: textSettings.shadowOffsetY, // New
+            shadowAngle: textSettings.shadowAngle, // New
           };
           await axios.put(
             `${API_BASE_URL}/projects/${projectId}/update-text`,
@@ -656,12 +706,23 @@
               timelineStartTime: updatedTextSegment.timelineStartTime,
               timelineEndTime: updatedTextSegment.timelineEndTime,
               layer: updatedTextSegment.layer,
+              positionX: updatedTextSegment.positionX,
+              positionY: updatedTextSegment.positionY,
               alignment: updatedTextSegment.alignment,
+              backgroundOpacity: updatedTextSegment.backgroundOpacity, // New
+              backgroundBorderWidth: updatedTextSegment.backgroundBorderWidth, // New
+              backgroundBorderColor: updatedTextSegment.backgroundBorderColor, // New
+              backgroundPadding: updatedTextSegment.backgroundPadding, // New
+              shadowColor: updatedTextSegment.shadowColor, // New
+              shadowOffsetX: updatedTextSegment.shadowOffsetX, // New
+              shadowOffsetY: updatedTextSegment.shadowOffsetY, // New
+              shadowAngle: updatedTextSegment.shadowAngle, // New
               keyframes: keyframes,
             },
             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
           );
           setIsTextToolOpen(false);
+          saveHistory();
         } catch (error) {
           console.error('Error saving text segment:', error);
         }
@@ -685,12 +746,20 @@
               timelineStartTime: startTime,
               timelineEndTime: startTime + duration,
               fontFamily: textSettings.fontFamily,
-              scale: textSettings.scale || 1.0, // Default scale
+              scale: textSettings.scale || 1.0,
               fontColor: textSettings.fontColor,
               backgroundColor: textSettings.backgroundColor,
               positionX: 0,
               positionY: 0,
               alignment: textSettings.alignment,
+              backgroundOpacity: textSettings.backgroundOpacity, // New
+              backgroundBorderWidth: textSettings.backgroundBorderWidth, // New
+              backgroundBorderColor: textSettings.backgroundBorderColor, // New
+              backgroundPadding: textSettings.backgroundPadding, // New
+              shadowColor: textSettings.shadowColor, // New
+              shadowOffsetX: textSettings.shadowOffsetX, // New
+              shadowOffsetY: textSettings.shadowOffsetY, // New
+              shadowAngle: textSettings.shadowAngle, // New
             },
             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
           );
@@ -703,12 +772,20 @@
             duration: duration,
             layer: 0,
             fontFamily: textSettings.fontFamily,
-            scale: textSettings.scale || 1.0, // Default scale
+            scale: textSettings.scale || 1.0,
             fontColor: textSettings.fontColor,
             backgroundColor: textSettings.backgroundColor,
             positionX: 0,
             positionY: 0,
             alignment: textSettings.alignment,
+            backgroundOpacity: textSettings.backgroundOpacity, // New
+            backgroundBorderWidth: textSettings.backgroundBorderWidth, // New
+            backgroundBorderColor: textSettings.backgroundBorderColor, // New
+            backgroundPadding: textSettings.backgroundPadding, // New
+            shadowColor: textSettings.shadowColor, // New
+            shadowOffsetX: textSettings.shadowOffsetX, // New
+            shadowOffsetY: textSettings.shadowOffsetY, // New
+            shadowAngle: textSettings.shadowAngle, // New
           };
           setVideoLayers((prevLayers) => {
             const newLayers = [...prevLayers];
@@ -726,10 +803,18 @@
             backgroundColor: newSegment.backgroundColor,
             duration: newSegment.duration,
             alignment: newSegment.alignment,
+            backgroundOpacity: newSegment.backgroundOpacity, // New
+            backgroundBorderWidth: newSegment.backgroundBorderWidth, // New
+            backgroundBorderColor: newSegment.backgroundBorderColor, // New
+            backgroundPadding: newSegment.backgroundPadding, // New
+            shadowColor: newSegment.shadowColor, // New
+            shadowOffsetX: newSegment.shadowOffsetX, // New
+            shadowOffsetY: newSegment.shadowOffsetY, // New
+            shadowAngle: newSegment.shadowAngle, // New
           });
           setIsTextToolOpen(true);
-          preloadMedia(); // Preload after adding text
-          saveHistory(); // Save history after adding text
+          preloadMedia();
+          saveHistory();
         } catch (error) {
           console.error('Error adding text to timeline:', error);
         }
@@ -2764,13 +2849,13 @@
             ];
             break;
           case 'text':
-            properties = [
-              { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
-              { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
-              { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 }, // Added scale
-              { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 }, // Added opacity
-            ];
-            break;
+                properties = [
+                  { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
+                  { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
+                  { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 },
+                  { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 },
+                ];
+                break;
           case 'audio':
             properties = [
               { name: 'volume', label: 'Volume', unit: '', step: 0.01, min: 0, max: 1 },
@@ -3393,6 +3478,113 @@
                               />
                             </div>
                             <div className="control-group">
+                              <label>Background Opacity</label>
+                              <div className="slider-container">
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="1"
+                                  step="0.01"
+                                  value={textSettings.backgroundOpacity}
+                                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundOpacity: parseFloat(e.target.value) })}
+                                />
+                                <input
+                                  type="number"
+                                  value={textSettings.backgroundOpacity}
+                                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundOpacity: parseFloat(e.target.value) || 1.0 })}
+                                  step="0.01"
+                                  min="0"
+                                  max="1"
+                                  style={{ width: '60px', marginLeft: '10px' }}
+                                />
+                              </div>
+                            </div>
+                            <div className="control-group">
+                              <label>Background Border Width</label>
+                              <input
+                                type="number"
+                                value={textSettings.backgroundBorderWidth}
+                                onChange={(e) => updateTextSettings({ ...textSettings, backgroundBorderWidth: parseInt(e.target.value) || 0 })}
+                                min="0"
+                                step="1"
+                                style={{ width: '60px' }}
+                              />
+                            </div>
+                            <div className="control-group">
+                              <label>Background Border Color</label>
+                              <input
+                                type="color"
+                                value={textSettings.backgroundBorderColor}
+                                onChange={(e) => updateTextSettings({ ...textSettings, backgroundBorderColor: e.target.value })}
+                              />
+                            </div>
+                            <div className="control-group">
+                              <label>Background Padding</label>
+                              <input
+                                type="number"
+                                value={textSettings.backgroundPadding}
+                                onChange={(e) => updateTextSettings({ ...textSettings, backgroundPadding: parseInt(e.target.value) || 0 })}
+                                min="0"
+                                step="1"
+                                style={{ width: '60px' }}
+                              />
+                            </div>
+                            <div className="control-group">
+                              <label>Shadow Color</label>
+                              <input
+                                type="color"
+                                value={textSettings.shadowColor === 'transparent' ? '#000000' : textSettings.shadowColor}
+                                onChange={(e) =>
+                                  updateTextSettings({
+                                    ...textSettings,
+                                    shadowColor: e.target.value === '#000000' ? 'transparent' : e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                            <div className="control-group">
+                              <label>Shadow Offset X</label>
+                              <input
+                                type="number"
+                                value={textSettings.shadowOffsetX}
+                                onChange={(e) => updateTextSettings({ ...textSettings, shadowOffsetX: parseInt(e.target.value) || 0 })}
+                                step="1"
+                                style={{ width: '60px' }}
+                              />
+                            </div>
+                            <div className="control-group">
+                              <label>Shadow Offset Y</label>
+                              <input
+                                type="number"
+                                value={textSettings.shadowOffsetY}
+                                onChange={(e) => updateTextSettings({ ...textSettings, shadowOffsetY: parseInt(e.target.value) || 0 })}
+                                step="1"
+                                style={{ width: '60px' }}
+                              />
+                            </div>
+                            <div className="control-group">
+                              <label>Shadow Angle (°)</label>
+                              <div className="slider-container">
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="360"
+                                  step="1"
+                                  value={textSettings.shadowAngle}
+                                  onChange={(e) => updateTextSettings({ ...textSettings, shadowAngle: parseFloat(e.target.value) })}
+                                />
+                                <input
+                                  type="number"
+                                  value={textSettings.shadowAngle}
+                                  onChange={(e) => updateTextSettings({ ...textSettings, shadowAngle: parseFloat(e.target.value) || 0 })}
+                                  step="1"
+                                  min="0"
+                                  max="360"
+                                  style={{ width: '60px', marginLeft: '10px' }}
+                                />
+                              </div>
+                            </div>
+                            <div className="control-group">
                               <label>Alignment</label>
                               <select
                                 value={textSettings.alignment}
@@ -3402,6 +3594,17 @@
                                 <option value="center">Center</option>
                                 <option value="right">Right</option>
                               </select>
+                            </div>
+                            <div className="control-group">
+                              <label>Duration (s)</label>
+                              <input
+                                type="number"
+                                value={textSettings.duration}
+                                onChange={(e) => updateTextSettings({ ...textSettings, duration: parseFloat(e.target.value) || 5 })}
+                                min="0.1"
+                                step="0.1"
+                                style={{ width: '60px' }}
+                              />
                             </div>
                             <button onClick={handleSaveTextSegment}>Save Text</button>
                           </div>

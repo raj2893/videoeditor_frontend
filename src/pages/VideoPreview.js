@@ -89,13 +89,7 @@ const VideoPreview = ({
       const progress = (currentTime - transition.timelineStartTime) / transition.duration;
       const parameters = transition.parameters || {};
 
-      if (transition.type === 'Fade') {
-        if (transition.toSegmentId === element.id && transition.fromSegmentId === null) {
-          effects.opacity = lerp(0, 1, progress);
-        } else if (transition.fromSegmentId === element.id) {
-          effects.opacity = lerp(1, 0, progress);
-        }
-      } else if (transition.type === 'Slide') {
+      if (transition.type === 'Slide') {
         const direction = parameters.direction || 'right';
         const canvasWidth = canvasDimensions.width;
         const canvasHeight = canvasDimensions.height;
@@ -119,29 +113,6 @@ const VideoPreview = ({
             effects.positionY = lerp(0, canvasHeight, progress);
           } else if (direction === 'bottom') {
             effects.positionY = lerp(0, -canvasHeight, progress);
-          }
-        }
-      } else if (transition.type === 'Wipe') {
-        const direction = parameters.direction || 'left';
-        if (transition.toSegmentId === element.id) {
-          if (direction === 'left') {
-            effects.clipPath = `inset(0 calc((1 - ${progress}) * 100%) 0 0)`;
-          } else if (direction === 'right') {
-            effects.clipPath = `inset(0 0 0 calc((1 - ${progress}) * 100%))`;
-          } else if (direction === 'top') {
-            effects.clipPath = `inset(calc((1 - ${progress}) * 100%) 0 0 0)`;
-          } else if (direction === 'bottom') {
-            effects.clipPath = `inset(0 0 calc((1 - ${progress}) * 100%) 0)`;
-          }
-        } else if (transition.fromSegmentId === element.id) {
-          if (direction === 'left') {
-            effects.clipPath = `inset(0 calc(${progress} * 100%) 0 0)`;
-          } else if (direction === 'right') {
-            effects.clipPath = `inset(0 0 0 calc(${progress} * 100%))`;
-          } else if (direction === 'top') {
-            effects.clipPath = `inset(calc(${progress} * 100%) 0 0 0)`;
-          } else if (direction === 'bottom') {
-            effects.clipPath = `inset(0 0 calc(${progress} * 100%) 0)`;
           }
         }
       } else if (transition.type === 'Zoom') {
@@ -159,32 +130,6 @@ const VideoPreview = ({
           effects.rotate = lerp(angle, 0, progress); // From angle to 0
         } else if (transition.fromSegmentId === element.id) {
           effects.rotate = lerp(0, angle, progress); // From 0 to angle
-        }
-      } else if (transition.type === 'Push') {
-        const direction = parameters.direction || 'right';
-        const canvasWidth = canvasDimensions.width;
-        const canvasHeight = canvasDimensions.height;
-
-        if (transition.toSegmentId === element.id) {
-          if (direction === 'right') {
-            effects.positionX = lerp(-canvasWidth, 0, progress);
-          } else if (direction === 'left') {
-            effects.positionX = lerp(canvasWidth, 0, progress);
-          } else if (direction === 'top') {
-            effects.positionY = lerp(canvasHeight, 0, progress);
-          } else if (direction === 'bottom') {
-            effects.positionY = lerp(-canvasHeight, 0, progress);
-          }
-        } else if (transition.fromSegmentId === element.id) {
-          if (direction === 'right') {
-            effects.positionX = lerp(0, canvasWidth, progress);
-          } else if (direction === 'left') {
-            effects.positionX = lerp(0, -canvasWidth, progress);
-          } else if (direction === 'top') {
-            effects.positionY = lerp(0, -canvasHeight, progress);
-          } else if (direction === 'bottom') {
-            effects.positionY = lerp(0, canvasHeight, progress);
-          }
         }
       }
     }
@@ -461,7 +406,7 @@ const VideoPreview = ({
     visibleAudioElements.forEach((element) => {
       const audioRef = audioRefs.current[element.id];
       if (audioRef) {
-        const audioUrl = `${API_BASE_URL}/projects/88/audio/${encodeURIComponent(element.fileName)}`;
+        const audioUrl = `${API_BASE_URL}/projects/{projectId}/audio/${encodeURIComponent(element.fileName)}`;
 
         if (!audioRef.src) {
           audioRef.src = audioUrl;

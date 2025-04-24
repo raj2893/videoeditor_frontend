@@ -7,6 +7,9 @@
     import { debounce } from 'lodash'; // Ensure lodash is installed: npm install lodash
     import ImageSegmentHandler from './ImageSegmentHandler';
     import AudioSegmentHandler from './AudioSegmentHandler';
+    import KeyframeControls from './KeyframeControls';
+    import FilterControls from './FilterControls';
+    import TransitionsPanel from './TransitionsPanel';
 
     const API_BASE_URL = 'http://localhost:8080';
 
@@ -3115,432 +3118,432 @@
           });
         };
 
-        const renderFilterControls = () => {
-          return (
-            <div className="filters-panel" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              <h3>Filters</h3>
-              {!selectedSegment || (selectedSegment.type !== 'video' && selectedSegment.type !== 'image') ? (
-                <p>Select a video or image segment to apply filters</p>
-              ) : (
-                <>
-                  {/* Color Adjustments */}
-                  <div className="filter-group">
-                    <h4>Color Adjustments</h4>
-                    <div className="control-group">
-                      <label>Brightness (-1 to 1)</label>
-                      <div className="slider-container">
-                        <input
-                          type="range"
-                          min="-1"
-                          max="1"
-                          step="0.01"
-                          value={filterParams.brightness !== undefined ? filterParams.brightness : 0}
-                          onChange={(e) => updateFilterSetting('brightness', parseFloat(e.target.value))}
-                        />
-                        <input
-                          type="number"
-                          value={filterParams.brightness !== undefined ? filterParams.brightness : 0}
-                          onChange={(e) => updateFilterSetting('brightness', parseFloat(e.target.value))}
-                          step="0.01"
-                          min="-1"
-                          max="1"
-                          style={{ width: '60px', marginLeft: '10px' }}
-                        />
-                      </div>
-                    </div>
-                    <div className="control-group">
-                      <label>Contrast (0 to 2)</label>
-                      <div className="slider-container">
-                        <input
-                          type="range"
-                          min="0"
-                          max="2"
-                          step="0.01"
-                          value={filterParams.contrast !== undefined ? filterParams.contrast : 1}
-                          onChange={(e) => updateFilterSetting('contrast', parseFloat(e.target.value))}
-                        />
-                        <input
-                          type="number"
-                          value={filterParams.contrast !== undefined ? filterParams.contrast : 1}
-                          onChange={(e) => updateFilterSetting('contrast', parseFloat(e.target.value))}
-                          step="0.01"
-                          min="0"
-                          max="2"
-                          style={{ width: '60px', marginLeft: '10px' }}
-                        />
-                      </div>
-                    </div>
-                    <div className="control-group">
-                      <label>Saturation (0 to 2)</label>
-                      <div className="slider-container">
-                        <input
-                          type="range"
-                          min="0"
-                          max="2"
-                          step="0.01"
-                          value={filterParams.saturation !== undefined ? filterParams.saturation : 1}
-                          onChange={(e) => updateFilterSetting('saturation', parseFloat(e.target.value))}
-                        />
-                        <input
-                          type="number"
-                          value={filterParams.saturation !== undefined ? filterParams.saturation : 1}
-                          onChange={(e) => updateFilterSetting('saturation', parseFloat(e.target.value))}
-                          step="0.01"
-                          min="0"
-                          max="2"
-                          style={{ width: '60px', marginLeft: '10px' }}
-                        />
-                      </div>
-                    </div>
-                    <div className="control-group">
-                      <label>Hue (-180 to 180)</label>
-                      <div className="slider-container">
-                        <input
-                          type="range"
-                          min="-180"
-                          max="180"
-                          step="1"
-                          value={filterParams.hue !== undefined ? filterParams.hue : 0}
-                          onChange={(e) => updateFilterSetting('hue', parseInt(e.target.value))}
-                        />
-                        <input
-                          type="number"
-                          value={filterParams.hue !== undefined ? filterParams.hue : 0}
-                          onChange={(e) => updateFilterSetting('hue', parseInt(e.target.value))}
-                          step="1"
-                          min="-180"
-                          max="180"
-                          style={{ width: '60px', marginLeft: '10px' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Stylization Filters */}
-                  <div className="filter-group">
-                    <h4>Stylization</h4>
-                    <div className="control-group">
-                      <label>Grayscale</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <input
-                          type="checkbox"
-                          checked={!!filterParams.grayscale}
-                          onChange={(e) => updateFilterSetting('grayscale', e.target.checked ? '1' : '')}
-                        />
-                      </div>
-                    </div>
-                    <div className="control-group">
-                      <label>Invert</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <input
-                          type="checkbox"
-                          checked={!!filterParams.invert}
-                          onChange={(e) => updateFilterSetting('invert', e.target.checked ? '1' : '')}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Transformation */}
-                  <div className="filter-group">
-                    <h4>Transformation</h4>
-                    <div className="control-group">
-                      <label>Rotate (-180 to 180°)</label>
-                      <div className="slider-container">
-                        <input
-                          type="range"
-                          min="-180"
-                          max="180"
-                          step="1"
-                          value={filterParams.rotate !== undefined ? filterParams.rotate : 0}
-                          onChange={(e) => updateFilterSetting('rotate', parseInt(e.target.value))}
-                        />
-                        <input
-                          type="number"
-                          value={filterParams.rotate !== undefined ? filterParams.rotate : 0}
-                          onChange={(e) => updateFilterSetting('rotate', parseInt(e.target.value))}
-                          step="1"
-                          min="-180"
-                          max="180"
-                          style={{ width: '60px', marginLeft: '10px' }}
-                        />
-                      </div>
-                    </div>
-                    <div className="control-group">
-                      <label>Flip</label>
-                      <select
-                        value={filterParams.flip || 'none'}
-                        onChange={(e) => updateFilterSetting('flip', e.target.value === 'none' ? '' : e.target.value)}
-                      >
-                        <option value="none">None</option>
-                        <option value="horizontal">Horizontal</option>
-                        <option value="vertical">Vertical</option>
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        };
-
-      const renderKeyframeControls = () => {
-        if (!selectedSegment) return null;
-
-        let properties = [];
-        switch (selectedSegment.type) {
-          case 'video':
-            properties = [
-              { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
-              { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
-              { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 },
-              { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 },
-            ];
-            break;
-          case 'image':
-            properties = [
-              { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
-              { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
-              { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 },
-              { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 },
-            ];
-            break;
-          case 'text':
-            properties = [
-              { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
-              { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
-              { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 },
-              { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 },
-            ];
-            break;
-          case 'audio':
-            properties = [
-              { name: 'volume', label: 'Volume', unit: '', step: 0.01, min: 0, max: 1 },
-            ];
-            break;
-          default:
-            return null;
-        }
-
-        const startDragging = (e, property) => {
-          e.preventDefault();
-          const initialX = e.clientX;
-          const initialValue = parseFloat(
-            tempSegmentValues[property.name] ||
-            selectedSegment[property.name] ||
-            (property.name === 'scale' || property.name === 'opacity' ? 1 : 0)
-          );
-          const step = property.step;
-
-          const onMouseMove = (moveEvent) => {
-            const deltaX = moveEvent.clientX - initialX;
-            const sensitivity = step < 1 ? 0.1 : 1;
-            let newValue = initialValue + (deltaX * step * sensitivity);
-            newValue = Math.max(property.min, Math.min(property.max, newValue));
-            newValue = Math.round(newValue / step) * step;
-            setTempSegmentValues((prev) => ({ ...prev, [property.name]: newValue }));
-            updateSegmentProperty(property.name, newValue);
-          };
-
-          const onMouseUp = () => {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-          };
-
-          document.addEventListener('mousemove', onMouseMove);
-          document.addEventListener('mouseup', onMouseUp);
-        };
-
-        const handleValueClick = (property) => {
-          setEditingProperty(property.name);
-        };
-
-        const handleInputChange = (e, property) => {
-          let newValue = parseFloat(e.target.value);
-          if (isNaN(newValue)) return;
-          newValue = Math.max(property.min, Math.min(property.max, newValue));
-          newValue = Math.round(newValue / property.step) * property.step;
-          setTempSegmentValues((prev) => ({ ...prev, [property.name]: newValue }));
-          updateSegmentProperty(property.name, newValue);
-        };
-
-        const handleInputKeyDown = (e, property) => {
-          if (e.key === 'Enter') {
-            setEditingProperty(null);
-          }
-        };
-
-        const handleInputBlur = (property) => {
-          setEditingProperty(null);
-        };
-
-        return (
-          <div className="keyframe-section">
-            {properties.map((prop) => {
-              const hasKeyframes = keyframes[prop.name] && keyframes[prop.name].length > 0;
-              const isAtKeyframe = hasKeyframes && keyframes[prop.name].some((kf) => areTimesEqual(kf.time, currentTimeInSegment));
-              const currentValue = hasKeyframes
-                ? getValueAtTime(keyframes[prop.name], currentTimeInSegment)
-                : (tempSegmentValues[prop.name] !== undefined
-                   ? tempSegmentValues[prop.name]
-                   : selectedSegment[prop.name] || (prop.name === 'scale' || prop.name === 'opacity' ? 1 : 0));
-              const miniTimelineWidth = 200;
-              const duration = selectedSegment.duration;
-
-              return (
-                <div key={prop.name} className="property-row">
-                  <div className="property-header">
-                    <button
-                      className={`keyframe-toggle ${isAtKeyframe ? 'active' : ''}`}
-                      onClick={() => toggleKeyframe(prop.name)}
-                      title="Toggle Keyframe"
-                    >
-                      ⏱
-                    </button>
-                    <label>{prop.label}</label>
-                  </div>
-                  <div className="property-controls">
-                    {editingProperty === prop.name ? (
-                      <input
-                        type="text"
-                        className="value-scrubber"
-                        defaultValue={currentValue.toFixed(prop.step < 1 ? 2 : 0)}
-                        onChange={(e) => handleInputChange(e, prop)}
-                        onKeyDown={(e) => handleInputKeyDown(e, prop)}
-                        onBlur={() => handleInputBlur(prop)}
-                        autoFocus
-                        style={{ width: '60px', textAlign: 'center' }}
-                      />
-                    ) : (
-                      <div
-                        className="value-scrubber"
-                        onClick={() => handleValueClick(prop)}
-                        onMouseDown={(e) => startDragging(e, prop)}
-                      >
-                        {currentValue.toFixed(prop.step < 1 ? 2 : 0)} {prop.unit}
-                      </div>
-                    )}
-                    <div className="keyframe-nav">
-                      <button
-                        onClick={() => navigateKeyframes(prop.name, 'prev')}
-                        disabled={!hasKeyframes}
-                      >
-                        ◄
-                      </button>
-                      <button
-                        onClick={() => navigateKeyframes(prop.name, 'next')}
-                        disabled={!hasKeyframes}
-                      >
-                        ►
-                      </button>
-                    </div>
-                  </div>
-                  <div className="mini-timeline">
-                    <div
-                      className="mini-playhead"
-                      style={{ left: `${(currentTimeInSegment / duration) * miniTimelineWidth}px` }}
-                    />
-                    {(keyframes[prop.name] || []).map((kf, index) => (
-                      <div
-                        key={index}
-                        className="keyframe-marker"
-                        style={{ left: `${(kf.time / duration) * miniTimelineWidth}px` }}
-                        onClick={() => {
-                          setCurrentTimeInSegment(kf.time);
-                          handleTimeUpdate(selectedSegment.startTime + kf.time);
-                          setTempSegmentValues((prev) => ({ ...prev, [prop.name]: kf.value }));
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        );
-      };
-
-        const renderTransitionsPanel = () => {
-          const getDirectionOptions = (transitionType) => {
-            switch (transitionType) {
-              case 'Zoom':
-                return [
-                  { value: 'in', label: 'Zoom In' },
-                  { value: 'out', label: 'Zoom Out' },
-                ];
-              case 'Rotate':
-                return [
-                  { value: 'clockwise', label: 'Clockwise' },
-                  { value: 'counterclockwise', label: 'Counterclockwise' },
-                ];
-              case 'Slide':
-                return [
-                  { value: 'right', label: 'Right' },
-                  { value: 'left', label: 'Left' },
-                  { value: 'top', label: 'Top' },
-                  { value: 'bottom', label: 'Bottom' },
-                ];
-              default:
-                return [];
-            }
-          };
-
-          return (
-            <div className="transitions-panel">
-              <h3>Transitions</h3>
-              <div className="transitions-list">
-                {availableTransitions.map((transition) => (
-                  <div
-                    key={transition.type}
-                    className="transition-item"
-                    draggable
-                    onDragStart={(e) => handleTransitionDragStart(e, transition)}
-                  >
-                    <img src={transition.icon} alt={transition.label} className="transition-icon" />
-                    <span>{transition.label}</span>
-                  </div>
-                ))}
-              </div>
-              {selectedTransition && (
-                <div className="selected-transition-details">
-                  <h4>Selected Transition</h4>
-                  <div className="control-group">
-                    <label>Type</label>
-                    <span>{selectedTransition.type}</span>
-                  </div>
-                  <div className="control-group">
-                    <label>Duration (s)</label>
-                    <input
-                      type="number"
-                      value={selectedTransition.duration}
-                      onChange={(e) => handleTransitionDurationChange(parseFloat(e.target.value))}
-                      min="0.1"
-                      step="0.1"
-                    />
-                  </div>
-                  {getDirectionOptions(selectedTransition.type).length > 0 && (
-                    <div className="control-group">
-                      <label>Direction</label>
-                      <select
-                        value={selectedTransition.parameters?.direction || getDirectionOptions(selectedTransition.type)[0].value}
-                        onChange={(e) => handleTransitionDirectionChange(e.target.value)}
-                      >
-                        {getDirectionOptions(selectedTransition.type).map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <button className="delete-button" onClick={handleTransitionDelete}>
-                    🗑️ Delete Transition
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        };
+//        const renderFilterControls = () => {
+//          return (
+//            <div className="filters-panel" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+//              <h3>Filters</h3>
+//              {!selectedSegment || (selectedSegment.type !== 'video' && selectedSegment.type !== 'image') ? (
+//                <p>Select a video or image segment to apply filters</p>
+//              ) : (
+//                <>
+//                  {/* Color Adjustments */}
+//                  <div className="filter-group">
+//                    <h4>Color Adjustments</h4>
+//                    <div className="control-group">
+//                      <label>Brightness (-1 to 1)</label>
+//                      <div className="slider-container">
+//                        <input
+//                          type="range"
+//                          min="-1"
+//                          max="1"
+//                          step="0.01"
+//                          value={filterParams.brightness !== undefined ? filterParams.brightness : 0}
+//                          onChange={(e) => updateFilterSetting('brightness', parseFloat(e.target.value))}
+//                        />
+//                        <input
+//                          type="number"
+//                          value={filterParams.brightness !== undefined ? filterParams.brightness : 0}
+//                          onChange={(e) => updateFilterSetting('brightness', parseFloat(e.target.value))}
+//                          step="0.01"
+//                          min="-1"
+//                          max="1"
+//                          style={{ width: '60px', marginLeft: '10px' }}
+//                        />
+//                      </div>
+//                    </div>
+//                    <div className="control-group">
+//                      <label>Contrast (0 to 2)</label>
+//                      <div className="slider-container">
+//                        <input
+//                          type="range"
+//                          min="0"
+//                          max="2"
+//                          step="0.01"
+//                          value={filterParams.contrast !== undefined ? filterParams.contrast : 1}
+//                          onChange={(e) => updateFilterSetting('contrast', parseFloat(e.target.value))}
+//                        />
+//                        <input
+//                          type="number"
+//                          value={filterParams.contrast !== undefined ? filterParams.contrast : 1}
+//                          onChange={(e) => updateFilterSetting('contrast', parseFloat(e.target.value))}
+//                          step="0.01"
+//                          min="0"
+//                          max="2"
+//                          style={{ width: '60px', marginLeft: '10px' }}
+//                        />
+//                      </div>
+//                    </div>
+//                    <div className="control-group">
+//                      <label>Saturation (0 to 2)</label>
+//                      <div className="slider-container">
+//                        <input
+//                          type="range"
+//                          min="0"
+//                          max="2"
+//                          step="0.01"
+//                          value={filterParams.saturation !== undefined ? filterParams.saturation : 1}
+//                          onChange={(e) => updateFilterSetting('saturation', parseFloat(e.target.value))}
+//                        />
+//                        <input
+//                          type="number"
+//                          value={filterParams.saturation !== undefined ? filterParams.saturation : 1}
+//                          onChange={(e) => updateFilterSetting('saturation', parseFloat(e.target.value))}
+//                          step="0.01"
+//                          min="0"
+//                          max="2"
+//                          style={{ width: '60px', marginLeft: '10px' }}
+//                        />
+//                      </div>
+//                    </div>
+//                    <div className="control-group">
+//                      <label>Hue (-180 to 180)</label>
+//                      <div className="slider-container">
+//                        <input
+//                          type="range"
+//                          min="-180"
+//                          max="180"
+//                          step="1"
+//                          value={filterParams.hue !== undefined ? filterParams.hue : 0}
+//                          onChange={(e) => updateFilterSetting('hue', parseInt(e.target.value))}
+//                        />
+//                        <input
+//                          type="number"
+//                          value={filterParams.hue !== undefined ? filterParams.hue : 0}
+//                          onChange={(e) => updateFilterSetting('hue', parseInt(e.target.value))}
+//                          step="1"
+//                          min="-180"
+//                          max="180"
+//                          style={{ width: '60px', marginLeft: '10px' }}
+//                        />
+//                      </div>
+//                    </div>
+//                  </div>
+//
+//                  {/* Stylization Filters */}
+//                  <div className="filter-group">
+//                    <h4>Stylization</h4>
+//                    <div className="control-group">
+//                      <label>Grayscale</label>
+//                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+//                        <input
+//                          type="checkbox"
+//                          checked={!!filterParams.grayscale}
+//                          onChange={(e) => updateFilterSetting('grayscale', e.target.checked ? '1' : '')}
+//                        />
+//                      </div>
+//                    </div>
+//                    <div className="control-group">
+//                      <label>Invert</label>
+//                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+//                        <input
+//                          type="checkbox"
+//                          checked={!!filterParams.invert}
+//                          onChange={(e) => updateFilterSetting('invert', e.target.checked ? '1' : '')}
+//                        />
+//                      </div>
+//                    </div>
+//                  </div>
+//
+//                  {/* Transformation */}
+//                  <div className="filter-group">
+//                    <h4>Transformation</h4>
+//                    <div className="control-group">
+//                      <label>Rotate (-180 to 180°)</label>
+//                      <div className="slider-container">
+//                        <input
+//                          type="range"
+//                          min="-180"
+//                          max="180"
+//                          step="1"
+//                          value={filterParams.rotate !== undefined ? filterParams.rotate : 0}
+//                          onChange={(e) => updateFilterSetting('rotate', parseInt(e.target.value))}
+//                        />
+//                        <input
+//                          type="number"
+//                          value={filterParams.rotate !== undefined ? filterParams.rotate : 0}
+//                          onChange={(e) => updateFilterSetting('rotate', parseInt(e.target.value))}
+//                          step="1"
+//                          min="-180"
+//                          max="180"
+//                          style={{ width: '60px', marginLeft: '10px' }}
+//                        />
+//                      </div>
+//                    </div>
+//                    <div className="control-group">
+//                      <label>Flip</label>
+//                      <select
+//                        value={filterParams.flip || 'none'}
+//                        onChange={(e) => updateFilterSetting('flip', e.target.value === 'none' ? '' : e.target.value)}
+//                      >
+//                        <option value="none">None</option>
+//                        <option value="horizontal">Horizontal</option>
+//                        <option value="vertical">Vertical</option>
+//                      </select>
+//                    </div>
+//                  </div>
+//                </>
+//              )}
+//            </div>
+//          );
+//        };
+//
+//      const renderKeyframeControls = () => {
+//        if (!selectedSegment) return null;
+//
+//        let properties = [];
+//        switch (selectedSegment.type) {
+//          case 'video':
+//            properties = [
+//              { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
+//              { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
+//              { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 },
+//              { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 },
+//            ];
+//            break;
+//          case 'image':
+//            properties = [
+//              { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
+//              { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
+//              { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 },
+//              { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 },
+//            ];
+//            break;
+//          case 'text':
+//            properties = [
+//              { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999 },
+//              { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999 },
+//              { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.1, max: 5 },
+//              { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1 },
+//            ];
+//            break;
+//          case 'audio':
+//            properties = [
+//              { name: 'volume', label: 'Volume', unit: '', step: 0.01, min: 0, max: 1 },
+//            ];
+//            break;
+//          default:
+//            return null;
+//        }
+//
+//        const startDragging = (e, property) => {
+//          e.preventDefault();
+//          const initialX = e.clientX;
+//          const initialValue = parseFloat(
+//            tempSegmentValues[property.name] ||
+//            selectedSegment[property.name] ||
+//            (property.name === 'scale' || property.name === 'opacity' ? 1 : 0)
+//          );
+//          const step = property.step;
+//
+//          const onMouseMove = (moveEvent) => {
+//            const deltaX = moveEvent.clientX - initialX;
+//            const sensitivity = step < 1 ? 0.1 : 1;
+//            let newValue = initialValue + (deltaX * step * sensitivity);
+//            newValue = Math.max(property.min, Math.min(property.max, newValue));
+//            newValue = Math.round(newValue / step) * step;
+//            setTempSegmentValues((prev) => ({ ...prev, [property.name]: newValue }));
+//            updateSegmentProperty(property.name, newValue);
+//          };
+//
+//          const onMouseUp = () => {
+//            document.removeEventListener('mousemove', onMouseMove);
+//            document.removeEventListener('mouseup', onMouseUp);
+//          };
+//
+//          document.addEventListener('mousemove', onMouseMove);
+//          document.addEventListener('mouseup', onMouseUp);
+//        };
+//
+//        const handleValueClick = (property) => {
+//          setEditingProperty(property.name);
+//        };
+//
+//        const handleInputChange = (e, property) => {
+//          let newValue = parseFloat(e.target.value);
+//          if (isNaN(newValue)) return;
+//          newValue = Math.max(property.min, Math.min(property.max, newValue));
+//          newValue = Math.round(newValue / property.step) * property.step;
+//          setTempSegmentValues((prev) => ({ ...prev, [property.name]: newValue }));
+//          updateSegmentProperty(property.name, newValue);
+//        };
+//
+//        const handleInputKeyDown = (e, property) => {
+//          if (e.key === 'Enter') {
+//            setEditingProperty(null);
+//          }
+//        };
+//
+//        const handleInputBlur = (property) => {
+//          setEditingProperty(null);
+//        };
+//
+//        return (
+//          <div className="keyframe-section">
+//            {properties.map((prop) => {
+//              const hasKeyframes = keyframes[prop.name] && keyframes[prop.name].length > 0;
+//              const isAtKeyframe = hasKeyframes && keyframes[prop.name].some((kf) => areTimesEqual(kf.time, currentTimeInSegment));
+//              const currentValue = hasKeyframes
+//                ? getValueAtTime(keyframes[prop.name], currentTimeInSegment)
+//                : (tempSegmentValues[prop.name] !== undefined
+//                   ? tempSegmentValues[prop.name]
+//                   : selectedSegment[prop.name] || (prop.name === 'scale' || prop.name === 'opacity' ? 1 : 0));
+//              const miniTimelineWidth = 200;
+//              const duration = selectedSegment.duration;
+//
+//              return (
+//                <div key={prop.name} className="property-row">
+//                  <div className="property-header">
+//                    <button
+//                      className={`keyframe-toggle ${isAtKeyframe ? 'active' : ''}`}
+//                      onClick={() => toggleKeyframe(prop.name)}
+//                      title="Toggle Keyframe"
+//                    >
+//                      ⏱
+//                    </button>
+//                    <label>{prop.label}</label>
+//                  </div>
+//                  <div className="property-controls">
+//                    {editingProperty === prop.name ? (
+//                      <input
+//                        type="text"
+//                        className="value-scrubber"
+//                        defaultValue={currentValue.toFixed(prop.step < 1 ? 2 : 0)}
+//                        onChange={(e) => handleInputChange(e, prop)}
+//                        onKeyDown={(e) => handleInputKeyDown(e, prop)}
+//                        onBlur={() => handleInputBlur(prop)}
+//                        autoFocus
+//                        style={{ width: '60px', textAlign: 'center' }}
+//                      />
+//                    ) : (
+//                      <div
+//                        className="value-scrubber"
+//                        onClick={() => handleValueClick(prop)}
+//                        onMouseDown={(e) => startDragging(e, prop)}
+//                      >
+//                        {currentValue.toFixed(prop.step < 1 ? 2 : 0)} {prop.unit}
+//                      </div>
+//                    )}
+//                    <div className="keyframe-nav">
+//                      <button
+//                        onClick={() => navigateKeyframes(prop.name, 'prev')}
+//                        disabled={!hasKeyframes}
+//                      >
+//                        ◄
+//                      </button>
+//                      <button
+//                        onClick={() => navigateKeyframes(prop.name, 'next')}
+//                        disabled={!hasKeyframes}
+//                      >
+//                        ►
+//                      </button>
+//                    </div>
+//                  </div>
+//                  <div className="mini-timeline">
+//                    <div
+//                      className="mini-playhead"
+//                      style={{ left: `${(currentTimeInSegment / duration) * miniTimelineWidth}px` }}
+//                    />
+//                    {(keyframes[prop.name] || []).map((kf, index) => (
+//                      <div
+//                        key={index}
+//                        className="keyframe-marker"
+//                        style={{ left: `${(kf.time / duration) * miniTimelineWidth}px` }}
+//                        onClick={() => {
+//                          setCurrentTimeInSegment(kf.time);
+//                          handleTimeUpdate(selectedSegment.startTime + kf.time);
+//                          setTempSegmentValues((prev) => ({ ...prev, [prop.name]: kf.value }));
+//                        }}
+//                      />
+//                    ))}
+//                  </div>
+//                </div>
+//              );
+//            })}
+//          </div>
+//        );
+//      };
+//
+//        const renderTransitionsPanel = () => {
+//          const getDirectionOptions = (transitionType) => {
+//            switch (transitionType) {
+//              case 'Zoom':
+//                return [
+//                  { value: 'in', label: 'Zoom In' },
+//                  { value: 'out', label: 'Zoom Out' },
+//                ];
+//              case 'Rotate':
+//                return [
+//                  { value: 'clockwise', label: 'Clockwise' },
+//                  { value: 'counterclockwise', label: 'Counterclockwise' },
+//                ];
+//              case 'Slide':
+//                return [
+//                  { value: 'right', label: 'Right' },
+//                  { value: 'left', label: 'Left' },
+//                  { value: 'top', label: 'Top' },
+//                  { value: 'bottom', label: 'Bottom' },
+//                ];
+//              default:
+//                return [];
+//            }
+//          };
+//
+//          return (
+//            <div className="transitions-panel">
+//              <h3>Transitions</h3>
+//              <div className="transitions-list">
+//                {availableTransitions.map((transition) => (
+//                  <div
+//                    key={transition.type}
+//                    className="transition-item"
+//                    draggable
+//                    onDragStart={(e) => handleTransitionDragStart(e, transition)}
+//                  >
+//                    <img src={transition.icon} alt={transition.label} className="transition-icon" />
+//                    <span>{transition.label}</span>
+//                  </div>
+//                ))}
+//              </div>
+//              {selectedTransition && (
+//                <div className="selected-transition-details">
+//                  <h4>Selected Transition</h4>
+//                  <div className="control-group">
+//                    <label>Type</label>
+//                    <span>{selectedTransition.type}</span>
+//                  </div>
+//                  <div className="control-group">
+//                    <label>Duration (s)</label>
+//                    <input
+//                      type="number"
+//                      value={selectedTransition.duration}
+//                      onChange={(e) => handleTransitionDurationChange(parseFloat(e.target.value))}
+//                      min="0.1"
+//                      step="0.1"
+//                    />
+//                  </div>
+//                  {getDirectionOptions(selectedTransition.type).length > 0 && (
+//                    <div className="control-group">
+//                      <label>Direction</label>
+//                      <select
+//                        value={selectedTransition.parameters?.direction || getDirectionOptions(selectedTransition.type)[0].value}
+//                        onChange={(e) => handleTransitionDirectionChange(e.target.value)}
+//                      >
+//                        {getDirectionOptions(selectedTransition.type).map((option) => (
+//                          <option key={option.value} value={option.value}>
+//                            {option.label}
+//                          </option>
+//                        ))}
+//                      </select>
+//                    </div>
+//                  )}
+//                  <button className="delete-button" onClick={handleTransitionDelete}>
+//                    🗑️ Delete Transition
+//                  </button>
+//                </div>
+//              )}
+//            </div>
+//          );
+//        };
 
       return (
         <div className="project-editor">
@@ -3869,10 +3872,32 @@
                         {selectedSegment && isTransformOpen && (
                           <div className="transform-panel">
                             <h3>Transform</h3>
-                            {renderKeyframeControls()}
+                            <KeyframeControls
+                              selectedSegment={selectedSegment}
+                              keyframes={keyframes}
+                              currentTimeInSegment={currentTimeInSegment}
+                              tempSegmentValues={tempSegmentValues}
+                              editingProperty={editingProperty}
+                              setTempSegmentValues={setTempSegmentValues}
+                              setEditingProperty={setEditingProperty}
+                              toggleKeyframe={toggleKeyframe}
+                              navigateKeyframes={navigateKeyframes}
+                              updateSegmentProperty={updateSegmentProperty}
+                              handleTimeUpdate={handleTimeUpdate}
+                              areTimesEqual={areTimesEqual}
+                              getValueAtTime={getValueAtTime}
+                              setCurrentTimeInSegment={setCurrentTimeInSegment} // Add this line
+                            />
                           </div>
                         )}
-                        {isFiltersOpen && renderFilterControls()}
+                        {isFiltersOpen && (
+                          <FilterControls
+                            selectedSegment={selectedSegment}
+                            filterParams={filterParams}
+                            appliedFilters={appliedFilters}
+                            updateFilterSetting={updateFilterSetting}
+                          />
+                        )}
                         {
                           isTextToolOpen && selectedSegment && selectedSegment.type === 'text' && (
                             <div className="text-tool-panel">
@@ -4094,7 +4119,16 @@
                             </div>
                           )
                         }
-                        {isTransitionsOpen && renderTransitionsPanel()}
+                        {isTransitionsOpen && (
+                          <TransitionsPanel
+                            availableTransitions={availableTransitions}
+                            selectedTransition={selectedTransition}
+                            handleTransitionDragStart={handleTransitionDragStart}
+                            handleTransitionDurationChange={handleTransitionDurationChange}
+                            handleTransitionDirectionChange={handleTransitionDirectionChange}
+                            handleTransitionDelete={handleTransitionDelete}
+                          />
+                        )}
                       </div>
                     )}
           </aside>

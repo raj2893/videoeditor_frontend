@@ -34,14 +34,17 @@ const TextSegmentHandler = ({
           positionX: updatedTextSettings.positionX,
           positionY: updatedTextSettings.positionY,
           alignment: updatedTextSettings.alignment || 'center',
-          backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0, // New
-          backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0, // New
-          backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000', // New
-          backgroundPadding: updatedTextSettings.backgroundPadding ?? 0, // New
-          shadowColor: updatedTextSettings.shadowColor || 'transparent', // New
-          shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0, // New
-          shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0, // New
-          shadowAngle: updatedTextSettings.shadowAngle ?? 0, // New
+          backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
+          backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
+          backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
+          backgroundPadding: updatedTextSettings.backgroundPadding ?? 0,
+          backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
+          shadowColor: updatedTextSettings.shadowColor || 'transparent',
+          shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0,
+          shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0,
+          shadowBlurRadius: updatedTextSettings.shadowBlurRadius ?? 0, // New
+          shadowSpread: updatedTextSettings.shadowSpread ?? 0, // New
+          shadowOpacity: updatedTextSettings.shadowOpacity ?? 1.0, // New
         },
         {
           params: { sessionId },
@@ -68,14 +71,17 @@ const TextSegmentHandler = ({
         positionX: updatedTextSettings.positionX,
         positionY: updatedTextSettings.positionY,
         alignment: updatedTextSettings.alignment || 'center',
-        backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0, // New
-        backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0, // New
-        backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000', // New
-        backgroundPadding: updatedTextSettings.backgroundPadding ?? 0, // New
-        shadowColor: updatedTextSettings.shadowColor || 'transparent', // New
-        shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0, // New
-        shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0, // New
-        shadowAngle: updatedTextSettings.shadowAngle ?? 0, // New
+        backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
+        backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
+        backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
+        backgroundPadding: updatedTextSettings.backgroundPadding ?? 0,
+        backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
+        shadowColor: updatedTextSettings.shadowColor || 'transparent',
+        shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0,
+        shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0,
+        shadowBlurRadius: updatedTextSettings.shadowBlurRadius ?? 0, // New
+        shadowSpread: updatedTextSettings.shadowSpread ?? 0, // New
+        shadowOpacity: updatedTextSettings.shadowOpacity ?? 1.0, // New
       };
       // Only include keyframes if explicitly provided (e.g., from Transform panel)
       if (updatedTextSettings.keyframes) {
@@ -122,14 +128,17 @@ const TextSegmentHandler = ({
             isNew: true,
             scale: 1.0,
             alignment: 'center',
-            backgroundOpacity: 1.0, // New
-            backgroundBorderWidth: 0, // New
-            backgroundBorderColor: '#000000', // New
-            backgroundPadding: 0, // New
-            shadowColor: 'transparent', // New
-            shadowOffsetX: 0, // New
-            shadowOffsetY: 0, // New
-            shadowAngle: 0, // New
+            backgroundOpacity: 1.0,
+            backgroundBorderWidth: 0,
+            backgroundBorderColor: '#000000',
+            backgroundPadding: 0,
+            backgroundBorderRadius: 0, // New
+            shadowColor: 'transparent',
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+            shadowBlurRadius: 0, // New
+            shadowSpread: 0, // New
+            shadowOpacity: 1.0, // New
           };
         }
       }
@@ -171,14 +180,17 @@ const TextSegmentHandler = ({
       timelineStartTime: roundToThreeDecimals(adjustedStartTime),
       timelineEndTime: roundToThreeDecimals(adjustedStartTime + draggingItem.duration),
       alignment: draggingItem.alignment || 'center',
-      backgroundOpacity: draggingItem.backgroundOpacity ?? 1.0, // New
-      backgroundBorderWidth: draggingItem.backgroundBorderWidth ?? 0, // New
-      backgroundBorderColor: draggingItem.backgroundBorderColor || '#000000', // New
-      backgroundPadding: draggingItem.backgroundPadding ?? 0, // New
-      shadowColor: draggingItem.shadowColor || 'transparent', // New
-      shadowOffsetX: draggingItem.shadowOffsetX ?? 0, // New
-      shadowOffsetY: draggingItem.shadowOffsetY ?? 0, // New
-      shadowAngle: draggingItem.shadowAngle ?? 0, // New
+      backgroundOpacity: draggingItem.backgroundOpacity ?? 1.0,
+      backgroundBorderWidth: draggingItem.backgroundBorderWidth ?? 0,
+      backgroundBorderColor: draggingItem.backgroundBorderColor || '#000000',
+      backgroundPadding: draggingItem.backgroundPadding ?? 0,
+      backgroundBorderRadius: draggingItem.backgroundBorderRadius ?? 0, // New
+      shadowColor: draggingItem.shadowColor || 'transparent',
+      shadowOffsetX: draggingItem.shadowOffsetX ?? 0,
+      shadowOffsetY: draggingItem.shadowOffsetY ?? 0,
+      shadowBlurRadius: draggingItem.shadowBlurRadius ?? 0, // New
+      shadowSpread: draggingItem.shadowSpread ?? 0, // New
+      shadowOpacity: draggingItem.shadowOpacity ?? 1.0, // New
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
     setVideoLayers(newVideoLayers);
@@ -212,14 +224,17 @@ const TextSegmentHandler = ({
         positionX: updatedTextSettings.positionX,
         positionY: updatedTextSettings.positionY,
         alignment: updatedTextSettings.alignment || 'center',
-        backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0, // New
-        backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0, // New
-        backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000', // New
-        backgroundPadding: updatedTextSettings.backgroundPadding ?? 0, // New
-        shadowColor: updatedTextSettings.shadowColor || 'transparent', // New
-        shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0, // New
-        shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0, // New
-        shadowAngle: updatedTextSettings.shadowAngle ?? 0, // New
+        backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
+        backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
+        backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
+        backgroundPadding: updatedTextSettings.backgroundPadding ?? 0,
+        backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
+        shadowColor: updatedTextSettings.shadowColor || 'transparent',
+        shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0,
+        shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0,
+        shadowBlurRadius: updatedTextSettings.shadowBlurRadius ?? 0, // New
+        shadowSpread: updatedTextSettings.shadowSpread ?? 0, // New
+        shadowOpacity: updatedTextSettings.shadowOpacity ?? 1.0, // New
         timelineStartTime: roundToThreeDecimals(startTime),
         timelineEndTime: roundToThreeDecimals(startTime + duration),
       };
@@ -250,14 +265,17 @@ const TextSegmentHandler = ({
                 positionX: updatedTextSettings.positionX,
                 positionY: updatedTextSettings.positionY,
                 alignment: updatedTextSettings.alignment || 'center',
-                backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0, // New
-                backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0, // New
-                backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000', // New
-                backgroundPadding: updatedTextSettings.backgroundPadding ?? 0, // New
-                shadowColor: updatedTextSettings.shadowColor || 'transparent', // New
-                shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0, // New
-                shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0, // New
-                shadowAngle: updatedTextSettings.shadowAngle ?? 0, // New
+                backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
+                backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
+                backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
+                backgroundPadding: updatedTextSettings.backgroundPadding ?? 0,
+                backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
+                shadowColor: updatedTextSettings.shadowColor || 'transparent',
+                shadowOffsetX: updatedTextSettings.shadowOffsetX ?? 0,
+                shadowOffsetY: updatedTextSettings.shadowOffsetY ?? 0,
+                shadowBlurRadius: updatedTextSettings.shadowBlurRadius ?? 0, // New
+                shadowSpread: updatedTextSettings.shadowSpread ?? 0, // New
+                shadowOpacity: updatedTextSettings.shadowOpacity ?? 1.0, // New
                 duration,
                 timelineEndTime: roundToThreeDecimals(item.startTime + duration),
               }
@@ -286,14 +304,17 @@ const TextSegmentHandler = ({
       duration: firstPartDuration,
       timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration),
       alignment: item.alignment || 'center',
-      backgroundOpacity: item.backgroundOpacity ?? 1.0, // New
-      backgroundBorderWidth: item.backgroundBorderWidth ?? 0, // New
-      backgroundBorderColor: item.backgroundBorderColor || '#000000', // New
-      backgroundPadding: item.backgroundPadding ?? 0, // New
-      shadowColor: item.shadowColor || 'transparent', // New
-      shadowOffsetX: item.shadowOffsetX ?? 0, // New
-      shadowOffsetY: item.shadowOffsetY ?? 0, // New
-      shadowAngle: item.shadowAngle ?? 0, // New
+      backgroundOpacity: item.backgroundOpacity ?? 1.0,
+      backgroundBorderWidth: item.backgroundBorderWidth ?? 0,
+      backgroundBorderColor: item.backgroundBorderColor || '#000000',
+      backgroundPadding: item.backgroundPadding ?? 0,
+      backgroundBorderRadius: item.backgroundBorderRadius ?? 0, // New
+      shadowColor: item.shadowColor || 'transparent',
+      shadowOffsetX: item.shadowOffsetX ?? 0,
+      shadowOffsetY: item.shadowOffsetY ?? 0,
+      shadowBlurRadius: item.shadowBlurRadius ?? 0, // New
+      shadowSpread: item.shadowSpread ?? 0, // New
+      shadowOpacity: item.shadowOpacity ?? 1.0, // New
     };
     layer[itemIndex] = firstPart;
 
@@ -306,14 +327,17 @@ const TextSegmentHandler = ({
       timelineEndTime: roundToThreeDecimals(item.startTime + item.duration),
       scale: item.scale || 1.0,
       alignment: item.alignment || 'center',
-      backgroundOpacity: item.backgroundOpacity ?? 1.0, // New
-      backgroundBorderWidth: item.backgroundBorderWidth ?? 0, // New
-      backgroundBorderColor: item.backgroundBorderColor || '#000000', // New
-      backgroundPadding: item.backgroundPadding ?? 0, // New
-      shadowColor: item.shadowColor || 'transparent', // New
-      shadowOffsetX: item.shadowOffsetX ?? 0, // New
-      shadowOffsetY: item.shadowOffsetY ?? 0, // New
-      shadowAngle: item.shadowAngle ?? 0, // New
+      backgroundOpacity: item.backgroundOpacity ?? 1.0,
+      backgroundBorderWidth: item.backgroundBorderWidth ?? 0,
+      backgroundBorderColor: item.backgroundBorderColor || '#000000',
+      backgroundPadding: item.backgroundPadding ?? 0,
+      backgroundBorderRadius: item.backgroundBorderRadius ?? 0, // New
+      shadowColor: item.shadowColor || 'transparent',
+      shadowOffsetX: item.shadowOffsetX ?? 0,
+      shadowOffsetY: item.shadowOffsetY ?? 0,
+      shadowBlurRadius: item.shadowBlurRadius ?? 0, // New
+      shadowSpread: item.shadowSpread ?? 0, // New
+      shadowOpacity: item.shadowOpacity ?? 1.0, // New
     };
     layer.push(secondPart);
 
@@ -327,14 +351,17 @@ const TextSegmentHandler = ({
       duration: secondPartDuration,
       alignment: secondPart.alignment,
       scale: secondPart.scale,
-      backgroundOpacity: secondPart.backgroundOpacity, // New
-      backgroundBorderWidth: secondPart.backgroundBorderWidth, // New
-      backgroundBorderColor: secondPart.backgroundBorderColor, // New
-      backgroundPadding: secondPart.backgroundPadding, // New
-      shadowColor: secondPart.shadowColor, // New
-      shadowOffsetX: secondPart.shadowOffsetX, // New
-      shadowOffsetY: secondPart.shadowOffsetY, // New
-      shadowAngle: secondPart.shadowAngle, // New
+      backgroundOpacity: secondPart.backgroundOpacity,
+      backgroundBorderWidth: secondPart.backgroundBorderWidth,
+      backgroundBorderColor: secondPart.backgroundBorderColor,
+      backgroundPadding: secondPart.backgroundPadding,
+      backgroundBorderRadius: secondPart.backgroundBorderRadius, // New
+      shadowColor: secondPart.shadowColor,
+      shadowOffsetX: secondPart.shadowOffsetX,
+      shadowOffsetY: secondPart.shadowOffsetY,
+      shadowBlurRadius: secondPart.shadowBlurRadius, // New
+      shadowSpread: secondPart.shadowSpread, // New
+      shadowOpacity: secondPart.shadowOpacity, // New
     });
     autoSave(newVideoLayers, []);
     await loadProjectTimeline();

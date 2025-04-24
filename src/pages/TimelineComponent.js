@@ -326,14 +326,17 @@ const TimelineComponent = ({
               positionX: textSegment.positionX || 0,
               positionY: textSegment.positionY || 0,
               alignment: textSegment.alignment || 'center',
-              backgroundOpacity: textSegment.backgroundOpacity ?? 1.0, // New
-              backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0, // New
-              backgroundBorderColor: textSegment.backgroundBorderColor || '#000000', // New
-              backgroundPadding: textSegment.backgroundPadding ?? 0, // New
-              shadowColor: textSegment.shadowColor || 'transparent', // New
-              shadowOffsetX: textSegment.shadowOffsetX ?? 0, // New
-              shadowOffsetY: textSegment.shadowOffsetY ?? 0, // New
-              shadowAngle: textSegment.shadowAngle ?? 0, // New
+              backgroundOpacity: textSegment.backgroundOpacity ?? 1.0,
+              backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0,
+              backgroundBorderColor: textSegment.backgroundBorderColor || '#000000',
+              backgroundPadding: textSegment.backgroundPadding ?? 0,
+              backgroundBorderRadius: textSegment.backgroundBorderRadius ?? 0, // New
+              shadowColor: textSegment.shadowColor || 'transparent',
+              shadowOffsetX: textSegment.shadowOffsetX ?? 0,
+              shadowOffsetY: textSegment.shadowOffsetY ?? 0,
+              shadowBlurRadius: textSegment.shadowBlurRadius ?? 0, // New
+              shadowSpread: textSegment.shadowSpread ?? 0, // New
+              shadowOpacity: textSegment.shadowOpacity ?? 1.0, // New
               keyframes: textSegment.keyframes || {},
             });
           }
@@ -960,14 +963,17 @@ const TimelineComponent = ({
             positionX: item.positionX,
             positionY: item.positionY,
             alignment: item.alignment,
-            backgroundOpacity: item.backgroundOpacity, // New
-            backgroundBorderWidth: item.backgroundBorderWidth, // New
-            backgroundBorderColor: item.backgroundBorderColor, // New
-            backgroundPadding: item.backgroundPadding, // New
-            shadowColor: item.shadowColor, // New
-            shadowOffsetX: item.shadowOffsetX, // New
-            shadowOffsetY: item.shadowOffsetY, // New
-            shadowAngle: item.shadowAngle, // New
+            backgroundOpacity: item.backgroundOpacity,
+            backgroundBorderWidth: item.backgroundBorderWidth,
+            backgroundBorderColor: item.backgroundBorderColor,
+            backgroundPadding: item.backgroundPadding,
+            backgroundBorderRadius: item.backgroundBorderRadius, // New
+            shadowColor: item.shadowColor,
+            shadowOffsetX: item.shadowOffsetX,
+            shadowOffsetY: item.shadowOffsetY,
+            shadowBlurRadius: item.shadowBlurRadius, // New
+            shadowSpread: item.shadowSpread, // New
+            shadowOpacity: item.shadowOpacity, // New
             keyframes: item.keyframes || {},
           });
         } else if (item.type === 'video') {

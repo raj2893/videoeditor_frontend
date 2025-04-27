@@ -515,53 +515,47 @@ const TimelineComponent = ({
 
   const findAdjacentSegments = (timelinePosition, layerIndex, videoLayers) => {
     if (layerIndex < 0 || layerIndex >= videoLayers.length) {
-      return { fromSegment: null, toSegment: null };
+      return { segment: null, start: false, end: false };
     }
 
     const layer = videoLayers[layerIndex];
-    let fromSegment = null;
-    let toSegment = null;
-    const ADJACENCY_THRESHOLD = 0.01;
+    let segment = null;
+    let start = false;
+    let end = false;
+    const SNAP_THRESHOLD = 0.1; // Time in seconds to consider a transition near start/end
 
-    const sortedSegments = [...layer].sort((a, b) => a.startTime - b.startTime);
+    for (const seg of layer) {
+      const segmentStart = seg.startTime;
+      const segmentEnd = seg.startTime + seg.duration;
 
-    for (let i = 0; i < sortedSegments.length; i++) {
-      const segment = sortedSegments[i];
-      const segmentStart = segment.startTime;
-      const segmentEnd = segment.startTime + segment.duration;
-
-      if (timelinePosition >= segmentStart && timelinePosition <= segmentEnd) {
-        toSegment = segment;
-        if (i > 0) {
-          const prevSegment = sortedSegments[i - 1];
-          const prevSegmentEnd = prevSegment.startTime + prevSegment.duration;
-          if (Math.abs(prevSegmentEnd - segmentStart) <= ADJACENCY_THRESHOLD) {
-            fromSegment = prevSegment;
-          }
+      // Check if the drop position is near the start of the segment
+      if (Math.abs(timelinePosition - segmentStart) <= SNAP_THRESHOLD) {
+        segment = seg;
+        start = true;
+        break;
+      }
+      // Check if the drop position is near the end of the segment
+      else if (Math.abs(timelinePosition - segmentEnd) <= SNAP_THRESHOLD) {
+        segment = seg;
+        end = true;
+        break;
+      }
+      // Check if the drop position is within the segment
+      else if (timelinePosition > segmentStart && timelinePosition < segmentEnd) {
+        segment = seg;
+        // Decide whether to apply at start or end based on proximity
+        const distToStart = timelinePosition - segmentStart;
+        const distToEnd = segmentEnd - timelinePosition;
+        if (distToStart < distToEnd) {
+          start = true;
+        } else {
+          end = true;
         }
-        break;
-      } else if (
-        i < sortedSegments.length - 1 &&
-        timelinePosition > segmentEnd &&
-        timelinePosition < sortedSegments[i + 1].startTime
-      ) {
-        toSegment = sortedSegments[i + 1];
-        const nextSegment = sortedSegments[i + 1];
-        const segmentEnd = segment.startTime + segment.duration;
-        if (Math.abs(segmentEnd - nextSegment.startTime) <= ADJACENCY_THRESHOLD) {
-          fromSegment = segment;
-        }
-        break;
-      } else if (i === 0 && timelinePosition < segmentStart) {
-        toSegment = segment;
-        break;
-      } else if (i === sortedSegments.length - 1 && timelinePosition > segmentEnd) {
-        fromSegment = segment;
         break;
       }
     }
 
-    return { fromSegment, toSegment };
+    return { segment, start, end };
   };
 
   const handleDrop = async (e) => {
@@ -612,20 +606,12 @@ const TimelineComponent = ({
       }
 
       if (!isAudioLayer && layerIndex >= 0 && layerIndex < videoLayers.length) {
-        const { fromSegment, toSegment } = findAdjacentSegments(timelinePosition, layerIndex, videoLayers);
-        if (fromSegment && toSegment) {
+        const { segment, start, end } = findAdjacentSegments(timelinePosition, layerIndex, videoLayers);
+        if (segment && (start || end)) {
           await handleTransitionDrop(
-            fromSegment.id,
-            toSegment.id,
-            layerIndex,
-            timelinePosition,
-            dragData.transition.type
-          );
-          saveHistory();
-        } else if (toSegment) {
-          await handleTransitionDrop(
-            null,
-            toSegment.id,
+            segment.id,
+            start,
+            end,
             layerIndex,
             timelinePosition,
             dragData.transition.type
@@ -645,6 +631,7 @@ const TimelineComponent = ({
       return;
     }
 
+    // Rest of the method remains unchanged
     if (dragData?.type === 'audio' || (draggingItem && draggingItem.type === 'audio')) {
       const audioDropResult = await audioHandler.handleAudioDrop(
         e,
@@ -726,10 +713,9 @@ const TimelineComponent = ({
       if (reversedIndex <= totalVideoLayers) {
         layerIndex = totalVideoLayers - reversedIndex;
       } else {
-        layerIndex = 0; // Default to layer 0 if dropped in audio or invalid layer
+        layerIndex = 0;
       }
 
-      // Ensure the layer exists
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         while (newLayers.length <= layerIndex) newLayers.push([]);

@@ -884,20 +884,21 @@ const ProjectEditor = () => {
     }
     try {
       const token = localStorage.getItem('token');
-      await axios.put(
+      const response = await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-transition`,
         {
           transitionId: selectedTransition.id,
           type: selectedTransition.type,
           duration: newDuration,
-          fromSegmentId: selectedTransition.fromSegmentId,
-          toSegmentId: selectedTransition.toSegmentId,
+          segmentId: selectedTransition.segmentId,
+          start: selectedTransition.start,
+          end: selectedTransition.end,
           layer: selectedTransition.layer,
-          timelineStartTime: selectedTransition.timelineStartTime,
           parameters: selectedTransition.parameters || {},
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
+      const updatedTransition = response.data;
       setTransitions((prev) =>
         prev.map((t) =>
           t.id === selectedTransition.id ? { ...t, duration: newDuration } : t
@@ -915,20 +916,21 @@ const ProjectEditor = () => {
     try {
       const token = localStorage.getItem('token');
       const updatedParameters = { ...selectedTransition.parameters, direction };
-      await axios.put(
+      const response = await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-transition`,
         {
           transitionId: selectedTransition.id,
           type: selectedTransition.type,
           duration: selectedTransition.duration,
-          fromSegmentId: selectedTransition.fromSegmentId,
-          toSegmentId: selectedTransition.toSegmentId,
+          segmentId: selectedTransition.segmentId,
+          start: selectedTransition.start,
+          end: selectedTransition.end,
           layer: selectedTransition.layer,
-          timelineStartTime: selectedTransition.timelineStartTime,
           parameters: updatedParameters,
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
+      const updatedTransition = response.data;
       setTransitions((prev) =>
         prev.map((t) =>
           t.id === selectedTransition.id ? { ...t, parameters: updatedParameters } : t
@@ -1409,9 +1411,14 @@ const ProjectEditor = () => {
     e.dataTransfer.effectAllowed = 'copy';
   };
 
-  const handleTransitionDrop = async (fromSegmentId, toSegmentId, layer, timelinePosition, transitionType) => {
-    if (!sessionId || !projectId || !transitionType) {
-      console.error('Missing required parameters for transition drop:', { sessionId, projectId, transitionType });
+  const handleTransitionDrop = async (segmentId, start, end, layer, timelinePosition, transitionType) => {
+    if (!sessionId || !projectId || !transitionType || !segmentId) {
+      console.error('Missing required parameters for transition drop:', {
+        sessionId,
+        projectId,
+        transitionType,
+        segmentId,
+      });
       return;
     }
     try {
@@ -1427,10 +1434,10 @@ const ProjectEditor = () => {
       const payload = {
         type: transitionType,
         duration: 1,
-        fromSegmentId: fromSegmentId || null,
-        toSegmentId: toSegmentId,
-        layer: layer,
-        timelineStartTime: timelinePosition,
+        segmentId,
+        start,
+        end,
+        layer,
         parameters,
       };
       const response = await axios.post(
@@ -2325,9 +2332,7 @@ const handleDeleteSegment = async () => {
     });
 
     const transitionsToDelete = transitions.filter(
-      (transition) =>
-        transition.fromSegmentId === selectedSegment.id ||
-        transition.toSegmentId === selectedSegment.id
+      (transition) => transition.segmentId === selectedSegment.id
     );
 
     for (const transition of transitionsToDelete) {
@@ -2369,9 +2374,7 @@ const handleDeleteSegment = async () => {
 
     setTransitions((prevTransitions) =>
       prevTransitions.filter(
-        (transition) =>
-          transition.fromSegmentId !== selectedSegment.id &&
-          transition.toSegmentId !== selectedSegment.id
+        (transition) => transition.segmentId !== selectedSegment.id
       )
     );
 

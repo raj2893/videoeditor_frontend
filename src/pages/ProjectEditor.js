@@ -10,7 +10,6 @@ import AudioSegmentHandler from './AudioSegmentHandler';
 import KeyframeControls from './KeyframeControls';
 import FilterControls from './FilterControls';
 import TransitionsPanel from './TransitionsPanel';
-import CropControls from './CropControls';
 
 const API_BASE_URL = 'http://localhost:8080';
   const defaultTextStyles = [
@@ -136,6 +135,7 @@ const ProjectEditor = () => {
   const filterUpdateTimeoutRef = useRef(null);
   const animationFrameRef = useRef(null);
   const lastUpdateTimeRef = useRef(performance.now());
+  const transitionSaveTimeoutRef = useRef(null); // New ref for debouncing transition saves
 
   const MIN_TIME_SCALE = 0.1;
   const MAX_TIME_SCALE = 250;
@@ -943,24 +943,36 @@ const ProjectEditor = () => {
     }
   };
 
-  const handleTransitionDelete = async () => {
-    if (!selectedTransition || !sessionId || !projectId) return;
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(
-        `${API_BASE_URL}/projects/${projectId}/remove-transition`,
-        {
-          params: { sessionId, transitionId: selectedTransition.id },
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setTransitions((prev) => prev.filter((t) => t.id !== selectedTransition.id));
-      setSelectedTransition(null);
-    } catch (error) {
-      console.error('Error deleting transition:', error);
-      alert('Failed to delete transition');
-    }
-  };
+    const handleTransitionDelete = async () => {
+      if (!selectedTransition || !sessionId || !projectId) return;
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(
+          `${API_BASE_URL}/projects/${projectId}/remove-transition`,
+          {
+            params: { sessionId, transitionId: selectedTransition.id },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        let updatedTransitions = transitions;
+        setTransitions((prev) => {
+          updatedTransitions = prev.filter((t) => t.id !== selectedTransition.id);
+          return updatedTransitions;
+        });
+        setSelectedTransition(null);
+        saveHistory();
+
+        // Schedule auto-save with updated transitions
+        if (transitionSaveTimeoutRef.current) clearTimeout(transitionSaveTimeoutRef.current);
+        transitionSaveTimeoutRef.current = setTimeout(() => {
+          autoSaveProject(videoLayers, audioLayers);
+          console.log('Auto-saved project after transition delete:', selectedTransition.id);
+        }, 1000);
+      } catch (error) {
+        console.error('Error deleting transition:', error);
+        alert('Failed to delete transition');
+      }
+    };
 
   const fetchTransitions = async () => {
     if (!sessionId || !projectId || !localStorage.getItem('token')) {
@@ -1210,11 +1222,15 @@ const ProjectEditor = () => {
         backgroundPadding: textSettings.backgroundPadding,
         backgroundBorderRadius: textSettings.backgroundBorderRadius,
       };
+
+      let updatedVideoLayers = videoLayers; // Store updated layers for auto-save
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         newLayers[0].push(newSegment);
+        updatedVideoLayers = newLayers; // Update the variable for auto-save
         return newLayers;
       });
+
       setTotalDuration((prev) => Math.max(prev, startTime + duration));
       setSelectedSegment(newSegment);
       setEditingTextSegment(newSegment);
@@ -1236,8 +1252,12 @@ const ProjectEditor = () => {
       setIsTextToolOpen(true);
       preloadMedia();
       saveHistory();
+
+      // Auto-save the project with updated videoLayers
+      autoSaveProject(updatedVideoLayers, audioLayers);
     } catch (error) {
       console.error('Error adding text to timeline:', error);
+      alert('Failed to add text to timeline. Please try again.');
     }
   };
 
@@ -1449,6 +1469,14 @@ const ProjectEditor = () => {
       setTransitions((prev) => [...prev, newTransition]);
       await fetchTransitions();
       saveHistory();
+
+      // Schedule auto-save with updated transitions
+      if (transitionSaveTimeoutRef.current) clearTimeout(transitionSaveTimeoutRef.current);
+      transitionSaveTimeoutRef.current = setTimeout(() => {
+        autoSaveProject(videoLayers, audioLayers);
+        console.log('Auto-saved project after transition drop:', newTransition);
+      }, 1000);
+
     } catch (error) {
       console.error('Error adding transition:', error.response?.data || error.message);
       alert('Failed to add transition. Please try again.');
@@ -3402,6 +3430,58 @@ useEffect(() => {
   }
 }, [currentTime, selectedSegment]);
 
+const resetFilters = async () => {
+  if (!selectedSegment || !sessionId || !projectId) return;
+  if (selectedSegment.type !== 'video' && selectedSegment.type !== 'image') return;
+
+  try {
+    const token = localStorage.getItem('token');
+    // Send a single DELETE request to remove all filters for the segment
+    await axios.delete(`${API_BASE_URL}/projects/${projectId}/remove-filter`, {
+      params: {
+        sessionId,
+        segmentId: selectedSegment.id,
+      },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setAppliedFilters([]);
+    setFilterParams({
+      brightness: 0,
+      contrast: 1,
+      saturation: 1,
+      hue: 0,
+      blur: 0,
+      sharpen: 0,
+      grayscale: '',
+      invert: '',
+      rotate: 0,
+      flip: '',
+    });
+
+    let updatedVideoLayers = videoLayers;
+    setVideoLayers((prevLayers) => {
+      const newLayers = [...prevLayers];
+      newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
+        item.id === selectedSegment.id ? { ...item, filters: [] } : item
+      );
+      updatedVideoLayers = newLayers;
+      return newLayers;
+    });
+    setSelectedSegment((prev) => ({ ...prev, filters: [] }));
+
+    // Save history to capture the reset state
+    saveHistory();
+
+    // Trigger auto-save immediately with updated layers
+    if (filterUpdateTimeoutRef.current) clearTimeout(filterUpdateTimeoutRef.current);
+    await autoSaveProject(updatedVideoLayers, audioLayers);
+  } catch (error) {
+    console.error('Error resetting filters:', error);
+    alert('Failed to reset filters. Please try again.');
+  }
+};
+
 return (
   <div className="project-editor">
     <aside className={`media-panel ${isMediaPanelOpen ? 'open' : 'closed'}`}>
@@ -3792,6 +3872,7 @@ return (
               filterParams={filterParams}
               appliedFilters={appliedFilters}
               updateFilterSetting={updateFilterSetting}
+              resetFilters={resetFilters}
             />
           )}
           {isTextToolOpen && selectedSegment && selectedSegment.type === 'text' && (

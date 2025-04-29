@@ -681,8 +681,8 @@ const ProjectEditor = () => {
             ? {
                 ...item,
                 id: newImageSegment.id,
-                positionX: newImageSegment.positionX || 50,
-                positionY: newImageSegment.positionY || 50,
+                positionX: newImageSegment.positionX || 0,
+                positionY: newImageSegment.positionY || 0,
                 scale: newImageSegment.scale || 1,
                 filters: newImageSegment.filters || [],
                 keyframes: newImageSegment.keyframes || {},

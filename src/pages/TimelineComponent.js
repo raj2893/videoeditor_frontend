@@ -326,7 +326,8 @@ const TimelineComponent = ({
                 backgroundOpacity: textSegment.backgroundOpacity ?? 1.0,
                 backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0,
                 backgroundBorderColor: textSegment.backgroundBorderColor || '#000000',
-                backgroundPadding: textSegment.backgroundPadding ?? 0,
+                backgroundH: textSegment.backgroundH ?? 0, // Replace backgroundPadding
+                backgroundW: textSegment.backgroundW ?? 0, // Replace backgroundPadding
                 backgroundBorderRadius: textSegment.backgroundBorderRadius ?? 0,
                 keyframes: textSegment.keyframes || {},
                 opacity: textSegment.opacity || 1,
@@ -742,7 +743,8 @@ const TimelineComponent = ({
             backgroundOpacity: style.backgroundOpacity ?? 1.0,
             backgroundBorderWidth: style.backgroundBorderWidth ?? 0,
             backgroundBorderColor: style.backgroundBorderColor || '#000000',
-            backgroundPadding: style.backgroundPadding ?? 0,
+            backgroundH: style.backgroundH ?? 0, // Replace backgroundPadding
+            backgroundW: style.backgroundW ?? 0, // Replace backgroundPadding
             backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
           },
           { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
@@ -765,7 +767,8 @@ const TimelineComponent = ({
           backgroundOpacity: style.backgroundOpacity ?? 1.0,
           backgroundBorderWidth: style.backgroundBorderWidth ?? 0,
           backgroundBorderColor: style.backgroundBorderColor || '#000000',
-          backgroundPadding: style.backgroundPadding ?? 0,
+          backgroundH: style.backgroundH ?? 0, // Replace backgroundPadding
+          backgroundW: style.backgroundW ?? 0, // Replace backgroundPadding
           backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
           keyframes: {},
         };
@@ -1029,7 +1032,8 @@ const TimelineComponent = ({
               backgroundOpacity: item.backgroundOpacity,
               backgroundBorderWidth: item.backgroundBorderWidth,
               backgroundBorderColor: item.backgroundBorderColor,
-              backgroundPadding: item.backgroundPadding,
+              backgroundH: item.backgroundH, // Replace backgroundPadding
+              backgroundW: item.backgroundW, // Replace backgroundPadding
               backgroundBorderRadius: item.backgroundBorderRadius,
               keyframes: item.keyframes || {},
               opacity: item.opacity,

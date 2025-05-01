@@ -3,7 +3,7 @@ import '../CSS/VideoPreview.css';
 import fx from 'glfx';
 
 const API_BASE_URL = 'http://localhost:8080';
-const baseFontSize = 24;
+const baseFontSize = 24.0;
 
 const VideoPreview = ({
   videoLayers,
@@ -900,16 +900,15 @@ const VideoPreview = ({
                   </React.Fragment>
                 );
               } else if (element.type === 'text') {
-                // ... (text rendering remains unchanged)
+                const RESOLUTION_MULTIPLIER = canvasDimensions.width >= 3840 ? 1.5 : 2.0;
                 const fontSize = baseFontSize * scaleFactor;
-                const resolutionMultiplier = canvasDimensions.width >= 3840 ? 1.5 : 2.0;
-                const adjustedFontSize = fontSize * resolutionMultiplier;
 
                 const centerX = canvasDimensions.width / 2;
                 const centerY = canvasDimensions.height / 2;
 
-                const bgPadding = (element.backgroundPadding || 0) * scaleFactor * resolutionMultiplier;
-                const borderWidth = (element.backgroundBorderWidth || 0) * scaleFactor * resolutionMultiplier;
+                const bgHeight = (element.backgroundH || 0) * scaleFactor;
+                const bgWidth = (element.backgroundW || 0) * scaleFactor;
+                const borderWidth = (element.backgroundBorderWidth || 0) * scaleFactor;
                 const bgOpacity = element.backgroundOpacity !== undefined ? element.backgroundOpacity : 1.0;
                 let bgColorStyle = 'transparent';
 
@@ -927,20 +926,20 @@ const VideoPreview = ({
 
                 const baseRadius = element.backgroundBorderRadius || 0;
                 const correctionFactor = 0.55;
-                const bgBorderRadius = baseRadius * scaleFactor * resolutionMultiplier * correctionFactor;
+                const bgBorderRadius = baseRadius * scaleFactor * correctionFactor;
 
                 const borderColor = element.backgroundBorderColor && element.backgroundBorderColor !== 'transparent'
                   ? element.backgroundBorderColor
                   : 'transparent';
 
                 const textLines = element.text.split('\n');
-                const lineHeight = adjustedFontSize * 1.2;
+                const lineHeight = fontSize * 1.2;
                 const textHeight = textLines.length * lineHeight;
                 const longestLine = textLines.reduce((a, b) => a.length > b.length ? a : b, '');
-                const approxTextWidth = longestLine.length * adjustedFontSize * 0.6;
+                const approxTextWidth = longestLine.length * fontSize * 0.6;
 
-                const contentWidth = approxTextWidth + (bgPadding * 2);
-                const contentHeight = textHeight + (bgPadding * 2);
+                const contentWidth = approxTextWidth + bgWidth;
+                const contentHeight = textHeight + bgHeight;
                 const minDimension = Math.min(contentWidth, contentHeight);
                 const maxRadius = minDimension / 2;
                 const effectiveBorderRadius = Math.min(bgBorderRadius, maxRadius);
@@ -954,16 +953,16 @@ const VideoPreview = ({
                       left: `${centerX}px`,
                       top: `${centerY}px`,
                       fontFamily: element.fontFamily || 'Arial',
-                      fontSize: `${adjustedFontSize}px`,
+                      fontSize: `${fontSize}px`,
                       color: element.fontColor || '#FFFFFF',
                       background: bgColorStyle,
-                      padding: `${bgPadding}px`,
+                      padding: `${bgHeight / 2}px ${bgWidth / 2}px`,
                       borderRadius: `${effectiveBorderRadius}px`,
                       borderWidth: `${borderWidth}px`,
                       borderStyle: borderWidth > 0 ? 'solid' : 'none',
                       borderColor: borderColor,
                       zIndex: element.layerIndex,
-                      whiteSpace: 'pre-wrap',
+                      whiteSpace: 'pre', // Preserve explicit newlines only
                       opacity,
                       filter: filterStyle,
                       transform: `translate(-50%, -50%) ${transform.trim()}`,
@@ -972,7 +971,7 @@ const VideoPreview = ({
                       display: 'inline-block',
                       textAlign: element.alignment || 'center',
                       boxSizing: 'content-box',
-                      maxWidth: `${canvasDimensions.width * 0.8}px`,
+                      // Removed maxWidth to prevent wrapping
                       transition: 'transform 0.016s linear, opacity 0.016s linear',
                     }}
                   >

@@ -26,7 +26,8 @@ const API_BASE_URL = 'http://localhost:8080';
       backgroundOpacity: 1.0,
       backgroundBorderWidth: 0,
       backgroundBorderColor: "#f1ffbd",
-      backgroundPadding: 10,
+      backgroundH: 20, // Add this
+      backgroundW: 100, // Add this
       backgroundBorderRadius: 9,
       duration: 5,
     },
@@ -43,7 +44,8 @@ const API_BASE_URL = 'http://localhost:8080';
       backgroundOpacity: 0.21,
       backgroundBorderWidth: 0,
       backgroundBorderColor: "#000000",
-      backgroundPadding: 12,
+      backgroundH: 20, // Add this
+      backgroundW: 100, // Add this
       backgroundBorderRadius: 10,
       duration: 5,
     },
@@ -60,7 +62,8 @@ const API_BASE_URL = 'http://localhost:8080';
       backgroundOpacity: 1.0,
       backgroundBorderWidth: 0,
       backgroundBorderColor: "#000000",
-      backgroundPadding: 10,
+      backgroundH: 20, // Add this
+      backgroundW: 100, // Add this
       backgroundBorderRadius: 10,
       duration: 5,
     },
@@ -102,7 +105,8 @@ const ProjectEditor = () => {
     backgroundOpacity: 1.0,
     backgroundBorderWidth: 0,
     backgroundBorderColor: '#000000',
-    backgroundPadding: 0,
+    backgroundH: 0, // Add this
+    backgroundW: 0, // Add this
     backgroundBorderRadius: 0,
   });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -1085,7 +1089,8 @@ const ProjectEditor = () => {
                 backgroundOpacity: newSettings.backgroundOpacity,
                 backgroundBorderWidth: newSettings.backgroundBorderWidth,
                 backgroundBorderColor: newSettings.backgroundBorderColor,
-                backgroundPadding: newSettings.backgroundPadding,
+                backgroundH: newSettings.backgroundH, // Replace backgroundPadding
+                backgroundW: newSettings.backgroundW, // Replace backgroundPadding
                 backgroundBorderRadius: newSettings.backgroundBorderRadius,
               }
             : item
@@ -1121,7 +1126,8 @@ const ProjectEditor = () => {
         backgroundOpacity: textSettings.backgroundOpacity,
         backgroundBorderWidth: textSettings.backgroundBorderWidth,
         backgroundBorderColor: textSettings.backgroundBorderColor,
-        backgroundPadding: textSettings.backgroundPadding,
+        backgroundH: textSettings.backgroundH, // Replace backgroundPadding
+        backgroundW: textSettings.backgroundW, // Replace backgroundPadding
         backgroundBorderRadius: textSettings.backgroundBorderRadius,
         keyframes: keyframes,
       };
@@ -1143,7 +1149,8 @@ const ProjectEditor = () => {
           backgroundOpacity: updatedTextSegment.backgroundOpacity,
           backgroundBorderWidth: updatedTextSegment.backgroundBorderWidth,
           backgroundBorderColor: updatedTextSegment.backgroundBorderColor,
-          backgroundPadding: updatedTextSegment.backgroundPadding,
+          backgroundH: updatedTextSegment.backgroundH, // Replace backgroundPadding
+          backgroundW: updatedTextSegment.backgroundW, // Replace backgroundPadding
           backgroundBorderRadius: updatedTextSegment.backgroundBorderRadius,
           keyframes: updatedTextSegment.keyframes,
         },
@@ -1196,7 +1203,8 @@ const ProjectEditor = () => {
           backgroundOpacity: textSettings.backgroundOpacity,
           backgroundBorderWidth: textSettings.backgroundBorderWidth,
           backgroundBorderColor: textSettings.backgroundBorderColor,
-          backgroundPadding: textSettings.backgroundPadding,
+          backgroundH: textSettings.backgroundH, // Replace backgroundPadding
+          backgroundW: textSettings.backgroundW, // Replace backgroundPadding
           backgroundBorderRadius: textSettings.backgroundBorderRadius,
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
@@ -1219,7 +1227,8 @@ const ProjectEditor = () => {
         backgroundOpacity: textSettings.backgroundOpacity,
         backgroundBorderWidth: textSettings.backgroundBorderWidth,
         backgroundBorderColor: textSettings.backgroundBorderColor,
-        backgroundPadding: textSettings.backgroundPadding,
+        backgroundH: textSettings.backgroundH, // Replace backgroundPadding
+        backgroundW: textSettings.backgroundW, // Replace backgroundPadding
         backgroundBorderRadius: textSettings.backgroundBorderRadius,
       };
 
@@ -1245,7 +1254,8 @@ const ProjectEditor = () => {
         backgroundOpacity: newSegment.backgroundOpacity,
         backgroundBorderWidth: newSegment.backgroundBorderWidth,
         backgroundBorderColor: newSegment.backgroundBorderColor,
-        backgroundPadding: newSegment.backgroundPadding,
+        backgroundH: newSegment.backgroundH, // Replace backgroundPadding
+        backgroundW: newSegment.backgroundW, // Replace backgroundPadding
         backgroundBorderRadius: newSegment.backgroundBorderRadius,
         keyframes: newSegment.keyframes,
       });
@@ -1957,6 +1967,8 @@ const ProjectEditor = () => {
       textStyle: {
         ...style,
         id: `text-style-${Date.now()}`,
+        backgroundH: style.backgroundH ?? 0, // Add this
+        backgroundW: style.backgroundW ?? 0, // Add this
       },
     };
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
@@ -1996,7 +2008,8 @@ const ProjectEditor = () => {
           backgroundOpacity: style.backgroundOpacity ?? 1.0,
           backgroundBorderWidth: style.backgroundBorderWidth ?? 0,
           backgroundBorderColor: style.backgroundBorderColor || '#000000',
-          backgroundPadding: style.backgroundPadding ?? 0,
+          backgroundH: style.backgroundH ?? 0, // Replace backgroundPadding
+          backgroundW: style.backgroundW ?? 0, // Replace backgroundPadding
           backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
@@ -2019,7 +2032,8 @@ const ProjectEditor = () => {
         backgroundOpacity: style.backgroundOpacity ?? 1.0,
         backgroundBorderWidth: style.backgroundBorderWidth ?? 0,
         backgroundBorderColor: style.backgroundBorderColor || '#000000',
-        backgroundPadding: style.backgroundPadding ?? 0,
+        backgroundH: style.backgroundH ?? 0, // Replace backgroundPadding
+        backgroundW: style.backgroundW ?? 0, // Replace backgroundPadding
         backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
         keyframes: {},
       };
@@ -2052,7 +2066,8 @@ const ProjectEditor = () => {
         backgroundOpacity: newSegment.backgroundOpacity,
         backgroundBorderWidth: newSegment.backgroundBorderWidth,
         backgroundBorderColor: newSegment.backgroundBorderColor,
-        backgroundPadding: newSegment.backgroundPadding,
+        backgroundH: newSegment.backgroundH, // Replace backgroundPadding
+        backgroundW: newSegment.backgroundW, // Replace backgroundPadding
         backgroundBorderRadius: newSegment.backgroundBorderRadius,
       });
       setIsTextToolOpen(true);
@@ -3687,7 +3702,7 @@ return (
                           backgroundColor: style.backgroundColor,
                           color: style.fontColor,
                           fontFamily: style.fontFamily,
-                          padding: `${style.backgroundPadding}px`,
+                          padding: `${Math.max(style.backgroundH / 2, style.backgroundW / 2)}px`, // Replace backgroundPadding
                           borderRadius: `${style.backgroundBorderRadius}px`,
                           border: `${style.backgroundBorderWidth}px solid ${style.backgroundBorderColor}`,
                           opacity: style.backgroundOpacity,
@@ -3971,11 +3986,22 @@ return (
                 />
               </div>
               <div className="control-group">
-                <label>Background Padding</label>
+                <label>Background Height</label>
                 <input
                   type="number"
-                  value={textSettings.backgroundPadding}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundPadding: parseInt(e.target.value) || 0 })}
+                  value={textSettings.backgroundH}
+                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundH: parseInt(e.target.value) || 0 })}
+                  min="0"
+                  step="1"
+                  style={{ width: '60px' }}
+                />
+              </div>
+              <div className="control-group">
+                <label>Background Width</label>
+                <input
+                  type="number"
+                  value={textSettings.backgroundW}
+                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundW: parseInt(e.target.value) || 0 })}
                   min="0"
                   step="1"
                   style={{ width: '60px' }}

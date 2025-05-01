@@ -37,7 +37,8 @@ const TextSegmentHandler = ({
           backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
           backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
           backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
-          backgroundPadding: updatedTextSettings.backgroundPadding ?? 0,
+          backgroundH: updatedTextSettings.backgroundH ?? 0, // Replace backgroundPadding
+          backgroundW: updatedTextSettings.backgroundW ?? 0, // Replace backgroundPadding
           backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
         },
         {
@@ -68,7 +69,8 @@ const TextSegmentHandler = ({
         backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
         backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
         backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
-        backgroundPadding: updatedTextSettings.backgroundPadding ?? 0,
+        backgroundH: updatedTextSettings.backgroundH ?? 0, // Replace backgroundPadding
+        backgroundW: updatedTextSettings.backgroundW ?? 0, // Replace backgroundPadding
         backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
       };
       // Only include keyframes if explicitly provided (e.g., from Transform panel)
@@ -119,7 +121,8 @@ const TextSegmentHandler = ({
             backgroundOpacity: 1.0,
             backgroundBorderWidth: 0,
             backgroundBorderColor: '#000000',
-            backgroundPadding: 0,
+            backgroundH: 0, // Replace backgroundPadding
+            backgroundW: 0, // Replace backgroundPadding
             backgroundBorderRadius: 0, // New
           };
         }
@@ -165,7 +168,8 @@ const TextSegmentHandler = ({
       backgroundOpacity: draggingItem.backgroundOpacity ?? 1.0,
       backgroundBorderWidth: draggingItem.backgroundBorderWidth ?? 0,
       backgroundBorderColor: draggingItem.backgroundBorderColor || '#000000',
-      backgroundPadding: draggingItem.backgroundPadding ?? 0,
+      backgroundH: draggingItem.backgroundH ?? 0, // Replace backgroundPadding
+      backgroundW: draggingItem.backgroundW ?? 0, // Replace backgroundPadding
       backgroundBorderRadius: draggingItem.backgroundBorderRadius ?? 0, // New
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
@@ -203,7 +207,8 @@ const TextSegmentHandler = ({
         backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
         backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
         backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
-        backgroundPadding: updatedTextSettings.backgroundPadding ?? 0,
+        backgroundH: updatedTextSettings.backgroundH ?? 0, // Replace backgroundPadding
+        backgroundW: updatedTextSettings.backgroundW ?? 0, // Replace backgroundPadding
         backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
         timelineStartTime: roundToThreeDecimals(startTime),
         timelineEndTime: roundToThreeDecimals(startTime + duration),
@@ -238,7 +243,8 @@ const TextSegmentHandler = ({
                 backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
                 backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
                 backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
-                backgroundPadding: updatedTextSettings.backgroundPadding ?? 0,
+                backgroundH: updatedTextSettings.backgroundH ?? 0, // Replace backgroundPadding
+                backgroundW: updatedTextSettings.backgroundW ?? 0, // Replace backgroundPadding
                 backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
                 duration,
                 timelineEndTime: roundToThreeDecimals(item.startTime + duration),
@@ -271,7 +277,8 @@ const TextSegmentHandler = ({
       backgroundOpacity: item.backgroundOpacity ?? 1.0,
       backgroundBorderWidth: item.backgroundBorderWidth ?? 0,
       backgroundBorderColor: item.backgroundBorderColor || '#000000',
-      backgroundPadding: item.backgroundPadding ?? 0,
+      backgroundH: item.backgroundH ?? 0, // Replace backgroundPadding
+      backgroundW: item.backgroundW ?? 0, // Replace backgroundPadding
       backgroundBorderRadius: item.backgroundBorderRadius ?? 0, // New
     };
     layer[itemIndex] = firstPart;
@@ -288,7 +295,8 @@ const TextSegmentHandler = ({
       backgroundOpacity: item.backgroundOpacity ?? 1.0,
       backgroundBorderWidth: item.backgroundBorderWidth ?? 0,
       backgroundBorderColor: item.backgroundBorderColor || '#000000',
-      backgroundPadding: item.backgroundPadding ?? 0,
+      backgroundH: item.backgroundH ?? 0, // Replace backgroundPadding
+      backgroundW: item.backgroundW ?? 0, // Replace backgroundPadding
       backgroundBorderRadius: item.backgroundBorderRadius ?? 0, // New
     };
     layer.push(secondPart);
@@ -306,7 +314,8 @@ const TextSegmentHandler = ({
       backgroundOpacity: secondPart.backgroundOpacity,
       backgroundBorderWidth: secondPart.backgroundBorderWidth,
       backgroundBorderColor: secondPart.backgroundBorderColor,
-      backgroundPadding: secondPart.backgroundPadding,
+      backgroundH: secondPart.backgroundH, // Replace backgroundPadding
+      backgroundW: secondPart.backgroundW, // Replace backgroundPadding
       backgroundBorderRadius: secondPart.backgroundBorderRadius, // New
     });
     autoSave(newVideoLayers, []);

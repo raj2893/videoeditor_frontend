@@ -31,6 +31,9 @@ const API_BASE_URL = 'http://localhost:8080';
       backgroundW: 100, // Add this
       backgroundBorderRadius: 9,
       duration: 5,
+      textBorderColor: 'transparent', // Added
+      textBorderWidth: 0, // Added
+      textBorderOpacity: 1.0, // Added
     },
     {
       text: "Text Style 2",
@@ -49,6 +52,9 @@ const API_BASE_URL = 'http://localhost:8080';
       backgroundW: 100, // Add this
       backgroundBorderRadius: 10,
       duration: 5,
+      textBorderColor: 'transparent', // Added
+      textBorderWidth: 0, // Added
+      textBorderOpacity: 1.0, // Added
     },
     {
       text: "Text Style 3",
@@ -67,6 +73,9 @@ const API_BASE_URL = 'http://localhost:8080';
       backgroundW: 100, // Add this
       backgroundBorderRadius: 10,
       duration: 5,
+      textBorderColor: 'transparent', // Added
+      textBorderWidth: 0, // Added
+      textBorderOpacity: 1.0, // Added
     },
   ];
 
@@ -109,6 +118,9 @@ const ProjectEditor = () => {
     backgroundH: 0, // Add this
     backgroundW: 0, // Add this
     backgroundBorderRadius: 0,
+    textBorderColor: 'transparent', // Added for text border
+    textBorderWidth: 0, // Added for text border
+    textBorderOpacity: 1.0, // Added for text border
   });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [filterParams, setFilterParams] = useState({});
@@ -456,7 +468,12 @@ const ProjectEditor = () => {
               backgroundOpacity: item.backgroundOpacity,
               backgroundBorderWidth: item.backgroundBorderWidth,
               backgroundBorderColor: item.backgroundBorderColor,
-              backgroundPadding: item.backgroundPadding,
+              backgroundH: item.backgroundH,
+              backgroundW: item.backgroundW,
+              backgroundBorderRadius: item.backgroundBorderRadius,
+              textBorderColor: item.textBorderColor, // Added
+              textBorderWidth: item.textBorderWidth, // Added
+              textBorderOpacity: item.textBorderOpacity, // Added
               keyframes: item.keyframes || {},
             });
           }
@@ -903,8 +920,13 @@ const ProjectEditor = () => {
         backgroundOpacity: segment.backgroundOpacity ?? 1.0,
         backgroundBorderWidth: segment.backgroundBorderWidth ?? 0,
         backgroundBorderColor: segment.backgroundBorderColor || '#000000',
+        backgroundH: segment.backgroundH ?? 0, // Ensure this is included
+        backgroundW: segment.backgroundW ?? 0, // Ensure this is included
         backgroundPadding: segment.backgroundPadding ?? 0,
         backgroundBorderRadius: segment.backgroundBorderRadius ?? 0,
+        textBorderColor: segment.textBorderColor || 'transparent', // Added
+        textBorderWidth: segment.textBorderWidth ?? 0, // Added
+        textBorderOpacity: segment.textBorderOpacity ?? 1.0, // Added
       });
       setIsTextToolOpen(true);
     } else {
@@ -935,6 +957,9 @@ const ProjectEditor = () => {
                 backgroundH: newSettings.backgroundH, // Replace backgroundPadding
                 backgroundW: newSettings.backgroundW, // Replace backgroundPadding
                 backgroundBorderRadius: newSettings.backgroundBorderRadius,
+                textBorderColor: newSettings.textBorderColor, // Added
+                textBorderWidth: newSettings.textBorderWidth, // Added
+                textBorderOpacity: newSettings.textBorderOpacity, // Added
               }
             : item
         );
@@ -972,6 +997,9 @@ const ProjectEditor = () => {
         backgroundH: textSettings.backgroundH, // Replace backgroundPadding
         backgroundW: textSettings.backgroundW, // Replace backgroundPadding
         backgroundBorderRadius: textSettings.backgroundBorderRadius,
+        textBorderColor: textSettings.textBorderColor, // Added
+        textBorderWidth: textSettings.textBorderWidth, // Added
+        textBorderOpacity: textSettings.textBorderOpacity, // Added
         keyframes: keyframes,
       };
       await axios.put(
@@ -995,6 +1023,9 @@ const ProjectEditor = () => {
           backgroundH: updatedTextSegment.backgroundH, // Replace backgroundPadding
           backgroundW: updatedTextSegment.backgroundW, // Replace backgroundPadding
           backgroundBorderRadius: updatedTextSegment.backgroundBorderRadius,
+          textBorderColor: updatedTextSegment.textBorderColor, // Added
+          textBorderWidth: updatedTextSegment.textBorderWidth, // Added
+          textBorderOpacity: updatedTextSegment.textBorderOpacity, // Added
           keyframes: updatedTextSegment.keyframes,
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
@@ -1052,6 +1083,9 @@ const ProjectEditor = () => {
         backgroundH: textSettings.backgroundH,
         backgroundW: textSettings.backgroundW,
         backgroundBorderRadius: textSettings.backgroundBorderRadius,
+        textBorderColor: textSettings.textBorderColor, // Added
+        textBorderWidth: textSettings.textBorderWidth, // Added
+        textBorderOpacity: textSettings.textBorderOpacity, // Added
         keyframes: {},
       };
 
@@ -1085,6 +1119,9 @@ const ProjectEditor = () => {
           backgroundH: textSettings.backgroundH,
           backgroundW: textSettings.backgroundW,
           backgroundBorderRadius: textSettings.backgroundBorderRadius,
+          textBorderColor: textSettings.textBorderColor, // Added
+          textBorderWidth: textSettings.textBorderWidth, // Added
+          textBorderOpacity: textSettings.textBorderOpacity, // Added
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -1117,6 +1154,9 @@ const ProjectEditor = () => {
         backgroundH: newTextSegment.backgroundH ?? 0,
         backgroundW: newTextSegment.backgroundW ?? 0,
         backgroundBorderRadius: newTextSegment.backgroundBorderRadius ?? 0,
+        textBorderColor: newTextSegment.textBorderColor || 'transparent', // Added
+        textBorderWidth: newTextSegment.textBorderWidth ?? 0, // Added
+        textBorderOpacity: newTextSegment.textBorderOpacity ?? 1.0, // Added
         keyframes: newTextSegment.keyframes || {},
       };
 
@@ -1146,6 +1186,9 @@ const ProjectEditor = () => {
         backgroundH: updatedSegment.backgroundH,
         backgroundW: updatedSegment.backgroundW,
         backgroundBorderRadius: updatedSegment.backgroundBorderRadius,
+        textBorderColor: updatedSegment.textBorderColor, // Added
+        textBorderWidth: updatedSegment.textBorderWidth, // Added
+        textBorderOpacity: updatedSegment.textBorderOpacity, // Added
       });
       setIsTextToolOpen(true);
       preloadMedia();
@@ -1512,20 +1555,29 @@ const ProjectEditor = () => {
                   while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
                 }
                 newVideoLayers[layerIndex].push({
-                  id: textSegment.id,
+                  id: textSegment.textSegmentId,
                   type: 'text',
                   text: textSegment.text,
                   startTime: textSegment.timelineStartTime || 0,
                   duration: (textSegment.timelineEndTime - textSegment.timelineStartTime) || 0,
                   layer: layerIndex,
                   fontFamily: textSegment.fontFamily || 'Arial',
-                  scale: textSegment.scale || 1.0, // Use scale instead of
+                  scale: textSegment.scale || 1.0,
                   fontColor: textSegment.fontColor || '#FFFFFF',
                   backgroundColor: textSegment.backgroundColor || 'transparent',
                   positionX: textSegment.positionX || 0,
                   positionY: textSegment.positionY || 0,
-                  alignment: textSegment.alignment || 'center', // Include alignment
-                  keyframes: textSegment.keyframes || {}, // Add keyframes
+                  alignment: textSegment.alignment || 'center',
+                  backgroundOpacity: textSegment.backgroundOpacity ?? 1.0,
+                  backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0,
+                  backgroundBorderColor: textSegment.backgroundBorderColor || '#000000',
+                  backgroundH: textSegment.backgroundH ?? 0,
+                  backgroundW: textSegment.backgroundW ?? 0,
+                  backgroundBorderRadius: textSegment.backgroundBorderRadius ?? 0,
+                  textBorderColor: textSegment.textBorderColor || 'transparent', // Added
+                  textBorderWidth: textSegment.textBorderWidth ?? 0, // Added
+                  textBorderOpacity: textSegment.textBorderOpacity ?? 1.0, // Added
+                  keyframes: textSegment.keyframes || {},
                 });
               }
             }
@@ -1899,6 +1951,9 @@ const ProjectEditor = () => {
         backgroundH: style.backgroundH ?? 0,
         backgroundW: style.backgroundW ?? 0,
         backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
+        textBorderColor: style.textBorderColor || 'transparent', // Added
+        textBorderWidth: style.textBorderWidth ?? 0, // Added
+        textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
         keyframes: {},
       };
 
@@ -1932,6 +1987,9 @@ const ProjectEditor = () => {
           backgroundH: style.backgroundH ?? 0,
           backgroundW: style.backgroundW ?? 0,
           backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
+          textBorderColor: style.textBorderColor || 'transparent', // Added
+          textBorderWidth: style.textBorderWidth ?? 0, // Added
+          textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -1964,6 +2022,9 @@ const ProjectEditor = () => {
         backgroundH: newTextSegment.backgroundH ?? 0,
         backgroundW: newTextSegment.backgroundW ?? 0,
         backgroundBorderRadius: newTextSegment.backgroundBorderRadius ?? 0,
+        textBorderColor: newTextSegment.textBorderColor || 'transparent', // Added
+        textBorderWidth: newTextSegment.textBorderWidth ?? 0, // Added
+        textBorderOpacity: newTextSegment.textBorderOpacity ?? 1.0, // Added
         keyframes: newTextSegment.keyframes || {},
       };
 
@@ -1993,6 +2054,9 @@ const ProjectEditor = () => {
         backgroundH: updatedSegment.backgroundH,
         backgroundW: updatedSegment.backgroundW,
         backgroundBorderRadius: updatedSegment.backgroundBorderRadius,
+        textBorderColor: updatedSegment.textBorderColor, // Added
+        textBorderWidth: updatedSegment.textBorderWidth, // Added
+        textBorderOpacity: updatedSegment.textBorderOpacity, // Added
       });
       setIsTextToolOpen(true);
       preloadMedia();
@@ -3050,6 +3114,9 @@ const saveSegmentChanges = async (updatedKeyframes = keyframes, tempValues = tem
           backgroundBorderColor: textSettings.backgroundBorderColor,
           backgroundPadding: textSettings.backgroundPadding,
           backgroundBorderRadius: textSettings.backgroundBorderRadius,
+          textBorderColor: textSettings.textBorderColor, // Added
+          textBorderWidth: textSettings.textBorderWidth, // Added
+          textBorderOpacity: textSettings.textBorderOpacity, // Added
           keyframes: updatedKeyframes,
         };
 
@@ -3086,6 +3153,9 @@ const saveSegmentChanges = async (updatedKeyframes = keyframes, tempValues = tem
               backgroundBorderColor: textPayload.backgroundBorderColor,
               backgroundPadding: textPayload.backgroundPadding,
               backgroundBorderRadius: textPayload.backgroundBorderRadius,
+              textBorderColor: textPayload.textBorderColor, // Added
+              textBorderWidth: textPayload.textBorderWidth, // Added
+              textBorderOpacity: textPayload.textBorderOpacity, // Added
               keyframes: textPayload.keyframes,
             };
           }
@@ -3624,13 +3694,15 @@ return (
                           backgroundColor: style.backgroundColor,
                           color: style.fontColor,
                           fontFamily: style.fontFamily,
-                          padding: `${Math.max(style.backgroundH / 2, style.backgroundW / 2)}px`, // Replace backgroundPadding
+                          padding: `${Math.max(style.backgroundH / 2, style.backgroundW / 2)}px`,
                           borderRadius: `${style.backgroundBorderRadius}px`,
                           border: `${style.backgroundBorderWidth}px solid ${style.backgroundBorderColor}`,
                           opacity: style.backgroundOpacity,
                           textAlign: style.alignment,
                           margin: '10px 0',
                           cursor: 'pointer',
+                          WebkitTextStroke: style.textBorderWidth > 0 ? `${style.textBorderWidth}px ${style.textBorderColor}` : 'none', // Added
+                          WebkitTextStrokeOpacity: style.textBorderOpacity || 1.0, // Added (Note: CSS does not support stroke opacity directly)
                         }}
                       >
                         {style.text}
@@ -3912,7 +3984,7 @@ return (
                 <input
                   type="number"
                   value={textSettings.backgroundH}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundH: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundH: parseInt(e.target.value)})}
                   min="0"
                   step="1"
                   style={{ width: '60px' }}
@@ -3923,7 +3995,7 @@ return (
                 <input
                   type="number"
                   value={textSettings.backgroundW}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundW: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundW: parseInt(e.target.value)})}
                   min="0"
                   step="1"
                   style={{ width: '60px' }}
@@ -3939,6 +4011,52 @@ return (
                   step="1"
                   style={{ width: '60px' }}
                 />
+              </div>
+              <div className="control-group">
+                <label>Text Border Color</label>
+                <input
+                  type="color"
+                  value={textSettings.textBorderColor === 'transparent' ? '#000000' : textSettings.textBorderColor}
+                  onChange={(e) =>
+                    updateTextSettings({
+                      ...textSettings,
+                      textBorderColor: e.target.value === '#000000' ? 'transparent' : e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="control-group">
+                <label>Text Border Width</label>
+                <input
+                  type="number"
+                  value={textSettings.textBorderWidth}
+                  onChange={(e) => updateTextSettings({ ...textSettings, textBorderWidth: parseInt(e.target.value) || 0 })}
+                  min="0"
+                  step="1"
+                  style={{ width: '60px' }}
+                />
+              </div>
+              <div className="control-group">
+                <label>Text Border Opacity</label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={textSettings.textBorderOpacity}
+                    onChange={(e) => updateTextSettings({ ...textSettings, textBorderOpacity: parseFloat(e.target.value) })}
+                  />
+                  <input
+                    type="number"
+                    value={textSettings.textBorderOpacity}
+                    onChange={(e) => updateTextSettings({ ...textSettings, textBorderOpacity: parseFloat(e.target.value) || 1.0 })}
+                    step="0.01"
+                    min="0"
+                    max="1"
+                    style={{ width: '60px', marginLeft: '10px' }}
+                  />
+                </div>
               </div>
               <div className="control-group">
                 <label>Alignment</label>

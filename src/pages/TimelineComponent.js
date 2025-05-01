@@ -326,9 +326,12 @@ const TimelineComponent = ({
                 backgroundOpacity: textSegment.backgroundOpacity ?? 1.0,
                 backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0,
                 backgroundBorderColor: textSegment.backgroundBorderColor || '#000000',
-                backgroundH: textSegment.backgroundH ?? 0, // Replace backgroundPadding
-                backgroundW: textSegment.backgroundW ?? 0, // Replace backgroundPadding
+                backgroundH: textSegment.backgroundH ?? 0,
+                backgroundW: textSegment.backgroundW ?? 0,
                 backgroundBorderRadius: textSegment.backgroundBorderRadius ?? 0,
+                textBorderColor: textSegment.textBorderColor || 'transparent', // Added
+                textBorderWidth: textSegment.textBorderWidth ?? 0, // Added
+                textBorderOpacity: textSegment.textBorderOpacity ?? 1.0, // Added
                 keyframes: textSegment.keyframes || {},
                 opacity: textSegment.opacity || 1,
               });
@@ -743,9 +746,12 @@ const TimelineComponent = ({
             backgroundOpacity: style.backgroundOpacity ?? 1.0,
             backgroundBorderWidth: style.backgroundBorderWidth ?? 0,
             backgroundBorderColor: style.backgroundBorderColor || '#000000',
-            backgroundH: style.backgroundH ?? 0, // Replace backgroundPadding
-            backgroundW: style.backgroundW ?? 0, // Replace backgroundPadding
+            backgroundH: style.backgroundH ?? 0,
+            backgroundW: style.backgroundW ?? 0,
             backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
+            textBorderColor: style.textBorderColor || 'transparent', // Added
+            textBorderWidth: style.textBorderWidth ?? 0, // Added
+            textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
           },
           { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
         );
@@ -767,9 +773,12 @@ const TimelineComponent = ({
           backgroundOpacity: style.backgroundOpacity ?? 1.0,
           backgroundBorderWidth: style.backgroundBorderWidth ?? 0,
           backgroundBorderColor: style.backgroundBorderColor || '#000000',
-          backgroundH: style.backgroundH ?? 0, // Replace backgroundPadding
-          backgroundW: style.backgroundW ?? 0, // Replace backgroundPadding
+          backgroundH: style.backgroundH ?? 0,
+          backgroundW: style.backgroundW ?? 0,
           backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
+          textBorderColor: style.textBorderColor || 'transparent', // Added
+          textBorderWidth: style.textBorderWidth ?? 0, // Added
+          textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
           keyframes: {},
         };
 
@@ -1035,6 +1044,9 @@ const TimelineComponent = ({
               backgroundH: item.backgroundH, // Replace backgroundPadding
               backgroundW: item.backgroundW, // Replace backgroundPadding
               backgroundBorderRadius: item.backgroundBorderRadius,
+              textBorderColor: item.textBorderColor, // Added
+              textBorderWidth: item.textBorderWidth, // Added
+              textBorderOpacity: item.textBorderOpacity, // Added
               keyframes: item.keyframes || {},
               opacity: item.opacity,
             });

@@ -751,7 +751,7 @@ const TimelineComponent = ({
         );
         const newTextSegment = response.data;
         const newSegment = {
-          id: newTextSegment.id,
+          id: newTextSegment.textSegmentId,
           type: 'text',
           text: style.text,
           startTime: roundToThreeDecimals(timelinePosition),

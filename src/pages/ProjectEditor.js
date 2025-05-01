@@ -621,106 +621,41 @@ const ProjectEditor = () => {
   };
 
   const handleElementClick = async (element, isDragEvent = false) => {
-    if (uploading) return;
-    try {
-      const token = localStorage.getItem('token');
+      if (uploading || isDragEvent) return;
+      try {
       let endTime = 0;
       videoLayers.forEach((layer) => {
-        layer.forEach((segment) => {
-          const segmentEndTime = segment.startTime + segment.duration;
-          if (segmentEndTime > endTime) endTime = segmentEndTime;
-        });
+      layer.forEach((segment) => {
+      const segmentEndTime = segment.startTime + segment.duration;
+      if (segmentEndTime > endTime) endTime = segmentEndTime;
+      });
       });
       const timelineStartTime = endTime;
       const duration = 5;
       const selectedLayer = findAvailableLayer(timelineStartTime, timelineStartTime + duration, videoLayers);
 
-      const newSegment = {
-        id: `temp-${Date.now()}`,
-        type: 'image',
-        fileName: element.fileName,
-        filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(element.fileName)}`,
-        thumbnail: element.thumbnail,
-        startTime: timelineStartTime,
-        duration: duration,
-        layer: selectedLayer,
-        positionX: 50,
-        positionY: 50,
-        scale: 1,
-        filters: [],
-        isElement: true,
-      };
-
-      let updatedVideoLayers = videoLayers;
-      setVideoLayers((prevLayers) => {
-        const newLayers = [...prevLayers];
-        while (newLayers.length <= selectedLayer) newLayers.push([]);
-        newLayers[selectedLayer].push(newSegment);
-        updatedVideoLayers = newLayers;
-        return newLayers;
-      });
+      // Use ImageSegmentHandler's addImageToTimeline
+      const newSegment = await addImageToTimeline(
+      element.fileName,
+      selectedLayer,
+      roundToThreeDecimals(timelineStartTime),
+      roundToThreeDecimals(timelineStartTime + duration),
+      true // isElement
+      );
 
       setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
       preloadMedia();
       saveHistory();
 
-      const response = await axios.post(
-        `${API_BASE_URL}/projects/${projectId}/add-project-image-to-timeline`,
-        {
-          imageFileName: element.fileName,
-          layer: selectedLayer,
-          timelineStartTime: timelineStartTime,
-          timelineEndTime: timelineStartTime + duration,
-          isElement: true,
-        },
-        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const newImageSegment = response.data;
-
-      setVideoLayers((prevLayers) => {
-        const newLayers = [...prevLayers];
-        newLayers[selectedLayer] = newLayers[selectedLayer].map((item) =>
-          item.id === newSegment.id
-            ? {
-                ...item,
-                id: newImageSegment.id,
-                positionX: newImageSegment.positionX || 0,
-                positionY: newImageSegment.positionY || 0,
-                scale: newImageSegment.scale || 1,
-                filters: newImageSegment.filters || [],
-                keyframes: newImageSegment.keyframes || {},
-              }
-            : item
-        );
-        updatedVideoLayers = newLayers;
-        return newLayers;
-      });
-
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
-        autoSaveProject(updatedVideoLayers, audioLayers);
+      autoSaveProject(videoLayers, audioLayers);
       }, 1000);
-    } catch (error) {
+      } catch (error) {
       console.error('Error adding element to timeline:', error);
-      setVideoLayers((prevLayers) => {
-        const newLayers = [...prevLayers];
-        newLayers.forEach((layer, index) => {
-          newLayers[index] = layer.filter((item) => !item.id.startsWith('temp-'));
-        });
-        return newLayers;
-      });
-      let maxEndTime = 0;
-      videoLayers.forEach((layer) => {
-        layer.forEach((item) => {
-          const endTime = item.startTime + item.duration;
-          if (endTime > maxEndTime) maxEndTime = endTime;
-        });
-      });
-      setTotalDuration(maxEndTime);
       alert('Failed to add element to timeline. Please try again.');
-    }
-  };
+      }
+     };
 
   const handleAudioClick = async (audio, isDragEvent = false) => {
     if (uploading || isDragEvent) return;

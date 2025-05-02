@@ -966,12 +966,12 @@ const ProjectEditor = () => {
                 backgroundOpacity: newSettings.backgroundOpacity,
                 backgroundBorderWidth: newSettings.backgroundBorderWidth,
                 backgroundBorderColor: newSettings.backgroundBorderColor,
-                backgroundH: newSettings.backgroundH, // Replace backgroundPadding
-                backgroundW: newSettings.backgroundW, // Replace backgroundPadding
+                backgroundH: newSettings.backgroundH,
+                backgroundW: newSettings.backgroundW,
                 backgroundBorderRadius: newSettings.backgroundBorderRadius,
-                textBorderColor: newSettings.textBorderColor, // Added
-                textBorderWidth: newSettings.textBorderWidth, // Added
-                textBorderOpacity: newSettings.textBorderOpacity, // Added
+                textBorderColor: newSettings.textBorderColor,
+                textBorderWidth: newSettings.textBorderWidth,
+                textBorderOpacity: newSettings.textBorderOpacity,
               }
             : item
         );
@@ -979,13 +979,19 @@ const ProjectEditor = () => {
       });
       setTempSegmentValues((prev) => ({
         ...prev,
-        scale: newSettings.scale, // Sync scale with textSettings
+        scale: newSettings.scale,
       }));
       setTotalDuration((prev) => {
         const layer = videoLayers[editingTextSegment.layer];
         const updatedSegment = layer.find((item) => item.id === editingTextSegment.id);
         return Math.max(prev, updatedSegment?.startTime + updatedSegment?.duration || prev);
       });
+
+      // Debounced auto-save for text changes
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        handleSaveTextSegment();
+      }, 1000);
     }
   };
 
@@ -1006,12 +1012,12 @@ const ProjectEditor = () => {
         backgroundOpacity: textSettings.backgroundOpacity,
         backgroundBorderWidth: textSettings.backgroundBorderWidth,
         backgroundBorderColor: textSettings.backgroundBorderColor,
-        backgroundH: textSettings.backgroundH, // Replace backgroundPadding
-        backgroundW: textSettings.backgroundW, // Replace backgroundPadding
+        backgroundH: textSettings.backgroundH,
+        backgroundW: textSettings.backgroundW,
         backgroundBorderRadius: textSettings.backgroundBorderRadius,
-        textBorderColor: textSettings.textBorderColor, // Added
-        textBorderWidth: textSettings.textBorderWidth, // Added
-        textBorderOpacity: textSettings.textBorderOpacity, // Added
+        textBorderColor: textSettings.textBorderColor,
+        textBorderWidth: textSettings.textBorderWidth,
+        textBorderOpacity: textSettings.textBorderOpacity,
         keyframes: keyframes,
       };
       await axios.put(
@@ -1032,33 +1038,42 @@ const ProjectEditor = () => {
           backgroundOpacity: updatedTextSegment.backgroundOpacity,
           backgroundBorderWidth: updatedTextSegment.backgroundBorderWidth,
           backgroundBorderColor: updatedTextSegment.backgroundBorderColor,
-          backgroundH: updatedTextSegment.backgroundH, // Replace backgroundPadding
-          backgroundW: updatedTextSegment.backgroundW, // Replace backgroundPadding
+          backgroundH: updatedTextSegment.backgroundH,
+          backgroundW: updatedTextSegment.backgroundW,
           backgroundBorderRadius: updatedTextSegment.backgroundBorderRadius,
-          textBorderColor: updatedTextSegment.textBorderColor, // Added
-          textBorderWidth: updatedTextSegment.textBorderWidth, // Added
-          textBorderOpacity: updatedTextSegment.textBorderOpacity, // Added
+          textBorderColor: updatedTextSegment.textBorderColor,
+          textBorderWidth: updatedTextSegment.textBorderWidth,
+          textBorderOpacity: updatedTextSegment.textBorderOpacity,
           keyframes: updatedTextSegment.keyframes,
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
 
       // Update videoLayers with the latest segment data
+      let updatedVideoLayers = videoLayers;
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         newLayers[editingTextSegment.layer] = newLayers[editingTextSegment.layer].map((item) =>
           item.id === editingTextSegment.id ? { ...updatedTextSegment } : item
         );
+        updatedVideoLayers = newLayers;
         return newLayers;
       });
 
-      setIsTextToolOpen(false);
       saveHistory();
 
       // Fetch updated segment data to ensure synchronization
       await fetchKeyframes(editingTextSegment.id, 'text');
+
+      // Trigger auto-save of the project with updated videoLayers
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        autoSaveProject(updatedVideoLayers, audioLayers);
+        console.log('Auto-saved project after text segment save:', editingTextSegment.id);
+      }, 1000);
     } catch (error) {
       console.error('Error saving text segment:', error);
+      alert('Failed to save text segment. Please try again.');
     }
   };
 

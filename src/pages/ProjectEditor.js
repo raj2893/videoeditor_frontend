@@ -31,6 +31,9 @@ const API_BASE_URL = 'http://localhost:8080';
       backgroundW: 100, // Add this
       backgroundBorderRadius: 9,
       duration: 5,
+      textBorderColor: 'transparent', // Added
+      textBorderWidth: 0, // Added
+      textBorderOpacity: 1.0, // Added
     },
     {
       text: "Text Style 2",
@@ -49,6 +52,9 @@ const API_BASE_URL = 'http://localhost:8080';
       backgroundW: 100, // Add this
       backgroundBorderRadius: 10,
       duration: 5,
+      textBorderColor: 'transparent', // Added
+      textBorderWidth: 0, // Added
+      textBorderOpacity: 1.0, // Added
     },
     {
       text: "Text Style 3",
@@ -67,6 +73,9 @@ const API_BASE_URL = 'http://localhost:8080';
       backgroundW: 100, // Add this
       backgroundBorderRadius: 10,
       duration: 5,
+      textBorderColor: 'transparent', // Added
+      textBorderWidth: 0, // Added
+      textBorderOpacity: 1.0, // Added
     },
   ];
 
@@ -109,6 +118,9 @@ const ProjectEditor = () => {
     backgroundH: 0, // Add this
     backgroundW: 0, // Add this
     backgroundBorderRadius: 0,
+    textBorderColor: 'transparent', // Added for text border
+    textBorderWidth: 0, // Added for text border
+    textBorderOpacity: 1.0, // Added for text border
   });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [filterParams, setFilterParams] = useState({});
@@ -456,7 +468,12 @@ const ProjectEditor = () => {
               backgroundOpacity: item.backgroundOpacity,
               backgroundBorderWidth: item.backgroundBorderWidth,
               backgroundBorderColor: item.backgroundBorderColor,
-              backgroundPadding: item.backgroundPadding,
+              backgroundH: item.backgroundH,
+              backgroundW: item.backgroundW,
+              backgroundBorderRadius: item.backgroundBorderRadius,
+              textBorderColor: item.textBorderColor, // Added
+              textBorderWidth: item.textBorderWidth, // Added
+              textBorderOpacity: item.textBorderOpacity, // Added
               keyframes: item.keyframes || {},
             });
           }
@@ -520,27 +537,39 @@ const ProjectEditor = () => {
   };
 
   const handleElementClick = async (element, isDragEvent = false) => {
-      if (uploading || isDragEvent) return;
-      try {
+    if (uploading || isDragEvent) return;
+    try {
       let endTime = 0;
       videoLayers.forEach((layer) => {
-      layer.forEach((segment) => {
-      const segmentEndTime = segment.startTime + segment.duration;
-      if (segmentEndTime > endTime) endTime = segmentEndTime;
-      });
+        layer.forEach((segment) => {
+          const segmentEndTime = segment.startTime + segment.duration;
+          if (segmentEndTime > endTime) endTime = segmentEndTime;
+        });
       });
       const timelineStartTime = endTime;
       const duration = 5;
       const selectedLayer = findAvailableLayer(timelineStartTime, timelineStartTime + duration, videoLayers);
 
-      // Use ImageSegmentHandler's addImageToTimeline
       const newSegment = await addImageToTimeline(
-      element.fileName,
-      selectedLayer,
-      roundToThreeDecimals(timelineStartTime),
-      roundToThreeDecimals(timelineStartTime + duration),
-      true // isElement
+        element.fileName,
+        selectedLayer,
+        roundToThreeDecimals(timelineStartTime),
+        roundToThreeDecimals(timelineStartTime + duration),
+        true // isElement
       );
+
+      // Explicitly add the segment to videoLayers with isElement: true
+      setVideoLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        while (newLayers.length <= selectedLayer) newLayers.push([]);
+        const exists = newLayers[selectedLayer].some((segment) => segment.id === newSegment.id);
+        if (!exists) {
+          newLayers[selectedLayer].push({ ...newSegment, isElement: true }); // Ensure isElement is set
+        } else {
+          console.warn(`Segment with id ${newSegment.id} already exists in layer ${selectedLayer}`);
+        }
+        return newLayers;
+      });
 
       setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
       preloadMedia();
@@ -548,13 +577,13 @@ const ProjectEditor = () => {
 
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(videoLayers, audioLayers);
+        autoSaveProject(videoLayers, audioLayers);
       }, 1000);
-      } catch (error) {
+    } catch (error) {
       console.error('Error adding element to timeline:', error);
       alert('Failed to add element to timeline. Please try again.');
-      }
-     };
+    }
+  };
 
   const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
     if (uploading || isDragEvent) return;
@@ -903,8 +932,13 @@ const ProjectEditor = () => {
         backgroundOpacity: segment.backgroundOpacity ?? 1.0,
         backgroundBorderWidth: segment.backgroundBorderWidth ?? 0,
         backgroundBorderColor: segment.backgroundBorderColor || '#000000',
+        backgroundH: segment.backgroundH ?? 0, // Ensure this is included
+        backgroundW: segment.backgroundW ?? 0, // Ensure this is included
         backgroundPadding: segment.backgroundPadding ?? 0,
         backgroundBorderRadius: segment.backgroundBorderRadius ?? 0,
+        textBorderColor: segment.textBorderColor || 'transparent', // Added
+        textBorderWidth: segment.textBorderWidth ?? 0, // Added
+        textBorderOpacity: segment.textBorderOpacity ?? 1.0, // Added
       });
       setIsTextToolOpen(true);
     } else {
@@ -932,9 +966,12 @@ const ProjectEditor = () => {
                 backgroundOpacity: newSettings.backgroundOpacity,
                 backgroundBorderWidth: newSettings.backgroundBorderWidth,
                 backgroundBorderColor: newSettings.backgroundBorderColor,
-                backgroundH: newSettings.backgroundH, // Replace backgroundPadding
-                backgroundW: newSettings.backgroundW, // Replace backgroundPadding
+                backgroundH: newSettings.backgroundH,
+                backgroundW: newSettings.backgroundW,
                 backgroundBorderRadius: newSettings.backgroundBorderRadius,
+                textBorderColor: newSettings.textBorderColor,
+                textBorderWidth: newSettings.textBorderWidth,
+                textBorderOpacity: newSettings.textBorderOpacity,
               }
             : item
         );
@@ -942,13 +979,19 @@ const ProjectEditor = () => {
       });
       setTempSegmentValues((prev) => ({
         ...prev,
-        scale: newSettings.scale, // Sync scale with textSettings
+        scale: newSettings.scale,
       }));
       setTotalDuration((prev) => {
         const layer = videoLayers[editingTextSegment.layer];
         const updatedSegment = layer.find((item) => item.id === editingTextSegment.id);
         return Math.max(prev, updatedSegment?.startTime + updatedSegment?.duration || prev);
       });
+
+      // Debounced auto-save for text changes
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        handleSaveTextSegment();
+      }, 1000);
     }
   };
 
@@ -969,9 +1012,12 @@ const ProjectEditor = () => {
         backgroundOpacity: textSettings.backgroundOpacity,
         backgroundBorderWidth: textSettings.backgroundBorderWidth,
         backgroundBorderColor: textSettings.backgroundBorderColor,
-        backgroundH: textSettings.backgroundH, // Replace backgroundPadding
-        backgroundW: textSettings.backgroundW, // Replace backgroundPadding
+        backgroundH: textSettings.backgroundH,
+        backgroundW: textSettings.backgroundW,
         backgroundBorderRadius: textSettings.backgroundBorderRadius,
+        textBorderColor: textSettings.textBorderColor,
+        textBorderWidth: textSettings.textBorderWidth,
+        textBorderOpacity: textSettings.textBorderOpacity,
         keyframes: keyframes,
       };
       await axios.put(
@@ -992,30 +1038,42 @@ const ProjectEditor = () => {
           backgroundOpacity: updatedTextSegment.backgroundOpacity,
           backgroundBorderWidth: updatedTextSegment.backgroundBorderWidth,
           backgroundBorderColor: updatedTextSegment.backgroundBorderColor,
-          backgroundH: updatedTextSegment.backgroundH, // Replace backgroundPadding
-          backgroundW: updatedTextSegment.backgroundW, // Replace backgroundPadding
+          backgroundH: updatedTextSegment.backgroundH,
+          backgroundW: updatedTextSegment.backgroundW,
           backgroundBorderRadius: updatedTextSegment.backgroundBorderRadius,
+          textBorderColor: updatedTextSegment.textBorderColor,
+          textBorderWidth: updatedTextSegment.textBorderWidth,
+          textBorderOpacity: updatedTextSegment.textBorderOpacity,
           keyframes: updatedTextSegment.keyframes,
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
 
       // Update videoLayers with the latest segment data
+      let updatedVideoLayers = videoLayers;
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         newLayers[editingTextSegment.layer] = newLayers[editingTextSegment.layer].map((item) =>
           item.id === editingTextSegment.id ? { ...updatedTextSegment } : item
         );
+        updatedVideoLayers = newLayers;
         return newLayers;
       });
 
-      setIsTextToolOpen(false);
       saveHistory();
 
       // Fetch updated segment data to ensure synchronization
       await fetchKeyframes(editingTextSegment.id, 'text');
+
+      // Trigger auto-save of the project with updated videoLayers
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        autoSaveProject(updatedVideoLayers, audioLayers);
+        console.log('Auto-saved project after text segment save:', editingTextSegment.id);
+      }, 1000);
     } catch (error) {
       console.error('Error saving text segment:', error);
+      alert('Failed to save text segment. Please try again.');
     }
   };
 
@@ -1052,6 +1110,9 @@ const ProjectEditor = () => {
         backgroundH: textSettings.backgroundH,
         backgroundW: textSettings.backgroundW,
         backgroundBorderRadius: textSettings.backgroundBorderRadius,
+        textBorderColor: textSettings.textBorderColor, // Added
+        textBorderWidth: textSettings.textBorderWidth, // Added
+        textBorderOpacity: textSettings.textBorderOpacity, // Added
         keyframes: {},
       };
 
@@ -1085,6 +1146,9 @@ const ProjectEditor = () => {
           backgroundH: textSettings.backgroundH,
           backgroundW: textSettings.backgroundW,
           backgroundBorderRadius: textSettings.backgroundBorderRadius,
+          textBorderColor: textSettings.textBorderColor, // Added
+          textBorderWidth: textSettings.textBorderWidth, // Added
+          textBorderOpacity: textSettings.textBorderOpacity, // Added
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -1117,6 +1181,9 @@ const ProjectEditor = () => {
         backgroundH: newTextSegment.backgroundH ?? 0,
         backgroundW: newTextSegment.backgroundW ?? 0,
         backgroundBorderRadius: newTextSegment.backgroundBorderRadius ?? 0,
+        textBorderColor: newTextSegment.textBorderColor || 'transparent', // Added
+        textBorderWidth: newTextSegment.textBorderWidth ?? 0, // Added
+        textBorderOpacity: newTextSegment.textBorderOpacity ?? 1.0, // Added
         keyframes: newTextSegment.keyframes || {},
       };
 
@@ -1146,6 +1213,9 @@ const ProjectEditor = () => {
         backgroundH: updatedSegment.backgroundH,
         backgroundW: updatedSegment.backgroundW,
         backgroundBorderRadius: updatedSegment.backgroundBorderRadius,
+        textBorderColor: updatedSegment.textBorderColor, // Added
+        textBorderWidth: updatedSegment.textBorderWidth, // Added
+        textBorderOpacity: updatedSegment.textBorderOpacity, // Added
       });
       setIsTextToolOpen(true);
       preloadMedia();
@@ -1512,20 +1582,29 @@ const ProjectEditor = () => {
                   while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
                 }
                 newVideoLayers[layerIndex].push({
-                  id: textSegment.id,
+                  id: textSegment.textSegmentId,
                   type: 'text',
                   text: textSegment.text,
                   startTime: textSegment.timelineStartTime || 0,
                   duration: (textSegment.timelineEndTime - textSegment.timelineStartTime) || 0,
                   layer: layerIndex,
                   fontFamily: textSegment.fontFamily || 'Arial',
-                  scale: textSegment.scale || 1.0, // Use scale instead of
+                  scale: textSegment.scale || 1.0,
                   fontColor: textSegment.fontColor || '#FFFFFF',
                   backgroundColor: textSegment.backgroundColor || 'transparent',
                   positionX: textSegment.positionX || 0,
                   positionY: textSegment.positionY || 0,
-                  alignment: textSegment.alignment || 'center', // Include alignment
-                  keyframes: textSegment.keyframes || {}, // Add keyframes
+                  alignment: textSegment.alignment || 'center',
+                  backgroundOpacity: textSegment.backgroundOpacity ?? 1.0,
+                  backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0,
+                  backgroundBorderColor: textSegment.backgroundBorderColor || '#000000',
+                  backgroundH: textSegment.backgroundH ?? 0,
+                  backgroundW: textSegment.backgroundW ?? 0,
+                  backgroundBorderRadius: textSegment.backgroundBorderRadius ?? 0,
+                  textBorderColor: textSegment.textBorderColor || 'transparent', // Added
+                  textBorderWidth: textSegment.textBorderWidth ?? 0, // Added
+                  textBorderOpacity: textSegment.textBorderOpacity ?? 1.0, // Added
+                  keyframes: textSegment.keyframes || {},
                 });
               }
             }
@@ -1608,72 +1687,49 @@ const ProjectEditor = () => {
   };
 
   const fetchElements = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found in localStorage');
-        setElements([]);
-        return;
-      }
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('No token found in localStorage');
+          setElements([]);
+          return;
+        }
 
-      const response = await axios.get(`${API_BASE_URL}/projects/elements`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+        const response = await axios.get(`${API_BASE_URL}/api/global-elements`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      const updatedElements = await Promise.all(
-        response.data.map(async (element) => {
-          const thumbnail = await new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(element.fileName)}`;
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-              const maxWidth = 120;
-              const maxHeight = 80;
-              let width = img.width;
-              let height = img.height;
-              if (width > height) {
-                if (width > maxWidth) {
-                  height = (height * maxWidth) / width;
-                  width = maxWidth;
-                }
-              } else {
-                if (height > maxHeight) {
-                  width = (width * maxHeight) / height;
-                  height = maxHeight;
-                }
-              }
-              canvas.width = width;
-              canvas.height = height;
-              ctx.drawImage(img, 0, 0, width, height);
-              resolve(canvas.toDataURL('image/jpeg'));
+        console.log('Global elements response:', response.data); // Debug response
+
+        const updatedElements = response.data
+          .filter((element) => element.fileName && typeof element.fileName === 'string') // Filter valid elements
+          .map((element) => {
+            if (!element.fileName) {
+              console.warn('Element with missing fileName:', element);
+            }
+            return {
+              id: element.id || `element-${element.fileName || 'unknown'}-${Date.now()}`,
+              fileName: element.fileName || 'unknown.png', // Fallback
+              displayName: element.fileName || 'Untitled Element', // Use fileName directly
+              filePath: `${API_BASE_URL}/api/global-elements/${encodeURIComponent(element.fileName || 'unknown.png')}`,
+              thumbnail: `${API_BASE_URL}/api/global-elements/${encodeURIComponent(element.fileName || 'unknown.png')}`,
             };
-            img.onerror = () => resolve(null);
           });
-          return {
-            id: element.id || `element-${element.fileName}-${Date.now()}`,
-            fileName: element.fileName,
-            displayName: element.fileName.split('/').pop(),
-            filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(element.fileName)}`,
-            thumbnail,
-          };
-        })
-      );
-      setElements(updatedElements);
-    } catch (error) {
-      console.error('Error fetching elements:', error);
-      if (error.response?.status === 401) {
-        alert('Session expired. Please log in again.');
-        navigate('/login');
-      } else if (error.response?.status === 403) {
-        alert('You do not have permission to fetch elements. Please contact support.');
-      } else {
-        alert('Failed to fetch elements. Please try again.');
+
+        setElements(updatedElements);
+      } catch (error) {
+        console.error('Error fetching global elements:', error);
+        if (error.response?.status === 401) {
+          alert('Session expired. Please log in again.');
+          navigate('/login');
+        } else if (error.response?.status === 403) {
+          alert('You do not have permission to fetch elements. Please contact support.');
+        } else {
+          alert('Failed to fetch global elements. Please try again.');
+        }
+        setElements([]);
       }
-      setElements([]);
-    }
-  };
+    };
 
   const handleElementUpload = async (event) => {
     const files = Array.from(event.target.files);
@@ -1899,6 +1955,9 @@ const ProjectEditor = () => {
         backgroundH: style.backgroundH ?? 0,
         backgroundW: style.backgroundW ?? 0,
         backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
+        textBorderColor: style.textBorderColor || 'transparent', // Added
+        textBorderWidth: style.textBorderWidth ?? 0, // Added
+        textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
         keyframes: {},
       };
 
@@ -1932,6 +1991,9 @@ const ProjectEditor = () => {
           backgroundH: style.backgroundH ?? 0,
           backgroundW: style.backgroundW ?? 0,
           backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
+          textBorderColor: style.textBorderColor || 'transparent', // Added
+          textBorderWidth: style.textBorderWidth ?? 0, // Added
+          textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -1964,6 +2026,9 @@ const ProjectEditor = () => {
         backgroundH: newTextSegment.backgroundH ?? 0,
         backgroundW: newTextSegment.backgroundW ?? 0,
         backgroundBorderRadius: newTextSegment.backgroundBorderRadius ?? 0,
+        textBorderColor: newTextSegment.textBorderColor || 'transparent', // Added
+        textBorderWidth: newTextSegment.textBorderWidth ?? 0, // Added
+        textBorderOpacity: newTextSegment.textBorderOpacity ?? 1.0, // Added
         keyframes: newTextSegment.keyframes || {},
       };
 
@@ -1993,6 +2058,9 @@ const ProjectEditor = () => {
         backgroundH: updatedSegment.backgroundH,
         backgroundW: updatedSegment.backgroundW,
         backgroundBorderRadius: updatedSegment.backgroundBorderRadius,
+        textBorderColor: updatedSegment.textBorderColor, // Added
+        textBorderWidth: updatedSegment.textBorderWidth, // Added
+        textBorderOpacity: updatedSegment.textBorderOpacity, // Added
       });
       setIsTextToolOpen(true);
       preloadMedia();
@@ -2079,79 +2147,81 @@ const ProjectEditor = () => {
   }
 }, 300);
 
-const addImageToTimeline = async (imageFileName, layer, timelineStartTime, timelineEndTime, isElement = false) => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await axios.post(
-      `${API_BASE_URL}/projects/${projectId}/add-project-image-to-timeline`,
-      {
-        imageFileName,
-        layer: layer || 0,
-        timelineStartTime: timelineStartTime || 0,
-        timelineEndTime: timelineEndTime || timelineStartTime + 5,
-        isElement,
-      },
-      { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-    );
+  const addImageToTimeline = async (imageFileName, layer, timelineStartTime, timelineEndTime, isElement = false) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/add-project-image-to-timeline`,
+        {
+          imageFileName,
+          layer: layer || 0,
+          timelineStartTime: timelineStartTime || 0,
+          timelineEndTime: timelineEndTime || timelineStartTime + 5,
+          isElement,
+        },
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    const newImageSegment = response.data;
-    if (!newImageSegment) {
-      throw new Error(`Failed to add image segment for ${imageFileName}`);
-    }
-
-    const photo = photos.find((p) => p.fileName === imageFileName);
-    if (!photo && !isElement) {
-      throw new Error(`Photo with fileName ${imageFileName} not found`);
-    }
-
-    const newSegment = {
-      id: newImageSegment.id,
-      type: 'image',
-      fileName: imageFileName,
-      filePath: isElement
-        ? `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(imageFileName)}`
-        : photo?.filePath,
-      startTime: newImageSegment.timelineStartTime,
-      duration: newImageSegment.timelineEndTime - newImageSegment.timelineStartTime,
-      layer: layer || 0,
-      positionX: newImageSegment.positionX || 0,
-      positionY: newImageSegment.positionY || 0,
-      scale: newImageSegment.scale || 1,
-      opacity: newImageSegment.opacity || 1,
-      filters: newImageSegment.filters || [],
-      keyframes: newImageSegment.keyframes || {},
-      thumbnail: photo?.thumbnail,
-    };
-
-    let updatedVideoLayers = videoLayers;
-    setVideoLayers((prevLayers) => {
-      const newLayers = [...prevLayers];
-      while (newLayers.length <= layer) newLayers.push([]);
-      const exists = newLayers[layer].some((segment) => segment.id === newSegment.id);
-      if (!exists) {
-        newLayers[layer].push(newSegment);
-      } else {
-        console.warn(`Segment with id ${newSegment.id} already exists in layer ${layer}`);
+      const newImageSegment = response.data;
+      if (!newImageSegment) {
+        throw new Error(`Failed to add image segment for ${imageFileName}`);
       }
-      updatedVideoLayers = newLayers;
-      return newLayers;
-    });
 
-    setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
-    preloadMedia();
+      const photo = photos.find((p) => p.fileName === imageFileName);
+      if (!photo && !isElement) {
+        throw new Error(`Photo with fileName ${imageFileName} not found`);
+      }
 
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(updatedVideoLayers, audioLayers);
-    }, 1000);
+      // Ensure isElement is set based on the input parameter
+      const newSegment = {
+        id: newImageSegment.id,
+        type: 'image',
+        fileName: imageFileName,
+        filePath: isElement
+          ? `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(imageFileName)}`
+          : photo?.filePath,
+        startTime: newImageSegment.timelineStartTime,
+        duration: newImageSegment.timelineEndTime - newImageSegment.timelineStartTime,
+        layer: layer || 0,
+        positionX: newImageSegment.positionX || 0,
+        positionY: newImageSegment.positionY || 0,
+        scale: newImageSegment.scale || 1,
+        opacity: newImageSegment.opacity || 1,
+        filters: newImageSegment.filters || [],
+        keyframes: newImageSegment.keyframes || {},
+        thumbnail: photo?.thumbnail,
+        isElement: isElement || newImageSegment.element || false, // Explicitly set isElement
+      };
 
-    saveHistory();
-    return newSegment;
-  } catch (error) {
-    console.error('Error adding image to timeline:', error);
-    throw error;
-  }
-};
+      let updatedVideoLayers = videoLayers;
+      setVideoLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        while (newLayers.length <= layer) newLayers.push([]);
+        const exists = newLayers[layer].some((segment) => segment.id === newSegment.id);
+        if (!exists) {
+          newLayers[layer].push(newSegment);
+        } else {
+          console.warn(`Segment with id ${newSegment.id} already exists in layer ${layer}`);
+        }
+        updatedVideoLayers = newLayers;
+        return newLayers;
+      });
+
+      setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
+      preloadMedia();
+
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        autoSaveProject(updatedVideoLayers, audioLayers);
+      }, 1000);
+
+      saveHistory();
+      return newSegment;
+    } catch (error) {
+      console.error('Error adding image to timeline:', error);
+      throw error;
+    }
+  };
 
 const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineEndTime, startTimeWithinVideo, endTimeWithinVideo) => {
   try {
@@ -3050,6 +3120,9 @@ const saveSegmentChanges = async (updatedKeyframes = keyframes, tempValues = tem
           backgroundBorderColor: textSettings.backgroundBorderColor,
           backgroundPadding: textSettings.backgroundPadding,
           backgroundBorderRadius: textSettings.backgroundBorderRadius,
+          textBorderColor: textSettings.textBorderColor, // Added
+          textBorderWidth: textSettings.textBorderWidth, // Added
+          textBorderOpacity: textSettings.textBorderOpacity, // Added
           keyframes: updatedKeyframes,
         };
 
@@ -3086,6 +3159,9 @@ const saveSegmentChanges = async (updatedKeyframes = keyframes, tempValues = tem
               backgroundBorderColor: textPayload.backgroundBorderColor,
               backgroundPadding: textPayload.backgroundPadding,
               backgroundBorderRadius: textPayload.backgroundBorderRadius,
+              textBorderColor: textPayload.textBorderColor, // Added
+              textBorderWidth: textPayload.textBorderWidth, // Added
+              textBorderOpacity: textPayload.textBorderOpacity, // Added
               keyframes: textPayload.keyframes,
             };
           }
@@ -3583,23 +3659,23 @@ return (
                   {uploading ? 'Uploading...' : 'Upload Element'}
                 </label>
                 {elements.length === 0 ? (
-                  <div className="empty-state">Pour it in, I am waiting!</div>
-                ) : (
-                  <div className="element-list">
-                    {elements.map((element) => (
-                      <div
-                        key={element.id}
-                        className="element-item"
-                        draggable={true}
-                        onDragStart={(e) => handleMediaDragStart(e, element, 'element')}
-                        onClick={() => handleElementClick(element)}
-                      >
-                        <img src={element.thumbnail || element.filePath} alt={element.displayName} className="element-thumbnail" />
-                        <div className="element-title">{element.displayName}</div>
+                      <div className="empty-state">No elements available!</div>
+                    ) : (
+                      <div className="element-list">
+                        {elements.map((element) => (
+                          <div
+                            key={element.id}
+                            className="element-item"
+                            draggable={true}
+                            onDragStart={(e) => handleMediaDragStart(e, element, 'element')}
+                            onClick={() => handleElementClick(element)}
+                          >
+                            <img src={element.thumbnail || element.filePath} alt={element.displayName} className="element-thumbnail" />
+                            <div className="element-title">{element.displayName}</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )}
               </div>
             )}
           </div>
@@ -3624,13 +3700,15 @@ return (
                           backgroundColor: style.backgroundColor,
                           color: style.fontColor,
                           fontFamily: style.fontFamily,
-                          padding: `${Math.max(style.backgroundH / 2, style.backgroundW / 2)}px`, // Replace backgroundPadding
+                          padding: `${Math.max(style.backgroundH / 2, style.backgroundW / 2)}px`,
                           borderRadius: `${style.backgroundBorderRadius}px`,
                           border: `${style.backgroundBorderWidth}px solid ${style.backgroundBorderColor}`,
                           opacity: style.backgroundOpacity,
                           textAlign: style.alignment,
                           margin: '10px 0',
                           cursor: 'pointer',
+                          WebkitTextStroke: style.textBorderWidth > 0 ? `${style.textBorderWidth}px ${style.textBorderColor}` : 'none', // Added
+                          WebkitTextStrokeOpacity: style.textBorderOpacity || 1.0, // Added (Note: CSS does not support stroke opacity directly)
                         }}
                       >
                         {style.text}
@@ -3912,7 +3990,7 @@ return (
                 <input
                   type="number"
                   value={textSettings.backgroundH}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundH: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundH: parseInt(e.target.value)})}
                   min="0"
                   step="1"
                   style={{ width: '60px' }}
@@ -3923,7 +4001,7 @@ return (
                 <input
                   type="number"
                   value={textSettings.backgroundW}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundW: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundW: parseInt(e.target.value)})}
                   min="0"
                   step="1"
                   style={{ width: '60px' }}
@@ -3939,6 +4017,52 @@ return (
                   step="1"
                   style={{ width: '60px' }}
                 />
+              </div>
+              <div className="control-group">
+                <label>Text Border Color</label>
+                <input
+                  type="color"
+                  value={textSettings.textBorderColor === 'transparent' ? '#000000' : textSettings.textBorderColor}
+                  onChange={(e) =>
+                    updateTextSettings({
+                      ...textSettings,
+                      textBorderColor: e.target.value === '#000000' ? 'transparent' : e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="control-group">
+                <label>Text Border Width</label>
+                <input
+                  type="number"
+                  value={textSettings.textBorderWidth}
+                  onChange={(e) => updateTextSettings({ ...textSettings, textBorderWidth: parseInt(e.target.value) || 0 })}
+                  min="0"
+                  step="1"
+                  style={{ width: '60px' }}
+                />
+              </div>
+              <div className="control-group">
+                <label>Text Border Opacity</label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={textSettings.textBorderOpacity}
+                    onChange={(e) => updateTextSettings({ ...textSettings, textBorderOpacity: parseFloat(e.target.value) })}
+                  />
+                  <input
+                    type="number"
+                    value={textSettings.textBorderOpacity}
+                    onChange={(e) => updateTextSettings({ ...textSettings, textBorderOpacity: parseFloat(e.target.value) || 1.0 })}
+                    step="0.01"
+                    min="0"
+                    max="1"
+                    style={{ width: '60px', marginLeft: '10px' }}
+                  />
+                </div>
               </div>
               <div className="control-group">
                 <label>Alignment</label>

@@ -14,13 +14,16 @@ const TextSegmentHandler = ({
   roundToThreeDecimals, // Destructure roundToThreeDecimals
 }) => {
   const addTextToTimeline = async (targetLayer = 0, startTime = 0, updatedTextSettings) => {
-    if (!sessionId || !projectId) return;
+    if (!sessionId || !projectId) {
+      console.error('Missing sessionId or projectId');
+      return null;
+    }
     try {
       const token = localStorage.getItem('token');
       const duration = updatedTextSettings.duration || 5;
       const timelineStartTime = roundToThreeDecimals(startTime);
       const timelineEndTime = roundToThreeDecimals(startTime + duration);
-      await axios.post(
+      const response = await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-text`,
         {
           text: updatedTextSettings.text,
@@ -37,18 +40,85 @@ const TextSegmentHandler = ({
           backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
           backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
           backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
-          backgroundH: updatedTextSettings.backgroundH ?? 0, // Replace backgroundPadding
-          backgroundW: updatedTextSettings.backgroundW ?? 0, // Replace backgroundPadding
-          backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
+          backgroundH: updatedTextSettings.backgroundH ?? 0,
+          backgroundW: updatedTextSettings.backgroundW ?? 0,
+          backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0,
+          textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
+          textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
+          textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
         },
         {
           params: { sessionId },
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      loadProjectTimeline();
+
+      const segment = response.data;
+      const newSegment = {
+        id: segment.textSegmentId || `text-${Date.now()}`, // Use backend ID or fallback
+        type: 'text',
+        text: updatedTextSettings.text,
+        startTime: timelineStartTime,
+        duration,
+        layer: targetLayer,
+        fontFamily: updatedTextSettings.fontFamily,
+        scale: updatedTextSettings.scale || 1.0,
+        fontColor: updatedTextSettings.fontColor,
+        backgroundColor: updatedTextSettings.backgroundColor,
+        positionX: updatedTextSettings.positionX || 0,
+        positionY: updatedTextSettings.positionY || 0,
+        alignment: updatedTextSettings.alignment || 'center',
+        backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
+        backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
+        backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
+        backgroundH: updatedTextSettings.backgroundH ?? 0,
+        backgroundW: updatedTextSettings.backgroundW ?? 0,
+        backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0,
+        textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
+        textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
+        textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
+        timelineStartTime,
+        timelineEndTime,
+      };
+
+      setVideoLayers((prev) => {
+        const newLayers = [...prev];
+        while (newLayers.length <= targetLayer) newLayers.push([]);
+
+        // Check for duplicate IDs
+        let existingLayerIndex = -1;
+        for (let i = 0; i < newLayers.length; i++) {
+          if (newLayers[i].some((s) => s.id === newSegment.id)) {
+            existingLayerIndex = i;
+            break;
+          }
+        }
+
+        if (existingLayerIndex !== -1) {
+          console.warn(`Segment with ID ${newSegment.id} already exists in layer ${existingLayerIndex}. Updating instead.`);
+          newLayers[existingLayerIndex] = newLayers[existingLayerIndex].map((s) =>
+            s.id === newSegment.id ? { ...s, ...newSegment, layer: targetLayer } : s
+          );
+        } else {
+          newLayers[targetLayer].push(newSegment);
+        }
+
+        return newLayers;
+      });
+
+      saveHistory(videoLayers, []);
+      autoSave(videoLayers, []);
+      return newSegment;
     } catch (error) {
-      console.error('Error adding text to timeline:', error);
+      console.error('Error adding text to timeline:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      if (error.response?.status >= 500) {
+        await loadProjectTimeline();
+      }
+      return null;
     }
   };
 
@@ -72,6 +142,9 @@ const TextSegmentHandler = ({
         backgroundH: updatedTextSettings.backgroundH ?? 0, // Replace backgroundPadding
         backgroundW: updatedTextSettings.backgroundW ?? 0, // Replace backgroundPadding
         backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
+        textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
+        textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
+        textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
       };
       // Only include keyframes if explicitly provided (e.g., from Transform panel)
       if (updatedTextSettings.keyframes) {
@@ -124,6 +197,9 @@ const TextSegmentHandler = ({
             backgroundH: 0, // Replace backgroundPadding
             backgroundW: 0, // Replace backgroundPadding
             backgroundBorderRadius: 0, // New
+            textBorderColor: 'transparent', // Added
+            textBorderWidth: 0, // Added
+            textBorderOpacity: 1.0, // Added
           };
         }
       }
@@ -171,6 +247,9 @@ const TextSegmentHandler = ({
       backgroundH: draggingItem.backgroundH ?? 0, // Replace backgroundPadding
       backgroundW: draggingItem.backgroundW ?? 0, // Replace backgroundPadding
       backgroundBorderRadius: draggingItem.backgroundBorderRadius ?? 0, // New
+      textBorderColor: draggingItem.textBorderColor || 'transparent', // Added
+      textBorderWidth: draggingItem.textBorderWidth ?? 0, // Added
+      textBorderOpacity: draggingItem.textBorderOpacity ?? 1.0, // Added
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
     setVideoLayers(newVideoLayers);
@@ -210,6 +289,9 @@ const TextSegmentHandler = ({
         backgroundH: updatedTextSettings.backgroundH ?? 0, // Replace backgroundPadding
         backgroundW: updatedTextSettings.backgroundW ?? 0, // Replace backgroundPadding
         backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
+        textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
+        textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
+        textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
         timelineStartTime: roundToThreeDecimals(startTime),
         timelineEndTime: roundToThreeDecimals(startTime + duration),
       };
@@ -246,6 +328,9 @@ const TextSegmentHandler = ({
                 backgroundH: updatedTextSettings.backgroundH ?? 0, // Replace backgroundPadding
                 backgroundW: updatedTextSettings.backgroundW ?? 0, // Replace backgroundPadding
                 backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
+                textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
+                textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
+                textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
                 duration,
                 timelineEndTime: roundToThreeDecimals(item.startTime + duration),
               }
@@ -261,14 +346,24 @@ const TextSegmentHandler = ({
 
   const handleTextSplit = async (item, clickTime, layerIndex) => {
     const splitTime = clickTime - item.startTime;
-    if (splitTime <= 0.1 || splitTime >= item.duration - 0.1) return;
+    if (splitTime <= 0.1 || splitTime >= item.duration - 0.1) {
+      console.warn('Split time is too close to segment boundaries:', { splitTime, duration: item.duration });
+      return;
+    }
 
     const firstPartDuration = splitTime;
     const secondPartDuration = item.duration - splitTime;
-    let newVideoLayers = [...videoLayers];
-    const layer = newVideoLayers[layerIndex];
-    const itemIndex = layer.findIndex((i) => i.id === item.id);
 
+    console.log('Splitting text segment:', {
+      text: item.text,
+      startTime: item.startTime,
+      splitTime,
+      firstPartDuration,
+      secondPartDuration,
+      itemId: item.id,
+    });
+
+    // Create first part (update original segment)
     const firstPart = {
       ...item,
       duration: firstPartDuration,
@@ -277,15 +372,19 @@ const TextSegmentHandler = ({
       backgroundOpacity: item.backgroundOpacity ?? 1.0,
       backgroundBorderWidth: item.backgroundBorderWidth ?? 0,
       backgroundBorderColor: item.backgroundBorderColor || '#000000',
-      backgroundH: item.backgroundH ?? 0, // Replace backgroundPadding
-      backgroundW: item.backgroundW ?? 0, // Replace backgroundPadding
-      backgroundBorderRadius: item.backgroundBorderRadius ?? 0, // New
+      backgroundH: item.backgroundH ?? 0,
+      backgroundW: item.backgroundW ?? 0,
+      backgroundBorderRadius: item.backgroundBorderRadius ?? 0,
+      textBorderColor: item.textBorderColor || 'transparent', // Added
+      textBorderWidth: item.textBorderWidth ?? 0, // Added
+      textBorderOpacity: item.textBorderOpacity ?? 1.0, // Added
     };
-    layer[itemIndex] = firstPart;
 
+    // Create second part (temporary)
+    const temporarySecondPartId = `${item.id}-split-${Date.now()}`;
     const secondPart = {
       ...item,
-      id: `${item.id}-split-${Date.now()}`,
+      id: temporarySecondPartId,
       startTime: item.startTime + splitTime,
       duration: secondPartDuration,
       timelineStartTime: roundToThreeDecimals(item.startTime + splitTime),
@@ -295,31 +394,90 @@ const TextSegmentHandler = ({
       backgroundOpacity: item.backgroundOpacity ?? 1.0,
       backgroundBorderWidth: item.backgroundBorderWidth ?? 0,
       backgroundBorderColor: item.backgroundBorderColor || '#000000',
-      backgroundH: item.backgroundH ?? 0, // Replace backgroundPadding
-      backgroundW: item.backgroundW ?? 0, // Replace backgroundPadding
-      backgroundBorderRadius: item.backgroundBorderRadius ?? 0, // New
+      backgroundH: item.backgroundH ?? 0,
+      backgroundW: item.backgroundW ?? 0,
+      backgroundBorderRadius: item.backgroundBorderRadius ?? 0,
+      textBorderColor: item.textBorderColor || 'transparent', // Added
+      textBorderWidth: item.textBorderWidth ?? 0, // Added
+      textBorderOpacity: item.textBorderOpacity ?? 1.0, // Added
     };
-    layer.push(secondPart);
 
+    // Update videoLayers with both parts
+    let newVideoLayers = [...videoLayers];
+    const layer = [...newVideoLayers[layerIndex]];
+    const itemIndex = layer.findIndex((i) => i.id === item.id);
+
+    if (itemIndex === -1) {
+      console.error('Text segment not found in layer:', item.id);
+      return;
+    }
+
+    layer[itemIndex] = firstPart;
+    layer.push(secondPart);
     newVideoLayers[layerIndex] = layer;
     setVideoLayers(newVideoLayers);
     saveHistory(newVideoLayers, []);
 
-    await updateTextSegment(item.id, firstPart, item.startTime, layerIndex);
-    await addTextToTimeline(layerIndex, secondPart.startTime, {
-      ...secondPart,
-      duration: secondPartDuration,
-      alignment: secondPart.alignment,
-      scale: secondPart.scale,
-      backgroundOpacity: secondPart.backgroundOpacity,
-      backgroundBorderWidth: secondPart.backgroundBorderWidth,
-      backgroundBorderColor: secondPart.backgroundBorderColor,
-      backgroundH: secondPart.backgroundH, // Replace backgroundPadding
-      backgroundW: secondPart.backgroundW, // Replace backgroundPadding
-      backgroundBorderRadius: secondPart.backgroundBorderRadius, // New
-    });
-    autoSave(newVideoLayers, []);
-    await loadProjectTimeline();
+    try {
+      // Update the first part in the backend
+      await updateTextSegment(item.id, firstPart, item.startTime, layerIndex);
+      console.log(`Successfully updated first part: ${item.id}`);
+
+      // Remove temporary second part from state
+      setVideoLayers((prev) => {
+        const newLayers = [...prev];
+        newLayers[layerIndex] = newLayers[layerIndex].filter((s) => s.id !== temporarySecondPartId);
+        return newLayers;
+      });
+
+      // Add second part to timeline
+      const newSegment = await addTextToTimeline(layerIndex, secondPart.startTime, {
+        text: secondPart.text,
+        duration: secondPartDuration,
+        fontFamily: secondPart.fontFamily,
+        scale: secondPart.scale,
+        fontColor: secondPart.fontColor,
+        backgroundColor: secondPart.backgroundColor,
+        positionX: secondPart.positionX,
+        positionY: secondPart.positionY,
+        alignment: secondPart.alignment,
+        backgroundOpacity: secondPart.backgroundOpacity,
+        backgroundBorderWidth: secondPart.backgroundBorderWidth,
+        backgroundBorderColor: secondPart.backgroundBorderColor,
+        backgroundH: secondPart.backgroundH,
+        backgroundW: secondPart.backgroundW,
+        backgroundBorderRadius: secondPart.backgroundBorderRadius,
+        textBorderColor: secondPart.textBorderColor, // Added
+        textBorderWidth: secondPart.textBorderWidth, // Added
+        textBorderOpacity: secondPart.textBorderOpacity, // Added
+      });
+
+      if (!newSegment) {
+        throw new Error('Failed to add second part to timeline');
+      }
+
+      console.log('Successfully added second part to timeline:', newSegment);
+      saveHistory(videoLayers, []);
+      autoSave(videoLayers, []);
+    } catch (error) {
+      console.error('Error during text split:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      // Revert state on error
+      setVideoLayers((prev) => {
+        const newLayers = [...prev];
+        newLayers[layerIndex] = newLayers[layerIndex].map((i) =>
+          i.id === item.id ? item : i
+        ).filter((i) => i.id !== temporarySecondPartId);
+        return newLayers;
+      });
+      if (error.response?.status >= 500) {
+        await loadProjectTimeline();
+      }
+      return;
+    }
   };
 
   return { addTextToTimeline, updateTextSegment, handleTextDrop, handleSaveTextSegment, handleTextSplit };

@@ -932,6 +932,22 @@ const VideoPreview = ({
                   ? element.backgroundBorderColor
                   : 'transparent';
 
+                // Text border properties
+                const textBorderWidth = (element.textBorderWidth || 0) * scaleFactor;
+                const textBorderOpacity = element.textBorderOpacity !== undefined ? element.textBorderOpacity : 1.0;
+                let textBorderColor = element.textBorderColor || 'transparent';
+
+                // Adjust textBorderColor for opacity
+                if (textBorderColor !== 'transparent' && textBorderColor.startsWith('#')) {
+                  const hex = textBorderColor.replace('#', '');
+                  const r = parseInt(hex.substring(0, 2), 16);
+                  const g = parseInt(hex.substring(2, 4), 16);
+                  const b = parseInt(hex.substring(4, 6), 16);
+                  textBorderColor = `rgba(${r}, ${g}, ${b}, ${textBorderOpacity})`;
+                } else if (textBorderColor !== 'transparent') {
+                  textBorderColor = `rgba(${textBorderColor}, ${textBorderOpacity})`;
+                }
+
                 const textLines = element.text.split('\n');
                 const lineHeight = fontSize * 1.2;
                 const textHeight = textLines.length * lineHeight;
@@ -961,8 +977,9 @@ const VideoPreview = ({
                       borderWidth: `${borderWidth}px`,
                       borderStyle: borderWidth > 0 ? 'solid' : 'none',
                       borderColor: borderColor,
+                      WebkitTextStroke: textBorderWidth > 0 ? `${textBorderWidth}px ${textBorderColor}` : 'none', // Added
                       zIndex: element.layerIndex,
-                      whiteSpace: 'pre', // Preserve explicit newlines only
+                      whiteSpace: 'pre',
                       opacity,
                       filter: filterStyle,
                       transform: `translate(-50%, -50%) ${transform.trim()}`,
@@ -971,7 +988,6 @@ const VideoPreview = ({
                       display: 'inline-block',
                       textAlign: element.alignment || 'center',
                       boxSizing: 'content-box',
-                      // Removed maxWidth to prevent wrapping
                       transition: 'transform 0.016s linear, opacity 0.016s linear',
                     }}
                   >

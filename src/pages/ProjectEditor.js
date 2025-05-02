@@ -142,6 +142,8 @@ const ProjectEditor = () => {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [loadedAudioSegments, setLoadedAudioSegments] = useState(new Set()); // Track loaded audio segments
+  // Add this to the existing state declarations at the top of ProjectEditor
+  const [elementSearchQuery, setElementSearchQuery] = useState('');
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -1730,45 +1732,6 @@ const ProjectEditor = () => {
         setElements([]);
       }
     };
-
-  const handleElementUpload = async (event) => {
-    const files = Array.from(event.target.files);
-    if (files.length === 0) return;
-
-    const formData = new FormData();
-    files.forEach((file) => {
-      console.log('Appending file:', file.name);
-      formData.append('files', file);
-    });
-
-    try {
-      setUploading(true);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      await axios.post(`${API_BASE_URL}/projects/elements/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      await fetchElements();
-    } catch (error) {
-      console.error('Error uploading elements:', error);
-      if (error.response?.status === 403) {
-        alert('You do not have permission to upload elements. Please contact support.');
-      } else if (error.response?.status === 401) {
-        alert('Session expired. Please log in again.');
-        navigate('/login');
-      } else {
-        alert('Failed to upload one or more elements. Please try again.');
-      }
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleAudioUpload = async (event) => {
     const files = Array.from(event.target.files);
@@ -3495,6 +3458,11 @@ const resetFilters = async () => {
   }
 };
 
+// Add this before the return statement
+const filteredElements = elements.filter((element) =>
+  element.displayName.toLowerCase().includes(elementSearchQuery.toLowerCase())
+);
+
 return (
   <div className="project-editor">
     <aside className={`media-panel ${isMediaPanelOpen ? 'open' : 'closed'}`}>
@@ -3648,34 +3616,41 @@ return (
             {expandedSection === 'elements' && (
               <div className="section-content">
                 <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleElementUpload}
-                  id="upload-element"
-                  className="hidden-input"
-                  multiple
+                  type="text"
+                  placeholder="Search elements..."
+                  value={elementSearchQuery}
+                  onChange={(e) => setElementSearchQuery(e.target.value)}
+                  className="search-input"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    marginBottom: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ccc',
+                    boxSizing: 'border-box',
+                    fontSize: '14px',
+                  }}
                 />
-                <label htmlFor="upload-element" className="upload-button">
-                  {uploading ? 'Uploading...' : 'Upload Element'}
-                </label>
-                {elements.length === 0 ? (
-                      <div className="empty-state">No elements available!</div>
-                    ) : (
-                      <div className="element-list">
-                        {elements.map((element) => (
-                          <div
-                            key={element.id}
-                            className="element-item"
-                            draggable={true}
-                            onDragStart={(e) => handleMediaDragStart(e, element, 'element')}
-                            onClick={() => handleElementClick(element)}
-                          >
-                            <img src={element.thumbnail || element.filePath} alt={element.displayName} className="element-thumbnail" />
-                            <div className="element-title">{element.displayName}</div>
-                          </div>
-                        ))}
+                {filteredElements.length === 0 ? (
+                  <div className="empty-state">
+                    {elementSearchQuery ? 'No elements match your search.' : 'No elements available!'}
+                  </div>
+                ) : (
+                  <div className="element-list">
+                    {filteredElements.map((element) => (
+                      <div
+                        key={element.id}
+                        className="element-item"
+                        draggable={true}
+                        onDragStart={(e) => handleMediaDragStart(e, element, 'element')}
+                        onClick={() => handleElementClick(element)}
+                      >
+                        <img src={element.thumbnail || element.filePath} alt={element.displayName} className="element-thumbnail" />
+                        <div className="element-title">{element.displayName}</div>
                       </div>
-                    )}
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

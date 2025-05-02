@@ -1687,72 +1687,49 @@ const ProjectEditor = () => {
   };
 
   const fetchElements = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found in localStorage');
-        setElements([]);
-        return;
-      }
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('No token found in localStorage');
+          setElements([]);
+          return;
+        }
 
-      const response = await axios.get(`${API_BASE_URL}/projects/elements`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+        const response = await axios.get(`${API_BASE_URL}/api/global-elements`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      const updatedElements = await Promise.all(
-        response.data.map(async (element) => {
-          const thumbnail = await new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(element.fileName)}`;
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-              const maxWidth = 120;
-              const maxHeight = 80;
-              let width = img.width;
-              let height = img.height;
-              if (width > height) {
-                if (width > maxWidth) {
-                  height = (height * maxWidth) / width;
-                  width = maxWidth;
-                }
-              } else {
-                if (height > maxHeight) {
-                  width = (width * maxHeight) / height;
-                  height = maxHeight;
-                }
-              }
-              canvas.width = width;
-              canvas.height = height;
-              ctx.drawImage(img, 0, 0, width, height);
-              resolve(canvas.toDataURL('image/jpeg'));
+        console.log('Global elements response:', response.data); // Debug response
+
+        const updatedElements = response.data
+          .filter((element) => element.fileName && typeof element.fileName === 'string') // Filter valid elements
+          .map((element) => {
+            if (!element.fileName) {
+              console.warn('Element with missing fileName:', element);
+            }
+            return {
+              id: element.id || `element-${element.fileName || 'unknown'}-${Date.now()}`,
+              fileName: element.fileName || 'unknown.png', // Fallback
+              displayName: element.fileName || 'Untitled Element', // Use fileName directly
+              filePath: `${API_BASE_URL}/api/global-elements/${encodeURIComponent(element.fileName || 'unknown.png')}`,
+              thumbnail: `${API_BASE_URL}/api/global-elements/${encodeURIComponent(element.fileName || 'unknown.png')}`,
             };
-            img.onerror = () => resolve(null);
           });
-          return {
-            id: element.id || `element-${element.fileName}-${Date.now()}`,
-            fileName: element.fileName,
-            displayName: element.fileName.split('/').pop(),
-            filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(element.fileName)}`,
-            thumbnail,
-          };
-        })
-      );
-      setElements(updatedElements);
-    } catch (error) {
-      console.error('Error fetching elements:', error);
-      if (error.response?.status === 401) {
-        alert('Session expired. Please log in again.');
-        navigate('/login');
-      } else if (error.response?.status === 403) {
-        alert('You do not have permission to fetch elements. Please contact support.');
-      } else {
-        alert('Failed to fetch elements. Please try again.');
+
+        setElements(updatedElements);
+      } catch (error) {
+        console.error('Error fetching global elements:', error);
+        if (error.response?.status === 401) {
+          alert('Session expired. Please log in again.');
+          navigate('/login');
+        } else if (error.response?.status === 403) {
+          alert('You do not have permission to fetch elements. Please contact support.');
+        } else {
+          alert('Failed to fetch global elements. Please try again.');
+        }
+        setElements([]);
       }
-      setElements([]);
-    }
-  };
+    };
 
   const handleElementUpload = async (event) => {
     const files = Array.from(event.target.files);
@@ -3682,23 +3659,23 @@ return (
                   {uploading ? 'Uploading...' : 'Upload Element'}
                 </label>
                 {elements.length === 0 ? (
-                  <div className="empty-state">Pour it in, I am waiting!</div>
-                ) : (
-                  <div className="element-list">
-                    {elements.map((element) => (
-                      <div
-                        key={element.id}
-                        className="element-item"
-                        draggable={true}
-                        onDragStart={(e) => handleMediaDragStart(e, element, 'element')}
-                        onClick={() => handleElementClick(element)}
-                      >
-                        <img src={element.thumbnail || element.filePath} alt={element.displayName} className="element-thumbnail" />
-                        <div className="element-title">{element.displayName}</div>
+                      <div className="empty-state">No elements available!</div>
+                    ) : (
+                      <div className="element-list">
+                        {elements.map((element) => (
+                          <div
+                            key={element.id}
+                            className="element-item"
+                            draggable={true}
+                            onDragStart={(e) => handleMediaDragStart(e, element, 'element')}
+                            onClick={() => handleElementClick(element)}
+                          >
+                            <img src={element.thumbnail || element.filePath} alt={element.displayName} className="element-thumbnail" />
+                            <div className="element-title">{element.displayName}</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )}
               </div>
             )}
           </div>

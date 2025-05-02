@@ -537,27 +537,39 @@ const ProjectEditor = () => {
   };
 
   const handleElementClick = async (element, isDragEvent = false) => {
-      if (uploading || isDragEvent) return;
-      try {
+    if (uploading || isDragEvent) return;
+    try {
       let endTime = 0;
       videoLayers.forEach((layer) => {
-      layer.forEach((segment) => {
-      const segmentEndTime = segment.startTime + segment.duration;
-      if (segmentEndTime > endTime) endTime = segmentEndTime;
-      });
+        layer.forEach((segment) => {
+          const segmentEndTime = segment.startTime + segment.duration;
+          if (segmentEndTime > endTime) endTime = segmentEndTime;
+        });
       });
       const timelineStartTime = endTime;
       const duration = 5;
       const selectedLayer = findAvailableLayer(timelineStartTime, timelineStartTime + duration, videoLayers);
 
-      // Use ImageSegmentHandler's addImageToTimeline
       const newSegment = await addImageToTimeline(
-      element.fileName,
-      selectedLayer,
-      roundToThreeDecimals(timelineStartTime),
-      roundToThreeDecimals(timelineStartTime + duration),
-      true // isElement
+        element.fileName,
+        selectedLayer,
+        roundToThreeDecimals(timelineStartTime),
+        roundToThreeDecimals(timelineStartTime + duration),
+        true // isElement
       );
+
+      // Explicitly add the segment to videoLayers with isElement: true
+      setVideoLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        while (newLayers.length <= selectedLayer) newLayers.push([]);
+        const exists = newLayers[selectedLayer].some((segment) => segment.id === newSegment.id);
+        if (!exists) {
+          newLayers[selectedLayer].push({ ...newSegment, isElement: true }); // Ensure isElement is set
+        } else {
+          console.warn(`Segment with id ${newSegment.id} already exists in layer ${selectedLayer}`);
+        }
+        return newLayers;
+      });
 
       setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
       preloadMedia();
@@ -565,13 +577,13 @@ const ProjectEditor = () => {
 
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(videoLayers, audioLayers);
+        autoSaveProject(videoLayers, audioLayers);
       }, 1000);
-      } catch (error) {
+    } catch (error) {
       console.error('Error adding element to timeline:', error);
       alert('Failed to add element to timeline. Please try again.');
-      }
-     };
+    }
+  };
 
   const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
     if (uploading || isDragEvent) return;
@@ -2143,79 +2155,81 @@ const ProjectEditor = () => {
   }
 }, 300);
 
-const addImageToTimeline = async (imageFileName, layer, timelineStartTime, timelineEndTime, isElement = false) => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await axios.post(
-      `${API_BASE_URL}/projects/${projectId}/add-project-image-to-timeline`,
-      {
-        imageFileName,
-        layer: layer || 0,
-        timelineStartTime: timelineStartTime || 0,
-        timelineEndTime: timelineEndTime || timelineStartTime + 5,
-        isElement,
-      },
-      { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-    );
+  const addImageToTimeline = async (imageFileName, layer, timelineStartTime, timelineEndTime, isElement = false) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/add-project-image-to-timeline`,
+        {
+          imageFileName,
+          layer: layer || 0,
+          timelineStartTime: timelineStartTime || 0,
+          timelineEndTime: timelineEndTime || timelineStartTime + 5,
+          isElement,
+        },
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    const newImageSegment = response.data;
-    if (!newImageSegment) {
-      throw new Error(`Failed to add image segment for ${imageFileName}`);
-    }
-
-    const photo = photos.find((p) => p.fileName === imageFileName);
-    if (!photo && !isElement) {
-      throw new Error(`Photo with fileName ${imageFileName} not found`);
-    }
-
-    const newSegment = {
-      id: newImageSegment.id,
-      type: 'image',
-      fileName: imageFileName,
-      filePath: isElement
-        ? `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(imageFileName)}`
-        : photo?.filePath,
-      startTime: newImageSegment.timelineStartTime,
-      duration: newImageSegment.timelineEndTime - newImageSegment.timelineStartTime,
-      layer: layer || 0,
-      positionX: newImageSegment.positionX || 0,
-      positionY: newImageSegment.positionY || 0,
-      scale: newImageSegment.scale || 1,
-      opacity: newImageSegment.opacity || 1,
-      filters: newImageSegment.filters || [],
-      keyframes: newImageSegment.keyframes || {},
-      thumbnail: photo?.thumbnail,
-    };
-
-    let updatedVideoLayers = videoLayers;
-    setVideoLayers((prevLayers) => {
-      const newLayers = [...prevLayers];
-      while (newLayers.length <= layer) newLayers.push([]);
-      const exists = newLayers[layer].some((segment) => segment.id === newSegment.id);
-      if (!exists) {
-        newLayers[layer].push(newSegment);
-      } else {
-        console.warn(`Segment with id ${newSegment.id} already exists in layer ${layer}`);
+      const newImageSegment = response.data;
+      if (!newImageSegment) {
+        throw new Error(`Failed to add image segment for ${imageFileName}`);
       }
-      updatedVideoLayers = newLayers;
-      return newLayers;
-    });
 
-    setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
-    preloadMedia();
+      const photo = photos.find((p) => p.fileName === imageFileName);
+      if (!photo && !isElement) {
+        throw new Error(`Photo with fileName ${imageFileName} not found`);
+      }
 
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(updatedVideoLayers, audioLayers);
-    }, 1000);
+      // Ensure isElement is set based on the input parameter
+      const newSegment = {
+        id: newImageSegment.id,
+        type: 'image',
+        fileName: imageFileName,
+        filePath: isElement
+          ? `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(imageFileName)}`
+          : photo?.filePath,
+        startTime: newImageSegment.timelineStartTime,
+        duration: newImageSegment.timelineEndTime - newImageSegment.timelineStartTime,
+        layer: layer || 0,
+        positionX: newImageSegment.positionX || 0,
+        positionY: newImageSegment.positionY || 0,
+        scale: newImageSegment.scale || 1,
+        opacity: newImageSegment.opacity || 1,
+        filters: newImageSegment.filters || [],
+        keyframes: newImageSegment.keyframes || {},
+        thumbnail: photo?.thumbnail,
+        isElement: isElement || newImageSegment.element || false, // Explicitly set isElement
+      };
 
-    saveHistory();
-    return newSegment;
-  } catch (error) {
-    console.error('Error adding image to timeline:', error);
-    throw error;
-  }
-};
+      let updatedVideoLayers = videoLayers;
+      setVideoLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        while (newLayers.length <= layer) newLayers.push([]);
+        const exists = newLayers[layer].some((segment) => segment.id === newSegment.id);
+        if (!exists) {
+          newLayers[layer].push(newSegment);
+        } else {
+          console.warn(`Segment with id ${newSegment.id} already exists in layer ${layer}`);
+        }
+        updatedVideoLayers = newLayers;
+        return newLayers;
+      });
+
+      setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
+      preloadMedia();
+
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = setTimeout(() => {
+        autoSaveProject(updatedVideoLayers, audioLayers);
+      }, 1000);
+
+      saveHistory();
+      return newSegment;
+    } catch (error) {
+      console.error('Error adding image to timeline:', error);
+      throw error;
+    }
+  };
 
 const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineEndTime, startTimeWithinVideo, endTimeWithinVideo) => {
   try {

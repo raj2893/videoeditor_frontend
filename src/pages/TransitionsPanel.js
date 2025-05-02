@@ -43,7 +43,12 @@ const TransitionsPanel = ({
             draggable
             onDragStart={(e) => handleTransitionDragStart(e, transition)}
           >
-            <img src={transition.icon} alt={transition.label} className="transition-icon" />
+            <img
+              src={`/images/${transition.type}.png`}
+              alt={transition.label}
+              className="transition-icon"
+              style={{ borderRadius: '10%' }}
+            />
             <span>{transition.label}</span>
           </div>
         ))}

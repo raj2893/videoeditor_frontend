@@ -346,6 +346,10 @@ const TimelineComponent = ({
               while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
               const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
               const audioUrl = `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(filename)}`;
+              // Construct waveform URL if waveformPath exists, else use default
+              const waveformImage = audioSegment.waveformPath
+                ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformPath.split('/').pop())}`
+                : '/images/audio.jpeg';
               console.log(`Audio segment ID ${audioSegment.id}: no filters applied`);
               const newSegment = {
                 id: audioSegment.id,
@@ -360,11 +364,12 @@ const TimelineComponent = ({
                 startTimeWithinAudio: audioSegment.startTime || 0,
                 endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
                 displayName: filename,
-                waveformImage: '/images/audio.jpeg',
+                waveformImage: waveformImage,
                 volume: audioSegment.volume || 1.0,
                 keyframes: audioSegment.keyframes || {},
+                isExtracted: audioSegment.isExtracted || false, // Include isExtracted from backend
               };
-              console.log(`Created audio segment, ${audioSegment.id} with URL: ${audioUrl}`, newSegment);
+              console.log(`Created audio segment, ${audioSegment.id} with URL: ${audioUrl}, waveform: ${waveformImage}`, newSegment);
               newAudioLayers[layerIndex].push(newSegment);
             }
           } else {
@@ -647,7 +652,25 @@ const TimelineComponent = ({
         dragOffset,
         snapIndicators
       );
-      if (audioDropResult === undefined) {
+      if (audioDropResult && audioDropResult.newSegment) {
+        // Update waveformImage and isExtracted based on backend response
+        const waveformImage = audioDropResult.response.waveformPath
+          ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(audioDropResult.response.waveformPath.split('/').pop())}`
+          : '/images/audio.jpeg';
+        setAudioLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          const layerIndex = Math.abs(audioDropResult.newSegment.layer) - 1;
+          newLayers[layerIndex] = newLayers[layerIndex].map((segment) =>
+            segment.id === audioDropResult.newSegment.id
+              ? {
+                  ...segment,
+                  waveformImage,
+                  isExtracted: audioDropResult.response.isExtracted || false, // Include isExtracted from backend
+                }
+              : segment
+          );
+          return newLayers;
+        });
         setDraggingItem(null);
         setDragLayer(null);
         setDragOffset(0);
@@ -655,6 +678,11 @@ const TimelineComponent = ({
         saveHistory();
         return;
       }
+      setDraggingItem(null);
+      setDragLayer(null);
+      setDragOffset(0);
+      setSnapIndicators([]);
+      saveHistory();
     }
 
     if (dragData?.type === 'media' || (draggingItem && draggingItem.type === 'video')) {
@@ -913,16 +941,9 @@ const TimelineComponent = ({
           await videoHandler.handleVideoSplit(foundItem, clickTime, adjustedLayerIndex);
           saveHistory();
         } else if (foundItem.type === 'audio') {
-          const isExtracted = foundItem.fileName.includes('extracted_') || foundItem.fileName.includes('extracted/');
-          console.log('Audio split: isExtracted=', isExtracted, 'fileName=', foundItem.fileName);
-          if (isExtracted) {
-            console.log('Calling handleExtractedAudioSplit for:', foundItem.id);
-            await audioHandler.handleExtractedAudioSplit(foundItem, clickTime, adjustedLayerIndex);
-            saveHistory();
-          } else {
-            console.log('Calling handleAudioSplit for:', foundItem.id);
-            await audioHandler.handleAudioSplit(foundItem, clickTime, adjustedLayerIndex);
-          }
+          console.log('Splitting audio:', foundItem.id, 'isExtracted=', foundItem.isExtracted);
+          await audioHandler.handleAudioSplit(foundItem, clickTime, adjustedLayerIndex);
+          saveHistory();
         } else if (foundItem.type === 'text') {
           console.log('Splitting text:', foundItem.id);
           await textHandler.handleTextSplit(foundItem, clickTime, adjustedLayerIndex);

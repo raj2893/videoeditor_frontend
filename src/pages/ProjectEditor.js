@@ -2585,6 +2585,9 @@ const handleSegmentSelect = async (segment) => {
             );
             return newLayers;
           });
+
+          // Force re-render of VideoPreview to ensure filters are applied
+          setCurrentTime((prev) => prev + 0);
         } catch (error) {
           console.error('Error fetching filters for segment:', error);
           setAppliedFilters([]);
@@ -3319,7 +3322,10 @@ const updateFilters = async (newFilterParams) => {
       }
     }
 
+    // Update appliedFilters state
     setAppliedFilters(updatedFilters);
+
+    // Update videoLayers with the new filters
     let updatedVideoLayers = videoLayers;
     setVideoLayers((prevLayers) => {
       const newLayers = [...prevLayers];
@@ -3329,15 +3335,23 @@ const updateFilters = async (newFilterParams) => {
       updatedVideoLayers = newLayers;
       return newLayers;
     });
+
+    // Update selectedSegment to propagate filter changes
     setSelectedSegment((prev) => ({ ...prev, filters: updatedFilters }));
 
+    // Force VideoPreview to re-render
+    setCurrentTime((prev) => prev + 0); // Micro-update to trigger re-render
+
+    // Schedule auto-save
     if (filterUpdateTimeoutRef.current) clearTimeout(filterUpdateTimeoutRef.current);
     filterUpdateTimeoutRef.current = setTimeout(() => {
       autoSaveProject(updatedVideoLayers, audioLayers);
     }, 1000);
+
     saveHistory();
   } catch (error) {
     console.error('Error updating filters:', error);
+    alert('Failed to apply filters. Please try again.');
   }
 };
 

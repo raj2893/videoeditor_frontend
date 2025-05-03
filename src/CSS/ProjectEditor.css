@@ -193,11 +193,9 @@
 .photo-title,
 .audio-title {
   font-size: 12px;
-  margin-top: 5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: center;
 }
 
 .audio-item {

@@ -404,7 +404,7 @@ const VideoPreview = ({
   const videoLayerIds = useMemo(() => {
     return videoLayers
       .flat()
-      .filter((item) => item.type === 'video')
+      .filter((item) => item.type === 'video' || item.type === 'image')
       .map((item) => `${item.id}-${item.filePath}`)
       .join('|');
   }, [videoLayers]);

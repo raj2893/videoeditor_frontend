@@ -46,6 +46,7 @@ const TimelineComponent = ({
   canUndo,
   canRedo,
   currentTime, // Added prop to receive currentTime from ProjectEditor
+  preloadMedia, // Add preloadMedia prop
 }) => {
   // Removed local playhead and currentTime states
   const [timelineVideos, setTimelineVideos] = useState([]);
@@ -475,7 +476,9 @@ const TimelineComponent = ({
     loadProjectTimeline,
     API_BASE_URL,
     timelineRef,
-    roundToThreeDecimals
+    roundToThreeDecimals,
+    setTotalDuration, // Pass setTotalDuration from props
+    preloadMedia, // Pass preloadMedia from ProjectEditor
   });
 
   const generalHandler = GeneralSegmentHandler({

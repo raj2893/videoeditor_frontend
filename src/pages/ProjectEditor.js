@@ -588,156 +588,195 @@ const ProjectEditor = () => {
   };
 
   const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
-    if (uploading || isDragEvent) return;
-    try {
-      const token = localStorage.getItem('token');
-      if (!sessionId || !projectId || !token) {
-        throw new Error('Missing sessionId, projectId, or token');
-      }
-
-      const duration = audio.duration || 5;
-      let timelineStartTime = roundToThreeDecimals(currentTime);
-
-      const findAvailableLayer = (start, end, layers) => {
-        for (let layerIndex = 0; layerIndex < layers.length; layerIndex++) {
-          const hasOverlap = layers[layerIndex].some((segment) => {
-            const segmentStart = segment.startTime;
-            const segmentEnd = segmentStart + segment.duration;
-            return start < segmentEnd && end > segmentStart;
-          });
-          if (!hasOverlap) return layerIndex;
+      if (uploading || isDragEvent) return;
+      try {
+        const token = localStorage.getItem('token');
+        if (!sessionId || !projectId || !token) {
+          throw new Error('Missing sessionId, projectId, or token');
         }
-        return layers.length;
-      };
 
-      const proposedEndTime = timelineStartTime + duration;
-      let selectedLayerIndex = findAvailableLayer(timelineStartTime, proposedEndTime, audioLayers);
+        const duration = audio.duration || 5;
+        let timelineStartTime = roundToThreeDecimals(currentTime);
 
-      if (selectedLayerIndex >= audioLayers.length) {
-        let earliestStartTime = timelineStartTime;
-        let foundLayer = -1;
+        const findAvailableLayer = (start, end, layers) => {
+          for (let layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+            const hasOverlap = layers[layerIndex].some((segment) => {
+              const segmentStart = segment.startTime;
+              const segmentEnd = segmentStart + segment.duration;
+              return start < segmentEnd && end > segmentStart;
+            });
+            if (!hasOverlap) return layerIndex;
+          }
+          return layers.length;
+        };
 
-        for (let layerIndex = 0; layerIndex < audioLayers.length; layerIndex++) {
-          const layer = audioLayers[layerIndex];
-          let layerEndTime = 0;
-          layer.forEach((segment) => {
-            const segmentEnd = segment.startTime + segment.duration;
-            if (segmentEnd > layerEndTime) layerEndTime = segmentEnd;
-          });
-          if (layerEndTime < earliestStartTime) {
-            earliestStartTime = layerEndTime;
-            foundLayer = layerIndex;
+        const proposedEndTime = timelineStartTime + duration;
+        let selectedLayerIndex = findAvailableLayer(timelineStartTime, proposedEndTime, audioLayers);
+
+        if (selectedLayerIndex >= audioLayers.length) {
+          let earliestStartTime = timelineStartTime;
+          let foundLayer = -1;
+
+          for (let layerIndex = 0; layerIndex < audioLayers.length; layerIndex++) {
+            const layer = audioLayers[layerIndex];
+            let layerEndTime = 0;
+            layer.forEach((segment) => {
+              const segmentEnd = segment.startTime + segment.duration;
+              if (segmentEnd > layerEndTime) layerEndTime = segmentEnd;
+            });
+            if (layerEndTime < earliestStartTime) {
+              earliestStartTime = layerEndTime;
+              foundLayer = layerIndex;
+            }
+          }
+
+          if (foundLayer >= 0) {
+            selectedLayerIndex = foundLayer;
+            timelineStartTime = roundToThreeDecimals(earliestStartTime);
+          } else {
+            selectedLayerIndex = audioLayers.length;
           }
         }
 
-        if (foundLayer >= 0) {
-          selectedLayerIndex = foundLayer;
-          timelineStartTime = roundToThreeDecimals(earliestStartTime);
-        } else {
-          selectedLayerIndex = audioLayers.length;
+        const backendLayer = -(selectedLayerIndex + 1);
+
+        // Generate unique temporary ID
+        const doesIdExist = (id) => {
+          return audioLayers.some((layer) => layer.some((segment) => segment.id === id));
+        };
+        let tempId = `temp-${uuidv4()}`;
+        while (doesIdExist(tempId)) {
+          tempId = `temp-${uuidv4()}`;
         }
-      }
 
-      const backendLayer = -(selectedLayerIndex + 1);
-
-      // Use UUID for temporary ID
-      const tempId = `temp-${uuidv4()}`;
-
-      const newSegment = {
-        id: tempId,
-        type: 'audio',
-        fileName: audio.fileName,
-        audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(audio.fileName)}`,
-        displayName: audio.displayName || audio.fileName.split('/').pop(),
-        waveformImage: audio.waveformImage || '/images/audio.jpeg',
-        startTime: timelineStartTime,
-        duration: duration,
-        layer: backendLayer,
-        volume: 1.0,
-        startTimeWithinAudio: 0,
-        endTimeWithinAudio: duration,
-        timelineStartTime: timelineStartTime,
-        timelineEndTime: timelineStartTime + duration,
-        keyframes: {},
-      };
-
-      let updatedAudioLayers = audioLayers;
-      setAudioLayers((prevLayers) => {
-        const newLayers = [...prevLayers];
-        while (newLayers.length <= selectedLayerIndex) newLayers.push([]);
-        newLayers[selectedLayerIndex].push(newSegment);
-        updatedAudioLayers = newLayers;
-        return newLayers;
-      });
-
-      setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
-      preloadMedia();
-      saveHistory();
-
-      const response = await axios.post(
-        `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
-        {
-          audioFileName: audio.fileName,
+        const newSegment = {
+          id: tempId,
+          type: 'audio',
+          fileName: audio.fileName,
+          audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(audio.fileName)}`,
+          displayName: audio.displayName || audio.fileName.split('/').pop(),
+          waveformImage: audio.waveformImage || '/images/audio.jpeg',
+          startTime: timelineStartTime,
+          duration: duration,
           layer: backendLayer,
-          timelineStartTime: roundToThreeDecimals(timelineStartTime),
-          timelineEndTime: roundToThreeDecimals(timelineStartTime + duration),
-          startTime: roundToThreeDecimals(0),
-          endTime: roundToThreeDecimals(duration),
           volume: 1.0,
-        },
-        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-      );
+          startTimeWithinAudio: 0,
+          endTimeWithinAudio: duration,
+          timelineStartTime: timelineStartTime,
+          timelineEndTime: timelineStartTime + duration,
+          keyframes: {},
+        };
 
-      const newAudioSegment = response.data;
+        let updatedAudioLayers = audioLayers;
+        setAudioLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          while (newLayers.length <= selectedLayerIndex) newLayers.push([]);
 
-      // Validate response
-      if (!newAudioSegment.audioSegmentId) {
-        throw new Error('Backend did not return audioSegmentId');
-      }
+          // Check for existing segment with the same ID
+          let existingLayerIndex = -1;
+          let existingSegment = null;
+          for (let i = 0; i < newLayers.length; i++) {
+            const found = newLayers[i].find((s) => s.id === newSegment.id);
+            if (found) {
+              existingSegment = found;
+              existingLayerIndex = i;
+              break;
+            }
+          }
 
-      setAudioLayers((prevLayers) => {
-        const newLayers = [...prevLayers];
-        newLayers[selectedLayerIndex] = newLayers[selectedLayerIndex].map((item) =>
-          item.id === tempId
-            ? {
-                ...item,
-                id: newAudioSegment.audioSegmentId,
-                volume: newAudioSegment.volume || 1.0,
-                keyframes: newAudioSegment.keyframes || {},
-                startTimeWithinAudio: roundToThreeDecimals(newAudioSegment.startTime || 0),
-                endTimeWithinAudio: roundToThreeDecimals(newAudioSegment.endTime || duration),
-                duration: roundToThreeDecimals(newAudioSegment.timelineEndTime - newAudioSegment.timelineStartTime),
-                timelineStartTime: roundToThreeDecimals(newAudioSegment.timelineStartTime),
-                timelineEndTime: roundToThreeDecimals(newAudioSegment.timelineEndTime),
-                layer: newAudioSegment.layer || backendLayer,
-              }
-            : item
+          if (existingSegment) {
+            console.warn(`Segment with ID ${newSegment.id} already exists in layer ${existingLayerIndex}. Updating instead.`);
+            newLayers[existingLayerIndex] = newLayers[existingLayerIndex].map((s) =>
+              s.id === newSegment.id ? { ...s, ...newSegment, layer: backendLayer } : s
+            );
+          } else {
+            newLayers[selectedLayerIndex].push(newSegment);
+          }
+
+          updatedAudioLayers = newLayers;
+          return newLayers;
+        });
+
+        setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
+        preloadMedia();
+        saveHistory();
+
+        const response = await axios.post(
+          `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
+          {
+            audioFileName: audio.fileName,
+            layer: backendLayer,
+            timelineStartTime: roundToThreeDecimals(timelineStartTime),
+            timelineEndTime: roundToThreeDecimals(timelineStartTime + duration),
+            startTime: roundToThreeDecimals(0),
+            endTime: roundToThreeDecimals(duration),
+            volume: 1.0,
+          },
+          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
         );
-        updatedAudioLayers = newLayers;
-        return newLayers;
-      });
 
-      autoSaveProject(videoLayers, updatedAudioLayers);
-    } catch (error) {
-      console.error('Error adding audio to timeline:', error.response?.data || error.message);
-      setAudioLayers((prevLayers) => {
-        const newLayers = [...prevLayers];
-        newLayers.forEach((layer, index) => {
-          newLayers[index] = layer.filter((item) => !item.id.startsWith('temp-'));
+        const newAudioSegment = response.data;
+
+        if (!newAudioSegment.audioSegmentId) {
+          throw new Error('Backend did not return audioSegmentId');
+        }
+
+        // Ensure backend ID is unique
+        let finalSegmentId = newAudioSegment.audioSegmentId;
+        if (doesIdExist(finalSegmentId)) {
+          console.warn(`Backend returned duplicate audioSegmentId ${finalSegmentId}. Generating new ID.`);
+          finalSegmentId = `${finalSegmentId}-${uuidv4()}`;
+        }
+
+        setAudioLayers((prevLayers) => {
+          const newLayers = prevLayers.map((layer, index) => {
+            if (index === selectedLayerIndex) {
+              return layer.map((item) =>
+                item.id === tempId
+                  ? {
+                      ...item,
+                      id: finalSegmentId,
+                      volume: newAudioSegment.volume || 1.0,
+                      keyframes: newAudioSegment.keyframes || {},
+                      startTimeWithinAudio: roundToThreeDecimals(newAudioSegment.startTime || 0),
+                      endTimeWithinAudio: roundToThreeDecimals(newAudioSegment.endTime || duration),
+                      duration: roundToThreeDecimals(
+                        newAudioSegment.timelineEndTime - newAudioSegment.timelineStartTime
+                      ),
+                      timelineStartTime: roundToThreeDecimals(newAudioSegment.timelineStartTime),
+                      timelineEndTime: roundToThreeDecimals(newAudioSegment.timelineEndTime),
+                      layer: newAudioSegment.layer || backendLayer,
+                    }
+                  : item
+              );
+            }
+            return layer;
+          });
+          updatedAudioLayers = newLayers;
+          return newLayers;
         });
-        return newLayers;
-      });
-      let maxEndTime = 0;
-      [...videoLayers, ...audioLayers].forEach((layer) => {
-        layer.forEach((item) => {
-          const endTime = item.startTime + item.duration;
-          if (endTime > maxEndTime) maxEndTime = endTime;
+
+        autoSaveProject(videoLayers, updatedAudioLayers);
+      } catch (error) {
+        console.error('Error adding audio to timeline:', error.response?.data || error.message);
+        setAudioLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          newLayers.forEach((layer, index) => {
+            newLayers[index] = layer.filter((item) => !item.id.startsWith('temp-'));
+          });
+          return newLayers;
         });
-      });
-      setTotalDuration(maxEndTime);
-      alert('Failed to add audio to timeline. Please try again.');
-    }
-  }, 300);
+        let maxEndTime = 0;
+        [...videoLayers, ...audioLayers].forEach((layer) => {
+          layer.forEach((item) => {
+            const endTime = item.startTime + item.duration;
+            if (endTime > maxEndTime) maxEndTime = endTime;
+          });
+        });
+        setTotalDuration(maxEndTime);
+        alert('Failed to add audio to timeline. Please try again.');
+      }
+    }, 300);
 
   const toggleTransitionsPanel = () => {
     setIsTransitionsOpen((prev) => !prev);
@@ -3398,19 +3437,166 @@ const handleRemoveFilter = async (filterName) => {
 };
 
 const updateFilterSetting = (filterName, filterValue) => {
-  setFilterParams((prev) => {
-    const newParams = {
-      ...prev,
-      [filterName]: filterValue,
-    };
-    if (filterUpdateTimeoutRef.current) {
-      clearTimeout(filterUpdateTimeoutRef.current);
+  if (!selectedSegment || !projectId) return;
+
+  // Update filterParams for the UI
+  setFilterParams((prev) => ({
+    ...prev,
+    [filterName]: filterValue,
+  }));
+
+  // Debounce the filter update
+  if (filterUpdateTimeoutRef.current) {
+    clearTimeout(filterUpdateTimeoutRef.current);
+  }
+  filterUpdateTimeoutRef.current = setTimeout(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Auth token:', token); // Debug log
+      if (!token) {
+        console.error('No token found for API request');
+        alert('Authentication token missing. Please log in again.');
+        navigate('/login');
+        return;
+      }
+
+      const segmentId = selectedSegment.id;
+      console.log('Applying filter:', { filterName, filterValue, segmentId }); // Debug log
+
+      // Use existing sessionId if available; otherwise, start a new session
+      let currentSessionId = sessionId;
+      if (!currentSessionId) {
+        console.log('No sessionId found, starting new editing session');
+        const sessionResponse = await fetch(`http://localhost:8080/projects/${projectId}/session`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!sessionResponse.ok) {
+          const errorText = await sessionResponse.text();
+          throw new Error(`Failed to start editing session: ${sessionResponse.status} ${errorText}`);
+        }
+        currentSessionId = await sessionResponse.text();
+        console.log('New Session ID:', currentSessionId); // Debug log
+        setSessionId(currentSessionId); // Update sessionId state
+      } else {
+        console.log('Using existing Session ID:', currentSessionId); // Debug log
+      }
+
+      // Update local videoLayers state
+      let filterId = null;
+      setVideoLayers((prevLayers) =>
+        prevLayers.map((layer, layerIndex) =>
+          layer.map((segment) => {
+            if (
+              segment.id === selectedSegment.id &&
+              segment.layer === selectedSegment.layer &&
+              layerIndex === selectedSegment.layer
+            ) {
+              const currentFilters = Array.isArray(segment.filters) ? segment.filters : [];
+              let newFilters;
+
+              if (filterValue === '' || filterValue === null || filterValue === undefined) {
+                newFilters = currentFilters.filter((f) => f.filterName !== filterName);
+              } else {
+                const existingFilter = currentFilters.find((f) => f.filterName === filterName);
+                filterId = existingFilter ? existingFilter.filterId : crypto.randomUUID(); // Generate filterId if new
+                newFilters = [
+                  ...currentFilters.filter((f) => f.filterName !== filterName),
+                  { filterId, filterName, filterValue: filterValue.toString(), segmentId },
+                ];
+              }
+
+              return {
+                ...segment,
+                filters: newFilters,
+              };
+            }
+            return segment;
+          })
+        )
+      );
+
+      // Update selectedSegment.filters to keep UI in sync
+      setSelectedSegment((prev) => {
+        const currentFilters = Array.isArray(prev.filters) ? prev.filters : [];
+        let newFilters;
+        if (filterValue === '' || filterValue === null || filterValue === undefined) {
+          newFilters = currentFilters.filter((f) => f.filterName !== filterName);
+        } else {
+          newFilters = [
+            ...currentFilters.filter((f) => f.filterName !== filterName),
+            { filterId: filterId || crypto.randomUUID(), filterName, filterValue: filterValue.toString(), segmentId },
+          ];
+        }
+        return { ...prev, filters: newFilters };
+      });
+
+      // Save to backend
+      if (filterValue === '' || filterValue === null || filterValue === undefined) {
+        console.log('Removing filter:', { filterName, segmentId }); // Debug log
+        const response = await fetch(
+          `http://localhost:8080/projects/${projectId}/remove-filter?sessionId=${currentSessionId}&segmentId=${segmentId}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        const responseText = await response.text();
+        console.log('Remove filter response:', responseText || 'Empty response'); // Debug log
+        if (!response.ok) {
+          throw new Error(`Failed to remove filter ${filterName}: ${response.status} ${responseText}`);
+        }
+        console.log(`Filter ${filterName} removed for segment ${segmentId}`);
+      } else {
+        const requestBody = {
+          filterId: filterId || crypto.randomUUID(), // Ensure filterId is included
+          segmentId,
+          filterName,
+          filterValue: filterValue.toString(),
+        };
+        console.log('Sending filter request:', requestBody); // Debug log
+        const response = await fetch(
+          `http://localhost:8080/projects/${projectId}/apply-filter?sessionId=${currentSessionId}`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+          }
+        );
+        const responseText = await response.text();
+        console.log('Apply filter response:', responseText || 'Empty response'); // Debug log
+        if (!response.ok) {
+          throw new Error(`Failed to apply filter ${filterName}: ${response.status} ${responseText}`);
+        }
+        // Handle empty response (backend returns 200 OK with no body)
+        let responseData = {};
+        if (responseText) {
+          try {
+            responseData = JSON.parse(responseText);
+          } catch (e) {
+            console.warn('Response is not JSON, treating as empty:', responseText);
+          }
+        }
+        console.log(`Filter ${filterName} applied for segment ${segmentId} with value ${filterValue}`, responseData); // Debug log
+      }
+
+      // Trigger auto-save to persist state
+      await autoSaveProject(videoLayers, audioLayers);
+      console.log('Auto-save triggered after filter update');
+    } catch (error) {
+      console.error('Error saving filter to backend:', error);
+      alert(`Failed to save filter changes: ${error.message}`);
     }
-    filterUpdateTimeoutRef.current = setTimeout(() => {
-      updateFilters({ [filterName]: filterValue });
-    }, 500);
-    return newParams;
-  });
+  }, 500);
 };
 
 useEffect(() => {
@@ -3785,6 +3971,7 @@ return (
               canUndo={canUndo}
               canRedo={canRedo}
               currentTime={currentTime}
+              preloadMedia={preloadMedia} // Add this line
             />
           ) : (
             <div className="loading-message">Loading timeline...</div>

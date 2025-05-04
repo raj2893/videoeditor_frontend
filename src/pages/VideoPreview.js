@@ -33,6 +33,7 @@ const VideoPreview = ({
   const glCanvasRef = useRef(null);
   const glTextureRefs = useRef({});
   const fxCanvasRef = useRef(null);
+  const [videoDimensions, setVideoDimensions] = useState({});
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -403,7 +404,7 @@ const VideoPreview = ({
   const videoLayerIds = useMemo(() => {
     return videoLayers
       .flat()
-      .filter((item) => item.type === 'video')
+      .filter((item) => item.type === 'video' || item.type === 'image')
       .map((item) => `${item.id}-${item.filePath}`)
       .join('|');
   }, [videoLayers]);
@@ -447,7 +448,11 @@ const VideoPreview = ({
           preloadRefs.current[item.id] = video;
 
           return new Promise((resolve) => {
-            video.onloadeddata = () => {
+            video.onloadedmetadata = () => {
+              setVideoDimensions((prev) => ({
+                ...prev,
+                [item.id]: { width: video.videoWidth, height: video.videoHeight },
+              }));
               try {
                 if (fxCanvasRef.current) {
                   const texture = fxCanvasRef.current.texture(video);
@@ -751,8 +756,8 @@ const VideoPreview = ({
               }
 
               if (element.type === 'video') {
-                const videoWidth = element.width || 1080;
-                const videoHeight = element.height || 1920;
+                const videoWidth = videoDimensions[element.id]?.width || canvasDimensions.width;
+                const videoHeight = videoDimensions[element.id]?.height || canvasDimensions.height;
 
                 let displayWidth = videoWidth * scaleFactor;
                 let displayHeight = videoHeight * scaleFactor;
@@ -785,7 +790,19 @@ const VideoPreview = ({
                         transformOrigin: 'center center',
                       }}
                       onError={(e) => console.error(`Error loading video ${element.filePath}:`, e)}
-                      onLoadedData={() => console.log(`Video ${element.filePath} loaded`)}
+                      onLoadedData={() => {
+                        console.log(`Video ${element.filePath} loaded`);
+                        // Update dimensions if not already set
+                        if (videoRefs.current[element.id] && !videoDimensions[element.id]) {
+                          setVideoDimensions((prev) => ({
+                            ...prev,
+                            [element.id]: {
+                              width: videoRefs.current[element.id].videoWidth,
+                              height: videoRefs.current[element.id].videoHeight,
+                            },
+                          }));
+                        }
+                      }}
                       preload="auto"
                     />
                     {webglFilters.length > 0 && (

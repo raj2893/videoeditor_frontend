@@ -13,6 +13,8 @@ const TimelineLayer = ({
   selectedSegmentId,
   transitions,
   onTransitionSelect,
+  isSplitMode, // Add isSplitMode prop
+  handleSplit, // Add handleSplit prop to trigger splitting
 }) => {
   const isAudioLayer = layer.some((item) => item.type === 'audio');
 
@@ -61,7 +63,7 @@ const TimelineLayer = ({
           return (
             <div
               key={item.id}
-              data-id={item.id} // Added data-id attribute
+              data-id={item.id}
               className={`timeline-item ${
                 item.type === 'text'
                   ? 'text-segment'
@@ -76,7 +78,13 @@ const TimelineLayer = ({
               style={style}
               onClick={(e) => {
                 e.stopPropagation();
-                if (item.type === 'text') {
+                if (isSplitMode) {
+                  // In split mode, trigger split at the clicked position
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const clickX = e.clientX - rect.left;
+                  const clickTime = item.startTime + clickX / timeScale;
+                  handleSplit(item, clickTime, layerIndex);
+                } else if (item.type === 'text') {
                   handleEditTextSegment(item, e);
                 } else {
                   handleVideoSelect(item.id);

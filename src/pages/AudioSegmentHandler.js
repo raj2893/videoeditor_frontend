@@ -740,7 +740,30 @@ const AudioSegmentHandler = ({
     }
   };
 
-  return { handleAudioDrop, updateAudioSegment, handleAudioSplit };
+  const fetchAudioDuration = async (fileName) => {
+    try {
+      if (!projectId || !fileName) {
+        console.error('Missing projectId or fileName', { projectId, fileName });
+        return null;
+      }
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+      const response = await axios.get(
+        `${API_BASE_URL}/projects/${projectId}/audio-duration/${encodeURIComponent(fileName)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data; // Duration in seconds
+    } catch (error) {
+      console.error('Error fetching audio duration:', error.response?.data || error.message);
+      return null;
+    }
+  };
+
+  return { handleAudioDrop, updateAudioSegment, handleAudioSplit, fetchAudioDuration };
 };
 
 export default AudioSegmentHandler;

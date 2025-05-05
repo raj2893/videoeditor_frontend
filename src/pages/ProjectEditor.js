@@ -1330,36 +1330,42 @@ const ProjectEditor = () => {
     }
   };
 
-  const fetchAudios = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const project = response.data;
-      if (project.audioJson) {
-        let audioFiles =
-          typeof project.audioJson === 'string' ? JSON.parse(project.audioJson) : project.audioJson;
-        if (Array.isArray(audioFiles)) {
-          const updatedAudios = audioFiles.map((audio) => ({
-            id: audio.audioPath || `audio-${audio.audioFileName}-${Date.now()}`,
-            fileName: audio.audioFileName,
-            displayName: audio.audioFileName.split('/').pop(),
-            waveformImage: '/images/audio.jpeg',
-            url: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(audio.audioFileName)}`,
-          }));
-          setAudios(updatedAudios);
+    const fetchAudios = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const project = response.data;
+        if (project.audioJson) {
+          let audioFiles =
+            typeof project.audioJson === 'string' ? JSON.parse(project.audioJson) : project.audioJson;
+          if (Array.isArray(audioFiles)) {
+            const updatedAudios = audioFiles.map((audio) => {
+              const fullFileName = audio.audioPath.split('/').pop();
+              const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
+              return {
+                id: audio.audioPath || `audio-${fullFileName}-${Date.now()}`,
+                fileName: fullFileName,
+                displayName: originalFileName,
+                audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(fullFileName)}`,
+                waveformImage: audio.waveformPath
+                  ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(audio.waveformPath.split('/').pop())}`
+                  : '/images/audio.jpeg',
+              };
+            });
+            setAudios(updatedAudios);
+          } else {
+            setAudios([]);
+          }
         } else {
           setAudios([]);
         }
-      } else {
+      } catch (error) {
+        console.error('Error fetching audios:', error);
         setAudios([]);
       }
-    } catch (error) {
-      console.error('Error fetching audios:', error);
-      setAudios([]);
-    }
-  };
+    };
 
   const fetchPhotos = async () => {
     try {
@@ -1772,48 +1778,53 @@ const ProjectEditor = () => {
       }
     };
 
-  const handleAudioUpload = async (event) => {
-    const files = Array.from(event.target.files);
-    if (files.length === 0) return;
+    const handleAudioUpload = async (event) => {
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
 
-    const formData = new FormData();
-    files.forEach((file) => {
-      formData.append('audio', file);
-      formData.append('audioFileNames', file.name);
-    });
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('audio', file);
+        formData.append('audioFileNames', file.name);
+      });
 
-    try {
-      setUploading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/projects/${projectId}/upload-audio`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
-      );
-      const updatedProject = response.data;
-      if (updatedProject && updatedProject.audioJson) {
-        let audioFiles =
-          typeof updatedProject.audioJson === 'string'
-            ? JSON.parse(updatedProject.audioJson)
-            : updatedProject.audioJson;
-        if (Array.isArray(audioFiles)) {
-          const updatedAudios = audioFiles.map((audio) => ({
-            id: audio.audioPath || `audio-${audio.audioFileName}-${Date.now()}`,
-            fileName: audio.audioFileName,
-            displayName: audio.audioFileName.split('/').pop(),
-            audioPath: `${API_BASE_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.audioFileName)}`,
-            waveformImage: '/images/audio.jpeg',
-          }));
+      try {
+        setUploading(true);
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+          `${API_BASE_URL}/projects/${projectId}/upload-audio`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
+        );
+        const { project, audioFiles } = response.data;
+
+        // Update state with audioFiles from response
+        if (audioFiles && Array.isArray(audioFiles)) {
+          const updatedAudios = audioFiles.map((audio) => {
+            const fullFileName = audio.audioFileName.split('/').pop();
+            const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
+            return {
+              id: audio.audioPath || `audio-${fullFileName}-${Date.now()}`,
+              fileName: fullFileName,
+              displayName: originalFileName,
+              audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(fullFileName)}`,
+              waveformImage: audio.waveformPath
+                ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(audio.waveformPath.split('/').pop())}`
+                : '/images/audio.jpeg',
+            };
+          });
           setAudios(updatedAudios);
         }
+
+        // Fetch audios to ensure consistency
+        if (project) await fetchAudios();
+      } catch (error) {
+        console.error('Error uploading audio files:', error);
+        alert('Failed to upload one or more audio files. Please try again.');
+      } finally {
+        setUploading(false);
       }
-    } catch (error) {
-      console.error('Error uploading audio files:', error);
-      alert('Failed to upload one or more audio files. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-  };
+    };
 
   const generateVideoThumbnail = async (video) => {
     if (!video || (!video.filePath && !video.filename)) return;
@@ -2610,11 +2621,24 @@ const handleSegmentSelect = async (segment) => {
             hue: 0,
             blur: 0,
             sharpen: 0,
+            grayscale: '',
+            invert: '',
+            rotate: 0,
+            flip: '', // Include flip with default empty string
           };
+          // Update filterParams based on fetched filters
           filters.forEach((filter) => {
-            initialFilterParams[filter.filterName] =
-              parseFloat(filter.filterValue) || initialFilterParams[filter.filterName];
+            if (filter.filterName === 'flip') {
+              // Ensure flip value is one of '', 'horizontal', 'vertical', or 'both'
+              initialFilterParams.flip = ['horizontal', 'vertical', 'both'].includes(filter.filterValue)
+                ? filter.filterValue
+                : '';
+            } else {
+              initialFilterParams[filter.filterName] =
+                parseFloat(filter.filterValue) || initialFilterParams[filter.filterName];
+            }
           });
+
           setFilterParams(initialFilterParams);
 
           setVideoLayers((prevLayers) => {
@@ -2637,6 +2661,10 @@ const handleSegmentSelect = async (segment) => {
             hue: 0,
             blur: 0,
             sharpen: 0,
+            grayscale: '',
+            invert: '',
+            rotate: 0,
+            flip: '', // Reset flip to empty string on error
           });
         }
       } else {
@@ -2648,6 +2676,10 @@ const handleSegmentSelect = async (segment) => {
           hue: 0,
           blur: 0,
           sharpen: 0,
+          grayscale: '',
+          invert: '',
+          rotate: 0,
+          flip: '', // Ensure flip is reset for non-video/image segments
         });
       }
       await fetchTransitions();

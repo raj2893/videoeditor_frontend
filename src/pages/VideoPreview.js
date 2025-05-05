@@ -742,9 +742,10 @@ const VideoPreview = ({
                 transform += `rotate(${parseInt(rotateFilter.filterValue)}deg) `;
               }
               if (flipFilter) {
-                if (flipFilter.filterValue === 'horizontal') {
+                if (flipFilter.filterValue === 'horizontal' || flipFilter.filterValue === 'both') {
                   transform += 'scaleX(-1) ';
-                } else if (flipFilter.filterValue === 'vertical') {
+                }
+                if (flipFilter.filterValue === 'vertical' || flipFilter.filterValue === 'both') {
                   transform += 'scaleY(-1) ';
                 }
               }
@@ -954,7 +955,7 @@ const VideoPreview = ({
                 const textBorderOpacity = element.textBorderOpacity !== undefined ? element.textBorderOpacity : 1.0;
                 let textBorderColor = element.textBorderColor || 'transparent';
 
-                // Adjust textBorderColor for opacity
+                // Convert textBorderColor to rgba format for canvas
                 if (textBorderColor !== 'transparent' && textBorderColor.startsWith('#')) {
                   const hex = textBorderColor.replace('#', '');
                   const r = parseInt(hex.substring(0, 2), 16);
@@ -968,48 +969,167 @@ const VideoPreview = ({
                 const textLines = element.text.split('\n');
                 const lineHeight = fontSize * 1.2;
                 const textHeight = textLines.length * lineHeight;
-                const longestLine = textLines.reduce((a, b) => a.length > b.length ? a : b, '');
-                const approxTextWidth = longestLine.length * fontSize * 0.6;
 
-                const contentWidth = approxTextWidth + bgWidth;
-                const contentHeight = textHeight + bgHeight;
-                const minDimension = Math.min(contentWidth, contentHeight);
+                // Calculate text width more accurately
+                const ctx = document.createElement('canvas').getContext('2d');
+                ctx.font = `${fontSize}px ${element.fontFamily || 'Arial'}`;
+                // Replace textWidths calculation
+                const textWidths = textLines.map(line => ctx.measureText(line).width);
+                const maxTextWidth = Math.max(...textWidths);
+
+                // Replace the existing calculations
+                const effectiveContentWidth = element.backgroundW === 0
+                  ? maxTextWidth + textBorderWidth * 2 // Include text border width for zero bgWidth
+                  : maxTextWidth + bgWidth + textBorderWidth * 2; // Include text border width
+                const contentHeight = textHeight + bgHeight + textBorderWidth * 2; // Include text border height
+
+                const minDimension = Math.min(effectiveContentWidth, contentHeight);
                 const maxRadius = minDimension / 2;
                 const effectiveBorderRadius = Math.min(bgBorderRadius, maxRadius);
 
+                // Replace canvas size calculation
+                const canvasWidth = effectiveContentWidth + 2 * textBorderWidth + 2 * borderWidth;
+                const canvasHeight = contentHeight + 2 * textBorderWidth + 2 * borderWidth;
+
+                // Replace canvas position calculation
+                const leftPos = centerX - (effectiveContentWidth + 2 * textBorderWidth + 2 * borderWidth) / 2 + positionX + transitionPosX;
+                const topPos = centerY - (contentHeight + 2 * textBorderWidth + 2 * borderWidth) / 2 + positionY + transitionPosY;
+
                 return (
-                  <div
+                  <canvas
                     key={element.id}
-                    className="preview-text"
+                    ref={(canvas) => {
+                      if (canvas) {
+                        canvas.width = canvasWidth;
+                        canvas.height = canvasHeight;
+                        const ctx = canvas.getContext('2d');
+
+                        // Clear canvas
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        // Set background with rounded corners if needed
+                        // Inside the canvas ref callback, replace the background drawing logic
+                        // Replace background drawing logic
+                        // Replace background drawing logic (only the border drawing part)
+                        if (bgColorStyle !== 'transparent') {
+                          ctx.save();
+                          ctx.fillStyle = bgColorStyle;
+                          const offset = textBorderWidth + borderWidth; // Match backend's bgBorderWidth + textBorderWidth
+                          if (effectiveBorderRadius > 0) {
+                            const x = offset;
+                            const y = offset;
+                            const width = effectiveContentWidth;
+                            const height = contentHeight;
+                            const radius = effectiveBorderRadius;
+
+                            ctx.beginPath();
+                            ctx.moveTo(x + radius, y);
+                            ctx.lineTo(x + width - radius, y);
+                            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                            ctx.lineTo(x + width, y + height - radius);
+                            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                            ctx.lineTo(x + radius, y + height);
+                            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                            ctx.lineTo(x, y + radius);
+                            ctx.quadraticCurveTo(x, y, x + radius, y);
+                            ctx.closePath();
+                            ctx.fill();
+                          } else {
+                            ctx.fillRect(offset, offset, effectiveContentWidth, contentHeight);
+                          }
+
+                          // Draw border if needed
+                          if (borderWidth > 0 && borderColor !== 'transparent') {
+                            ctx.lineWidth = borderWidth;
+                            ctx.strokeStyle = borderColor;
+                            const borderOffset = textBorderWidth + borderWidth / 2; // Match backend's bgBorderWidth / 2 + textBorderWidth
+                            if (effectiveBorderRadius > 0) {
+                              const x = borderOffset;
+                              const y = borderOffset;
+                              const width = effectiveContentWidth + borderWidth;
+                              const height = contentHeight + borderWidth;
+                              const radius = effectiveBorderRadius + borderWidth;
+
+                              ctx.beginPath();
+                              ctx.moveTo(x + radius, y);
+                              ctx.lineTo(x + width - radius, y);
+                              ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                              ctx.lineTo(x + width, y + height - radius);
+                              ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                              ctx.lineTo(x + radius, y + height);
+                              ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                              ctx.lineTo(x, y + radius);
+                              ctx.quadraticCurveTo(x, y, x + radius, y);
+                              ctx.closePath();
+                              ctx.stroke();
+                            } else {
+                              ctx.strokeRect(borderOffset, borderOffset, effectiveContentWidth + borderWidth, contentHeight + borderWidth);
+                            }
+                          }
+                          ctx.restore();
+                        }
+
+                        // Prepare font settings
+                        ctx.textBaseline = 'middle';
+                        const fontStyle = `${fontSize}px ${element.fontFamily || 'Arial'}`;
+                        ctx.font = fontStyle;
+
+                        // Calculate text alignment
+                        // Replace text alignment and vertical center calculations
+                        let textX = textBorderWidth + borderWidth; // Match backend's bgBorderWidth + textBorderWidth
+                        const alignment = element.alignment || 'center';
+
+                        // Calculate text position based on alignment
+                        if (alignment === 'center') {
+                          ctx.textAlign = 'center';
+                          textX += effectiveContentWidth / 2;
+                        } else if (alignment === 'left') {
+                          ctx.textAlign = 'left';
+                        } else if (alignment === 'right') {
+                          ctx.textAlign = 'right';
+                          textX += effectiveContentWidth;
+                        }
+
+                        // Calculate the vertical center of the content area
+                        const contentVerticalCenter = textBorderWidth + borderWidth + contentHeight / 2;
+                        const totalTextBlockHeight = textLines.length * lineHeight;
+                        const startY = contentVerticalCenter - totalTextBlockHeight / 2 + lineHeight / 2;
+
+                        // Draw text border if needed
+                        if (textBorderWidth > 0 && textBorderColor !== 'transparent') {
+                          ctx.lineWidth = textBorderWidth; // Double for better visibility
+                          ctx.strokeStyle = textBorderColor;
+                          ctx.lineJoin = 'round'; // Smooth corners for text stroke
+
+                          // Draw each line of text with border
+                          textLines.forEach((line, index) => {
+                            const textY = startY + index * lineHeight;
+                            ctx.strokeText(line, textX, textY);
+                          });
+                        }
+
+                        // Draw the text fill
+                        ctx.fillStyle = element.fontColor || '#FFFFFF';
+                        textLines.forEach((line, index) => {
+                          const textY = startY + index * lineHeight;
+                          ctx.fillText(line, textX, textY);
+                        });
+                      }
+                    }}
+                    className="preview-text-canvas"
                     style={{
                       position: 'absolute',
-                      left: `${centerX}px`,
-                      top: `${centerY}px`,
-                      fontFamily: element.fontFamily || 'Arial',
-                      fontSize: `${fontSize}px`,
-                      color: element.fontColor || '#FFFFFF',
-                      background: bgColorStyle,
-                      padding: `${bgHeight / 2}px ${bgWidth / 2}px`,
-                      borderRadius: `${effectiveBorderRadius}px`,
-                      borderWidth: `${borderWidth}px`,
-                      borderStyle: borderWidth > 0 ? 'solid' : 'none',
-                      borderColor: borderColor,
-                      WebkitTextStroke: textBorderWidth > 0 ? `${textBorderWidth}px ${textBorderColor}` : 'none', // Added
+                      left: `${leftPos}px`,
+                      top: `${topPos}px`,
                       zIndex: element.layerIndex,
-                      whiteSpace: 'pre',
                       opacity,
                       filter: filterStyle,
-                      transform: `translate(-50%, -50%) ${transform.trim()}`,
-                      transformOrigin: 'center center',
+                      transform: transform.trim(),
                       clipPath,
-                      display: 'inline-block',
-                      textAlign: element.alignment || 'center',
-                      boxSizing: 'content-box',
                       transition: 'transform 0.016s linear, opacity 0.016s linear',
+                      transformOrigin: 'center center',
                     }}
-                  >
-                    {element.text}
-                  </div>
+                  />
                 );
               }
               return null;

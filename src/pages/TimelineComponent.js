@@ -479,6 +479,7 @@ const TimelineComponent = ({
     roundToThreeDecimals,
     setTotalDuration, // Pass setTotalDuration from props
     preloadMedia, // Pass preloadMedia from ProjectEditor
+    videoLayers, // Ensure videoLayers is passed
   });
 
   const generalHandler = GeneralSegmentHandler({
@@ -508,7 +509,9 @@ const TimelineComponent = ({
     updateImageSegment: imageHandler.updateImageSegment,
     updateAudioSegment: audioHandler.updateAudioSegment,
     fetchVideoDuration: videoHandler.fetchVideoDuration,
-    currentTime
+    fetchAudioDuration: audioHandler.fetchAudioDuration, // Pass fetchAudioDuration
+    currentTime,
+    roundToThreeDecimals
   });
 
   useEffect(() => {
@@ -877,14 +880,32 @@ const TimelineComponent = ({
 
     console.log('handleTimelineClick: isSplitMode=', isSplitMode, 'clickTime=', clickTime, 'reversedIndex=', reversedIndex, 'totalVideoLayers=', totalVideoLayers, 'totalAudioLayers=', totalAudioLayers, 'clickX=', clickX, 'timeScale=', timeScale);
 
-    if (reversedIndex <= totalVideoLayers) {
-      clickedLayerIndex = totalVideoLayers - reversedIndex;
-    } else if (reversedIndex >= totalVideoLayers + 1 && reversedIndex < totalLayers - 1) {
-      clickedLayerIndex = totalLayers - 2 - reversedIndex;
+    // Calculate the actual audio layer index that was clicked
+    // Audio layers start after video layers + 1 (for spacing)
+    if (reversedIndex > totalVideoLayers && reversedIndex < totalLayers - 1) {
+      // This is an audio layer
       isAudioLayer = true;
+
+      // Calculate which audio layer was clicked (0-based index)
+      // audioLayerIndex = reversedIndex - (totalVideoLayers + 1)
+      const audioLayerIndex = reversedIndex - (totalVideoLayers + 1);
+
+      console.log('Audio layer clicked: audioLayerIndex=', audioLayerIndex);
+
+      // Make sure we're within valid range
+      if (audioLayerIndex >= 0 && audioLayerIndex < audioLayers.length) {
+        clickedLayerIndex = audioLayerIndex;
+      } else {
+        clickedLayerIndex = -1;
+      }
+    } else if (reversedIndex <= totalVideoLayers) {
+      // This is a video layer
+      clickedLayerIndex = totalVideoLayers - reversedIndex;
     } else {
       clickedLayerIndex = -1;
     }
+
+    console.log('clickedLayerIndex (corrected)=', clickedLayerIndex, 'isAudioLayer=', isAudioLayer);
 
     if (!isSplitMode) {
       onTimeUpdate(clickTime); // Update time in ProjectEditor
@@ -894,14 +915,13 @@ const TimelineComponent = ({
     }
 
     let foundItem = null;
-    let adjustedLayerIndex = isAudioLayer ? clickedLayerIndex : clickedLayerIndex >= 0 ? clickedLayerIndex : 0;
     const targetLayers = isAudioLayer ? audioLayers : videoLayers;
 
-    console.log('targetLayers=', isAudioLayer ? 'audio' : 'video', 'adjustedLayerIndex=', adjustedLayerIndex);
+    // Only proceed if we have a valid layer index
+    if (isAudioLayer && clickedLayerIndex >= 0 && clickedLayerIndex < audioLayers.length) {
+      const layerItems = audioLayers[clickedLayerIndex];
 
-    if (adjustedLayerIndex >= 0 && adjustedLayerIndex < targetLayers.length) {
-      const layerItems = targetLayers[adjustedLayerIndex];
-      console.log('layerItems=', layerItems.map(item => ({
+      console.log('Checking audio layer', clickedLayerIndex, 'items=', layerItems.map(item => ({
         id: item.id,
         type: item.type,
         startTime: item.startTime,
@@ -910,50 +930,104 @@ const TimelineComponent = ({
         fileName: item.fileName
       })));
 
+      // Look for a segment at this click time in this specific layer
       foundItem = layerItems.find((item) => {
         const itemStart = item.startTime;
         const itemEnd = itemStart + item.duration;
         const tolerance = 0.05;
         return clickTime >= itemStart - tolerance && clickTime <= itemEnd + tolerance;
       });
+
+      console.log('foundItem in audio layer', clickedLayerIndex, '=', foundItem ? foundItem.id : 'none');
+    } else if (!isAudioLayer && clickedLayerIndex >= 0 && clickedLayerIndex < videoLayers.length) {
+      const layerItems = videoLayers[clickedLayerIndex];
+
+      console.log('Checking video layer', clickedLayerIndex, 'items=', layerItems.map(item => ({
+        id: item.id,
+        type: item.type,
+        startTime: item.startTime,
+        duration: item.duration,
+        endTime: item.startTime + item.duration,
+        fileName: item.fileName
+      })));
+
+      // Look for a segment at this click time in this specific layer
+      foundItem = layerItems.find((item) => {
+        const itemStart = item.startTime;
+        const itemEnd = itemStart + item.duration;
+        const tolerance = 0.05;
+        return clickTime >= itemStart - tolerance && clickTime <= itemEnd + tolerance;
+      });
+
+      console.log('foundItem in video layer', clickedLayerIndex, '=', foundItem ? foundItem.id : 'none');
     }
 
-    if (!foundItem && isAudioLayer) {
-      console.log('No segment in layer', adjustedLayerIndex, ', searching all audio layers');
-      for (let i = 0; i < audioLayers.length; i++) {
-        const layerItems = audioLayers[i];
-        foundItem = layerItems.find((item) => {
-          const itemStart = item.startTime;
-          const itemEnd = itemStart + item.duration;
-          const tolerance = 0.05;
-          return clickTime >= itemStart - tolerance && clickTime <= itemEnd + tolerance;
-        });
-        if (foundItem) {
-          adjustedLayerIndex = i;
-          console.log('Found segment in audioLayers[', i, ']');
-          break;
+    // IMPORTANT: In split mode, we only process the exact item that was clicked
+    // We don't try to search other layers
+    if (!foundItem && !isSplitMode) {
+      // Only search other layers if NOT in split mode
+      if (isAudioLayer) {
+        console.log('No segment in audio layer', clickedLayerIndex, ', searching all audio layers');
+        for (let i = 0; i < audioLayers.length; i++) {
+          if (i === clickedLayerIndex) continue; // Skip the layer we already checked
+
+          const layerItems = audioLayers[i];
+          const found = layerItems.find((item) => {
+            const itemStart = item.startTime;
+            const itemEnd = itemStart + item.duration;
+            const tolerance = 0.05;
+            return clickTime >= itemStart - tolerance && clickTime <= itemEnd + tolerance;
+          });
+
+          if (found) {
+            foundItem = found;
+            clickedLayerIndex = i;
+            console.log('Found segment in audioLayers[', i, ']:', found.id);
+            break;
+          }
+        }
+      } else {
+        console.log('No segment in video layer', clickedLayerIndex, ', searching all video layers');
+        for (let i = 0; i < videoLayers.length; i++) {
+          if (i === clickedLayerIndex) continue; // Skip the layer we already checked
+
+          const layerItems = videoLayers[i];
+          const found = layerItems.find((item) => {
+            const itemStart = item.startTime;
+            const itemEnd = itemStart + item.duration;
+            const tolerance = 0.05;
+            return clickTime >= itemStart - tolerance && clickTime <= itemEnd + tolerance;
+          });
+
+          if (found) {
+            foundItem = found;
+            clickedLayerIndex = i;
+            console.log('Found segment in videoLayers[', i, ']:', found.id);
+            break;
+          }
         }
       }
     }
 
     if (foundItem) {
-      console.log('foundItem=', foundItem.type, 'id=', foundItem.id, 'fileName=', foundItem.fileName, 'startTime=', foundItem.startTime, 'duration=', foundItem.duration, 'layerIndex=', adjustedLayerIndex);
+      console.log('Final foundItem=', foundItem.type, 'id=', foundItem.id, 'fileName=', foundItem.fileName, 'startTime=', foundItem.startTime, 'duration=', foundItem.duration, 'layerIndex=', clickedLayerIndex);
+
       if (isSplitMode) {
         if (foundItem.type === 'video') {
           console.log('Splitting video:', foundItem.id);
-          await videoHandler.handleVideoSplit(foundItem, clickTime, adjustedLayerIndex);
+          await videoHandler.handleVideoSplit(foundItem, clickTime, clickedLayerIndex);
           saveHistory();
         } else if (foundItem.type === 'audio') {
           console.log('Splitting audio:', foundItem.id, 'isExtracted=', foundItem.isExtracted);
-          await audioHandler.handleAudioSplit(foundItem, clickTime, adjustedLayerIndex);
+          await audioHandler.handleAudioSplit(foundItem, clickTime, clickedLayerIndex);
           saveHistory();
         } else if (foundItem.type === 'text') {
           console.log('Splitting text:', foundItem.id);
-          await textHandler.handleTextSplit(foundItem, clickTime, adjustedLayerIndex);
+          await textHandler.handleTextSplit(foundItem, clickTime, clickedLayerIndex);
           saveHistory();
         } else if (foundItem.type === 'image') {
           console.log('Splitting image:', foundItem.id);
-          await imageHandler.handleImageSplit(foundItem, clickTime, adjustedLayerIndex);
+          await imageHandler.handleImageSplit(foundItem, clickTime, clickedLayerIndex);
           saveHistory();
         }
         setIsSplitMode(false);
@@ -971,30 +1045,6 @@ const TimelineComponent = ({
       }
     } else {
       console.log('No item found at clickTime=', clickTime);
-      console.log('All audioLayers=', audioLayers.map((layer, index) => ({
-        layerIndex: index,
-        items: layer.map(item => ({
-          id: item.id,
-          type: item.type,
-          startTime: item.startTime,
-          duration: item.duration,
-          endTime: item.startTime + item.duration,
-          fileName: item.fileName
-        }))
-      })));
-      if (!isAudioLayer) {
-        console.log('All videoLayers=', videoLayers.map((layer, index) => ({
-          layerIndex: index,
-          items: layer.map(item => ({
-            id: item.id,
-            type: item.type,
-            startTime: item.startTime,
-            duration: item.duration,
-            endTime: item.startTime + item.duration,
-            fileName: item.fileName
-          }))
-        })));
-      }
     }
 
     if (!isSplitMode && onVideoSelect) onVideoSelect(clickTime);

@@ -111,7 +111,15 @@ const FilterControls = ({
             </div>
             <div className="control-group">
               <label>Hue (-180 to 180)</label>
-              <div className="slider-container">
+              <div className="slider-container" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <div
+                  style={{
+                    width: '100%',
+                    height: '10px',
+                    background: 'linear-gradient(to right, hsl(-180, 100%, 50%), hsl(-120, 100%, 50%), hsl(-60, 100%, 50%), hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%))',
+                    borderRadius: '2px',
+                  }}
+                />
                 <input
                   type="range"
                   min="-180"
@@ -119,6 +127,7 @@ const FilterControls = ({
                   step="1"
                   value={filterParams.hue !== undefined ? filterParams.hue : 0}
                   onChange={(e) => updateFilterSetting('hue', parseInt(e.target.value))}
+                  style={{ width: '100%' }}
                 />
                 <input
                   type="number"
@@ -127,7 +136,7 @@ const FilterControls = ({
                   step="1"
                   min="-180"
                   max="180"
-                  style={{ width: '60px', marginLeft: '10px' }}
+                  style={{ width: '60px', marginTop: '5px' }}
                 />
               </div>
             </div>
@@ -138,22 +147,26 @@ const FilterControls = ({
             <h4>Stylization</h4>
             <div className="control-group">
               <label>Grayscale</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', width: 'auto' }}>
                 <input
                   type="checkbox"
                   checked={!!filterParams.grayscale}
                   onChange={(e) => updateFilterSetting('grayscale', e.target.checked ? '1' : '')}
+                  style={{ margin: '0 5px 0 0' }}
                 />
+                <span style={{ margin: 0 }}></span>
               </div>
             </div>
             <div className="control-group">
               <label>Invert</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 'auto' }}>
                 <input
                   type="checkbox"
                   checked={!!filterParams.invert}
                   onChange={(e) => updateFilterSetting('invert', e.target.checked ? '1' : '')}
+                  style={{ margin: '0 5px 0 0' }}
                 />
+                <span style={{ margin: 0 }}></span>
               </div>
             </div>
           </div>
@@ -184,15 +197,51 @@ const FilterControls = ({
               </div>
             </div>
             <div className="control-group">
-              <label>Flip</label>
-              <select
-                value={filterParams.flip || 'none'}
-                onChange={(e) => updateFilterSetting('flip', e.target.value === 'none' ? '' : e.target.value)}
-              >
-                <option value="none">None</option>
-                <option value="horizontal">Horizontal</option>
-                <option value="vertical">Vertical</option>
-              </select>
+              <label style={{ marginBottom: '10px' }}>Flip</label>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', width: 'auto' }}>
+                  <input
+                    type="checkbox"
+                    checked={filterParams.flip === 'horizontal' || filterParams.flip === 'both'}
+                    onChange={(e) => {
+                      const isHorizontalChecked = e.target.checked;
+                      const isVerticalChecked = filterParams.flip === 'vertical' || filterParams.flip === 'both';
+                      let newValue = '';
+                      if (isHorizontalChecked && isVerticalChecked) {
+                        newValue = 'both';
+                      } else if (isHorizontalChecked) {
+                        newValue = 'horizontal';
+                      } else if (isVerticalChecked) {
+                        newValue = 'vertical';
+                      }
+                      updateFilterSetting('flip', newValue);
+                    }}
+                    style={{ margin: '0 5px 0 0' }}
+                  />
+                  <span style={{ margin: 0 }}>Horizontal</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', width: 'auto', marginTop: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={filterParams.flip === 'vertical' || filterParams.flip === 'both'}
+                    onChange={(e) => {
+                      const isVerticalChecked = e.target.checked;
+                      const isHorizontalChecked = filterParams.flip === 'horizontal' || filterParams.flip === 'both';
+                      let newValue = '';
+                      if (isHorizontalChecked && isVerticalChecked) {
+                        newValue = 'both';
+                      } else if (isHorizontalChecked) {
+                        newValue = 'horizontal';
+                      } else if (isVerticalChecked) {
+                        newValue = 'vertical';
+                      }
+                      updateFilterSetting('flip', newValue);
+                    }}
+                    style={{ margin: '0 5px 0 0' }}
+                  />
+                  <span style={{ margin: 0 }}>Vertical</span>
+                </div>
+              </div>
             </div>
           </div>
         </>

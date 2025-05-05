@@ -16,6 +16,8 @@ const KeyframeControls = ({
   getValueAtTime,
   setCurrentTimeInSegment,
   canvasDimensions,
+  addKeyframe,
+  updateKeyframe, // Add this prop
 }) => {
   const [error, setError] = useState('');
   const [localCropValues, setLocalCropValues] = useState({
@@ -123,22 +125,37 @@ const KeyframeControls = ({
     const initialX = e.clientX;
     const initialValue = parseFloat(
       tempSegmentValues[property.name] ||
-      selectedSegment[property.name] ||
-      (property.name === 'scale' || property.name === 'opacity' ? 1 : property.isCrop ? 0 : 0)
+        selectedSegment[property.name] ||
+        (property.name === 'scale' || property.name === 'opacity' ? 1 : property.isCrop ? 0 : 0)
     );
     const step = property.step;
 
     const onMouseMove = (moveEvent) => {
       const deltaX = moveEvent.clientX - initialX;
       const sensitivity = step < 1 ? 0.1 : 1;
-      let newValue = initialValue + (deltaX * step * sensitivity);
+      let newValue = initialValue + deltaX * step * sensitivity;
       newValue = Math.max(property.min, Math.min(property.max, newValue));
       newValue = Math.round(newValue / step) * step;
+
       if (property.isCrop) {
         handleCropChange(property.name, newValue);
       } else {
         setTempSegmentValues((prev) => ({ ...prev, [property.name]: newValue }));
         updateSegmentProperty(property.name, newValue);
+
+        // Handle keyframes
+        if (property.supportsKeyframes && keyframes[property.name]?.length > 0) {
+          const existingKeyframe = keyframes[property.name].find((kf) =>
+            areTimesEqual(kf.time, currentTimeInSegment)
+          );
+          if (existingKeyframe) {
+            // Update existing keyframe
+            updateKeyframe(property.name, newValue);
+          } else {
+            // Add new keyframe
+            addKeyframe(property.name, newValue);
+          }
+        }
       }
     };
 
@@ -160,11 +177,26 @@ const KeyframeControls = ({
     if (isNaN(newValue)) return;
     newValue = Math.max(property.min, Math.min(property.max, newValue));
     newValue = Math.round(newValue / property.step) * property.step;
+
     if (property.isCrop) {
       handleCropChange(property.name, newValue);
     } else {
       setTempSegmentValues((prev) => ({ ...prev, [property.name]: newValue }));
       updateSegmentProperty(property.name, newValue);
+
+      // Handle keyframes
+      if (property.supportsKeyframes && keyframes[property.name]?.length > 0) {
+        const existingKeyframe = keyframes[property.name].find((kf) =>
+          areTimesEqual(kf.time, currentTimeInSegment)
+        );
+        if (existingKeyframe) {
+          // Update existing keyframe
+          updateKeyframe(property.name, newValue);
+        } else {
+          // Add new keyframe
+          addKeyframe(property.name, newValue);
+        }
+      }
     }
   };
 
@@ -188,9 +220,9 @@ const KeyframeControls = ({
           ? localCropValues[prop.name]
           : hasKeyframes
           ? getValueAtTime(keyframes[prop.name], currentTimeInSegment)
-          : (tempSegmentValues[prop.name] !== undefined
-             ? tempSegmentValues[prop.name]
-             : selectedSegment[prop.name] || (prop.name === 'scale' || prop.name === 'opacity' ? 1 : 0));
+          : tempSegmentValues[prop.name] !== undefined
+          ? tempSegmentValues[prop.name]
+          : selectedSegment[prop.name] || (prop.name === 'scale' || prop.name === 'opacity' ? 1 : 0);
         const miniTimelineWidth = 200;
         const duration = selectedSegment.duration;
 
@@ -231,16 +263,10 @@ const KeyframeControls = ({
               )}
               {prop.supportsKeyframes && (
                 <div className="keyframe-nav">
-                  <button
-                    onClick={() => navigateKeyframes(prop.name, 'prev')}
-                    disabled={!hasKeyframes}
-                  >
+                  <button onClick={() => navigateKeyframes(prop.name, 'prev')} disabled={!hasKeyframes}>
                     ◄
                   </button>
-                  <button
-                    onClick={() => navigateKeyframes(prop.name, 'next')}
-                    disabled={!hasKeyframes}
-                  >
+                  <button onClick={() => navigateKeyframes(prop.name, 'next')} disabled={!hasKeyframes}>
                     ►
                   </button>
                 </div>

@@ -3695,6 +3695,75 @@ const filteredElements = elements.filter((element) =>
   element.displayName.toLowerCase().includes(elementSearchQuery.toLowerCase())
 );
 
+  // In ProjectEditor.js, add the updateKeyframe function
+  const updateKeyframe = (property, newValue) => {
+    const time = currentTimeInSegment;
+    const currentKeyframes = keyframes || {};
+    const updatedPropertyKeyframes = (currentKeyframes[property] || []).map((kf) =>
+      areTimesEqual(kf.time, time) ? { ...kf, value: newValue } : kf
+    );
+
+    const updatedKeyframes = {
+      ...currentKeyframes,
+      [property]: updatedPropertyKeyframes,
+    };
+
+    // Update keyframes state
+    setKeyframes(updatedKeyframes);
+
+    // Update segment in layers
+    if (selectedSegment.type === 'audio') {
+      setAudioLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        const layerIndex = Math.abs(selectedSegment.layer) - 1;
+        newLayers[layerIndex] = newLayers[layerIndex].map((item) =>
+          item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+        );
+        return newLayers;
+      });
+    } else {
+      setVideoLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
+          item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+        );
+        return newLayers;
+      });
+    }
+
+    // Update tempSegmentValues
+    setTempSegmentValues((prev) => ({
+      ...prev,
+      [property]: newValue,
+    }));
+
+    // Save to backend
+    const token = localStorage.getItem('token');
+    axios
+      .post(
+        `${API_BASE_URL}/projects/${projectId}/update-keyframe`,
+        {
+          segmentId: selectedSegment.id,
+          segmentType: selectedSegment.type,
+          property,
+          time,
+          value: newValue,
+          interpolationType: 'linear',
+        },
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+      )
+      .then(() => {
+        // Schedule auto-save
+        if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+        updateTimeoutRef.current = setTimeout(() => {
+          autoSaveProject(videoLayers, audioLayers);
+        }, 1000);
+      })
+      .catch((error) => {
+        console.error('Error updating keyframe:', error);
+      });
+  };
+
 return (
   <div className="project-editor">
     <aside className={`media-panel ${isMediaPanelOpen ? 'open' : 'closed'}`}>
@@ -4086,6 +4155,8 @@ return (
                 areTimesEqual={areTimesEqual}
                 getValueAtTime={getValueAtTime}
                 setCurrentTimeInSegment={setCurrentTimeInSegment}
+                addKeyframe={addKeyframe}
+                updateKeyframe={updateKeyframe} // Add this line
               />
             </div>
           )}

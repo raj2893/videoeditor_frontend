@@ -9,7 +9,7 @@
 
 /* Media Panel */
 .media-panel {
-  width: 250px;
+  width: 175px;
   height: 100%;
   background-color: #252525;
   padding: 15px;
@@ -85,34 +85,86 @@
   padding: 0 5px;
 }
 
+/* Media Section */
 .media-section {
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
+/* Media Section */
 .section-button {
+  display: flex;
+  flex-direction: column; /* Stack image and text vertically */
+  align-items: center; /* Left-align content */
   width: 100%;
-  padding: 8px;
-  background-color: #333;
+  padding: 12px; /* Adjusted padding for spacing */
+  background-color: transparent;
   color: #e0e0e0;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
-  text-align: left;
-  transition: background-color 0.2s;
+  font-size: 13px; /* Smaller text size for professional look */
+  font-weight: 500;
+  text-align: center; /* center text */
+  transition: background-color 0.2s, color 0.2s;
+  margin-bottom: 10px; /* Space between buttons */
 }
 
-.section-button:hover {
-  background-color: #555;
+/* Remove hover effect */
+.section-button:focus {
+  outline: none;
+  background-color: #4285f4;
+  color: #ffffff;
 }
 
+/* Icon styling for each section */
+.section-button::before {
+  content: '';
+  display: block; /* Position above text */
+  width: 60px; /* 3 * 50px */
+  height: 60px; /* 3 * 50px */
+  margin-bottom: 8px; /* Space between image and text */
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 25%; /* Rounded corners for square icon */
+}
+
+/* Specific icons for each section */
+.section-button[data-section="videos"]::before {
+  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/VideoM.jpeg');
+}
+
+.section-button[data-section="photos"]::before {
+  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/PhotoM.jpeg');
+}
+
+.section-button[data-section="audios"]::before {
+  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/AudioM.jpeg');
+}
+
+.section-button[data-section="elements"]::before {
+  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/ElementsM.jpeg');
+}
+
+.section-button[data-section="textStyles"]::before {
+  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/TextM.jpeg');
+}
+
+/* Active state for section button */
+.section-button.active {
+  background-color: #4285f4;
+  color: #ffffff;
+}
+
+/* Section content */
 .section-content {
-  margin-top: 10px;
-  padding: 10px;
+  margin-top: 8px;
+  padding: 12px;
   background-color: #2a2a2a;
-  border-radius: 4px;
+  border-radius: 6px;
   max-height: 600px;
   overflow-y: auto;
+  border: 1px solid #333;
 }
 
 .hidden-input {
@@ -626,137 +678,6 @@
   font-size: 12px;
 }
 
-/* Premiere Pro-Inspired Keyframe Styles */
-.property-row {
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #444;
-}
-
-.property-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 5px;
-}
-
-.property-header label {
-  font-size: 14px;
-  color: #e0e0e0;
-  font-weight: bold;
-  flex-grow: 1;
-}
-
-.keyframe-toggle {
-  background: none;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  padding: 2px 6px;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #e0e0e0;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.keyframe-toggle:hover {
-  background-color: #444;
-}
-
-.keyframe-toggle.active {
-  color: #4CAF50;
-  background-color: #333;
-}
-
-.property-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 5px;
-}
-
-.value-scrubber {
-  cursor: ew-resize;
-  padding: 4px 8px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background: #333;
-  user-select: none;
-  min-width: 60px;
-  text-align: center;
-  font-size: 12px;
-  color: #e0e0e0;
-  transition: background-color 0.2s;
-}
-
-.value-scrubber:hover {
-  background: #444;
-}
-
-.keyframe-nav {
-  display: flex;
-  gap: 5px;
-}
-
-.keyframe-nav button {
-  background: #333;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  color: #e0e0e0;
-  transition: background-color 0.2s;
-}
-
-.keyframe-nav button:hover:not(:disabled) {
-  background: #555;
-}
-
-.keyframe-nav button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.mini-timeline {
-  width: 200px;
-  height: 20px;
-  background: #333; /* Changed to dark background */
-  border: 1px solid #444;
-  border-radius: 2px;
-  position: relative;
-  margin-top: 5px;
-}
-
-.mini-playhead {
-  position: absolute;
-  width: 2px;
-  height: 100%;
-  background: #ff4444;
-  top: 0;
-  transform: translateX(-50%);
-}
-
-.keyframe-marker {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: #4CAF50;
-  border: 1px solid #fff;
-  transform: translate(-50%, -50%) rotate(45deg);
-  cursor: pointer;
-  top: 50%;
-  transition: background-color 0.2s;
-}
-
-.keyframe-marker:hover {
-  background: #45a049;
-}
-
 .transitions-panel {
  padding: 10px;
 }
@@ -833,63 +754,6 @@
     text-align: center;
     word-break: break-all;
   }
-
-.property-row.crop-control {
-  margin-bottom: 10px;
-}
-
-.property-row.crop-control .property-header label {
-  font-weight: bold;
-}
-
-.property-row.crop-control .property-controls input[type="range"] {
-  width: 100px;
-  margin-right: 10px;
-}
-
-.property-row.crop-control .property-controls input[type="number"] {
-  width: 60px;
-}
-
-.crop-panel {
-  padding: 10px;
-  background: #2a2a2a;
-  border-radius: 4px;
-  color: #fff;
-}
-
-.crop-panel h3 {
-  margin: 0 0 10px;
-  font-size: 16px;
-}
-
-.crop-panel .control-group {
-  margin-bottom: 15px;
-}
-
-.crop-panel .control-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-size: 14px;
-}
-
-.crop-panel .slider-container {
-  display: flex;
-  align-items: center;
-}
-
-.crop-panel input[type="range"] {
-  flex: 1;
-  margin-right: 10px;
-}
-
-.crop-panel input[type="number"] {
-  background: #333;
-  border: 1px solid #555;
-  color: #fff;
-  border-radius: 4px;
-  padding: 5px;
-}
 
 /* Responsive Design */
 @media (max-width: 768px) {

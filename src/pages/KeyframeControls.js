@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import '../CSS/KeyframeControls.css'; // Ensure this CSS file is imported
 
 const KeyframeControls = ({
   selectedSegment,
@@ -17,9 +18,9 @@ const KeyframeControls = ({
   setCurrentTimeInSegment,
   canvasDimensions,
   addKeyframe,
-  updateKeyframe, // Add this prop
+  updateKeyframe,
 }) => {
-  const [error, setError] = useState('');
+  const [errorMessage, setErrorMessage] = useState(''); // New state for custom error message
   const [localCropValues, setLocalCropValues] = useState({
     cropL: 0,
     cropR: 0,
@@ -38,6 +39,13 @@ const KeyframeControls = ({
       setLocalCropValues(newLocalCropValues);
     }
   }, [selectedSegment, tempSegmentValues]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(''), 3000); // Clear error after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   if (!selectedSegment) return null;
 
@@ -79,8 +87,7 @@ const KeyframeControls = ({
 
   const handleCropChange = (propName, newValue) => {
     if (!validateCropValue(newValue)) {
-      setError(`Invalid value for ${propName}. Must be between 0 and 100.`);
-      setTimeout(() => setError(''), 3000);
+      setErrorMessage(`Invalid value for ${propName}. Must be between 0 and 100.`);
       return;
     }
 
@@ -89,20 +96,34 @@ const KeyframeControls = ({
     let cropT = propName === 'cropT' ? newValue : localCropValues.cropT;
     let cropB = propName === 'cropB' ? newValue : localCropValues.cropB;
 
-    if (cropL + cropR >= 100) {
-      setError('Total crop (left + right) must be less than 100%.');
-      setTimeout(() => setError(''), 3000);
-      if (propName === 'cropL') cropL = 100 - cropR;
-      if (propName === 'cropR') cropR = 100 - cropL;
-      newValue = propName === 'cropL' ? cropL : cropR;
+    // Validate horizontal crop (left + right)
+    if (propName === 'cropL' || propName === 'cropR') {
+      const maxAllowed = 100 - (propName === 'cropL' ? cropR : cropL);
+      if (newValue > maxAllowed) {
+        setErrorMessage(
+          `${propName === 'cropL' ? 'Crop Left' : 'Crop Right'} cannot exceed ${maxAllowed}% because ${
+            propName === 'cropL' ? 'Crop Right' : 'Crop Left'
+          } is set to ${(propName === 'cropL' ? cropR : cropL)}%.`
+        );
+        newValue = maxAllowed;
+        if (propName === 'cropL') cropL = maxAllowed;
+        if (propName === 'cropR') cropR = maxAllowed;
+      }
     }
 
-    if (cropT + cropB >= 100) {
-      setError('Total crop (top + bottom) must be less than 100%.');
-      setTimeout(() => setError(''), 3000);
-      if (propName === 'cropT') cropT = 100 - cropB;
-      if (propName === 'cropB') cropB = 100 - cropT;
-      newValue = propName === 'cropT' ? cropT : cropB;
+    // Validate vertical crop (top + bottom)
+    if (propName === 'cropT' || propName === 'cropB') {
+      const maxAllowed = 100 - (propName === 'cropT' ? cropB : cropT);
+      if (newValue > maxAllowed) {
+        setErrorMessage(
+          `${propName === 'cropT' ? 'Crop Top' : 'Crop Bottom'} cannot exceed ${maxAllowed}% because ${
+            propName === 'cropT' ? 'Crop Bottom' : 'Crop Top'
+          } is set to ${(propName === 'cropT' ? cropB : cropT)}%.`
+        );
+        newValue = maxAllowed;
+        if (propName === 'cropT') cropT = maxAllowed;
+        if (propName === 'cropB') cropB = maxAllowed;
+      }
     }
 
     const updatedLocalCropValues = {
@@ -149,10 +170,8 @@ const KeyframeControls = ({
             areTimesEqual(kf.time, currentTimeInSegment)
           );
           if (existingKeyframe) {
-            // Update existing keyframe
             updateKeyframe(property.name, newValue);
           } else {
-            // Add new keyframe
             addKeyframe(property.name, newValue);
           }
         }
@@ -190,10 +209,8 @@ const KeyframeControls = ({
           areTimesEqual(kf.time, currentTimeInSegment)
         );
         if (existingKeyframe) {
-          // Update existing keyframe
           updateKeyframe(property.name, newValue);
         } else {
-          // Add new keyframe
           addKeyframe(property.name, newValue);
         }
       }
@@ -212,7 +229,11 @@ const KeyframeControls = ({
 
   return (
     <div className="keyframe-section">
-      {error && <div className="error-message">{error}</div>}
+      {errorMessage && (
+        <div className="custom-error-message">
+          <span>{errorMessage}</span>
+        </div>
+      )}
       {properties.map((prop) => {
         const hasKeyframes = prop.supportsKeyframes && keyframes[prop.name] && keyframes[prop.name].length > 0;
         const isAtKeyframe = hasKeyframes && keyframes[prop.name].some((kf) => areTimesEqual(kf.time, currentTimeInSegment));

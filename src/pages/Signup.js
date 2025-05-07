@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { useNavigate, useLocation } from "react-router-dom";
 import "../CSS/Auth.css";
 
 const Signup = () => {
@@ -8,15 +8,13 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
-  const [serverError, setServerError] = useState(""); // State for server-side errors
+  const [serverError, setServerError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Check for error messages passed from other pages (e.g., VerifyEmail)
   useEffect(() => {
     if (location.state?.error) {
       setServerError(location.state.error);
-      // Clear the error after 5 seconds (unchanged, as this is for redirected errors)
       const timer = setTimeout(() => setServerError(""), 8000);
       return () => clearTimeout(timer);
     }
@@ -25,14 +23,12 @@ const Signup = () => {
   const validate = () => {
     const newErrors = {};
 
-    // Email validation
     if (!email) {
       newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = "Please enter a valid email address";
     }
 
-    // Password validation
     if (!password) {
       newErrors.password = "Password is required";
     } else if (password.length < 8) {
@@ -47,7 +43,7 @@ const Signup = () => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    setServerError(""); // Clear any previous server errors
+    setServerError("");
     if (!validate()) return;
 
     try {
@@ -57,13 +53,11 @@ const Signup = () => {
       });
 
       if (response.status === 200 && response.data.message) {
-        setShowVerificationMessage(true); // Show verification message
+        setShowVerificationMessage(true);
       }
     } catch (error) {
       if (error.response && error.response.status === 400) {
-        // Handle invalid email error
         setServerError(error.response.data.message || "Invalid email address. Please try again.");
-        // Redirect to signup page after 5 seconds (changed from 3 seconds)
         setTimeout(() => {
           setServerError("");
           navigate("/signup", { replace: true });
@@ -91,7 +85,7 @@ const Signup = () => {
     }
   };
 
-  const handleGoogleSignup = async (credentialResponse) => {
+  const handleGoogleSignup = useCallback(async (credentialResponse) => {
     try {
       const response = await axios.post("http://localhost:8080/auth/google", {
         token: credentialResponse.credential,
@@ -101,7 +95,7 @@ const Signup = () => {
     } catch (error) {
       setServerError(error.response?.data?.message || "Google signup failed. Please try again.");
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     const initializeGoogleSignIn = () => {
@@ -110,75 +104,121 @@ const Signup = () => {
           client_id: "475177334034-ufjdi8pebqvbgf9ogv0gs85nq9588a8m.apps.googleusercontent.com",
           callback: handleGoogleSignup,
         });
-        window.google.accounts.id.renderButton(document.getElementById("googleSignUpButton"), {
-          theme: "outline",
-          size: "large",
-        });
+        window.google.accounts.id.renderButton(
+          document.getElementById("googleSignUpButton"),
+          { theme: "outline", size: "large", width: 400 }
+        );
       } else {
         setTimeout(initializeGoogleSignIn, 100);
       }
     };
     initializeGoogleSignIn();
-  }, []);
+  }, [handleGoogleSignup]);
+
+  // Generate particles
+  const particles = Array.from({ length: 40 }).map((_, i) => (
+    <div
+      key={i}
+      className={`particle ${i % 2 === 0 ? "square" : ""}`}
+      style={{
+        left: `${Math.random() * 100}%`,
+        width: `${3 + Math.random() * 5}px`,
+        height: `${3 + Math.random() * 5}px`,
+        animationDelay: `${Math.random() * 5}s`,
+        animationDuration: `${5 + Math.random() * 5}s`,
+      }}
+    />
+  ));
 
   return (
     <div className="auth-page">
+      {particles}
+      <svg className="waveform-bg" viewBox="0 0 1440 900" preserveAspectRatio="none">
+        <path
+          d="M0,900 C180,750 360,900 540,750 C720,600 900,750 1080,600 C1260,450 1350,600 1440,0 L1440,0 H0 Z"
+          fill="rgba(63, 142, 252, 0.15)"
+        />
+      </svg>
+      <div className="rotating-text-container">
+        <div className="rotating-text-wrapper">
+          <div className="rotating-text">Transform ideas into stunning visuals with Scenith.</div>
+          <div className="rotating-text">Professional editing made simple for everyone.</div>
+          <div className="rotating-text">Intuitive timeline for frame-perfect edits.</div>
+          <div className="rotating-text">Dynamic effects, filters, and stickers await!</div>
+          <div className="rotating-text">Join a community of creators at Scenith.</div>
+        </div>
+      </div>
       <div className="auth-container">
         <div className="auth-header">
-          <h1>VideoCraft</h1>
-          <p>Professional Video Editing</p>
+          <h1>
+            <span className="letter">S</span>
+            <span className="letter">c</span>
+            <span className="letter">e</span>
+            <span className="letter">n</span>
+            <span className="letter">i</span>
+            <span className="letter">t</span>
+            <span className="letter">h</span>
+          </h1>
+          <p>The Peak of Visual Storytelling</p>
+          <div className="logo-element" />
         </div>
-        <h2>Signup</h2>
-
-
-{showVerificationMessage ? (
-  <div className="verification-message">
-    <p>We've sent a verification email to <strong>{email}</strong></p>
-    <p>Please check your inbox and verify your email before logging in.</p>
-    {serverError && (
-      <div
-        className={
-          serverError.includes("successfully") ? "success-message" : "error-message"
-        }
-      >
-        {serverError}
-      </div>
-    )}
-    <button onClick={resendVerification} className="auth-button">
-      Resend Verification Email
-    </button>
-    <p className="auth-link">
-      Already verified? <a href="/login">Login</a>
-    </p>
-  </div>
+        <h2>Create Your Story</h2>
+        {showVerificationMessage ? (
+          <div className="verification-message">
+            <p>
+              We've sent a verification email to <strong>{email}</strong>
+            </p>
+            <p>Please check your inbox and verify your email before logging in.</p>
+            {serverError && (
+              <div
+                className={
+                  serverError.includes("successfully") ? "success-message" : "error-message"
+                }
+              >
+                {serverError}
+              </div>
+            )}
+            <button onClick={resendVerification} className="auth-button">
+              Resend Verification Email
+            </button>
+            <p className="auth-link">
+              Already verified? <Link to="/">Login</Link>
+            </p>
+          </div>
         ) : (
           <>
             <form onSubmit={handleSignup} className="auth-form">
               {serverError && <div className="error-message">{serverError}</div>}
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`auth-input ${errors.email ? "error" : ""}`}
-              />
-              {errors.email && <div className="error-message">{errors.email}</div>}
-
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`auth-input ${errors.password ? "error" : ""}`}
-              />
-              {errors.password && <div className="error-message">{errors.password}</div>}
-
+              <div className="auth-input-label">
+                <input
+                  type="email"
+                  placeholder=" "
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`auth-input ${errors.email ? "error" : ""}`}
+                  aria-label="Email address"
+                />
+                <span>Email</span>
+                {errors.email && <div className="error-message">{errors.email}</div>}
+              </div>
+              <div className="auth-input-label">
+                <input
+                  type="password"
+                  placeholder=" "
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`auth-input ${errors.password ? "error" : ""}`}
+                  aria-label="Password"
+                />
+                <span>Password</span>
+                {errors.password && <div className="error-message">{errors.password}</div>}
+              </div>
               <button type="submit" className="auth-button">Sign Up</button>
             </form>
             <div className="divider">OR</div>
             <div id="googleSignUpButton" className="google-button"></div>
             <p className="auth-link">
-              Already have an account? <a href="/login">Login</a>
+              Already have an account? <Link to="/">Login</Link>
             </p>
           </>
         )}

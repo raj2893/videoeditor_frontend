@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import '../CSS/VideoPreview.css';
 import fx from 'glfx';
+import PropTypes from 'prop-types';
 
 const API_BASE_URL = 'http://localhost:8080';
 const baseFontSize = 24.0;
@@ -20,6 +21,8 @@ const VideoPreview = ({
   transitions = [],
   fps = 25,
   onLoadedAudioSegmentsUpdate, // New prop to share loadedAudioSegments
+  onSegmentSelect,
+  onSegmentPositionUpdate,
 }) => {
   const [loadingVideos, setLoadingVideos] = useState(new Set());
   const [preloadComplete, setPreloadComplete] = useState(false);
@@ -34,6 +37,173 @@ const VideoPreview = ({
   const glTextureRefs = useRef({});
   const fxCanvasRef = useRef(null);
   const [videoDimensions, setVideoDimensions] = useState({});
+
+    const [isDragging, setIsDragging] = useState(false);
+    const [draggedSegment, setDraggedSegment] = useState(null);
+    const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+    const [initialSegmentPos, setInitialSegmentPos] = useState({ positionX: 0, positionY: 0 });
+
+    // Convert canvas coordinates to normalized canvas space
+    const getCanvasCoordinates = (clientX, clientY) => {
+      const canvasWrapper = document.querySelector('.canvas-wrapper');
+      if (!canvasWrapper || !previewContainerRef.current) return { x: 0, y: 0 };
+
+      const rect = canvasWrapper.getBoundingClientRect();
+      const scaleFactor = 1 / scale; // Adjust for canvas scaling
+      const x = (clientX - rect.left) * scaleFactor;
+      const y = (clientY - rect.top) * scaleFactor;
+      return { x, y };
+    };
+
+    // Determine if a point is within a segment's bounds
+    const isPointInSegment = (x, y, element, scaleFactor) => {
+      const posX = getKeyframeValue(
+        element.keyframes?.positionX,
+        element.localTime,
+        element.positionX || 0
+      );
+      const posY = getKeyframeValue(
+        element.keyframes?.positionY,
+        element.localTime,
+        element.positionY || 0
+      );
+      const segScale = getKeyframeValue(
+        element.keyframes?.scale,
+        element.localTime,
+        element.scale || 1
+      );
+
+      let width, height;
+      if (element.type === 'video') {
+        width = (videoDimensions[element.id]?.width || canvasDimensions.width) * segScale;
+        height = (videoDimensions[element.id]?.height || canvasDimensions.height) * segScale;
+      } else if (element.type === 'image') {
+        width = (element.width || canvasDimensions.width) * segScale;
+        height = (element.height || canvasDimensions.height) * segScale;
+      } else if (element.type === 'text') {
+        const fontSize = baseFontSize * segScale;
+        const textLines = element.text.split('\n');
+        const lineHeight = fontSize * 1.2;
+        const textHeight = textLines.length * lineHeight;
+        const ctx = document.createElement('canvas').getContext('2d');
+        ctx.font = `${fontSize}px ${element.fontFamily || 'Arial'}`;
+        const textWidths = textLines.map(line => ctx.measureText(line).width);
+        const maxTextWidth = Math.max(...textWidths);
+        width = (element.backgroundW === 0 ? maxTextWidth : maxTextWidth + element.backgroundW) + (element.textBorderWidth || 0) * 2;
+        height = textHeight + (element.backgroundH || 0) + (element.textBorderWidth || 0) * 2;
+      } else {
+        return false;
+      }
+
+      // Center the bounds around the segment's position
+      const centerX = canvasDimensions.width / 2 + posX;
+      const centerY = canvasDimensions.height / 2 + posY;
+      const left = centerX - width / 2;
+      const top = centerY - height / 2;
+      const right = left + width;
+      const bottom = top + height;
+
+      return x >= left && x <= right && y >= top && y <= bottom;
+    };
+
+    // Find the topmost segment at the click position
+    const findTopSegmentAtPosition = (x, y) => {
+      const visible = getVisibleElements();
+      // Sort by layerIndex descending to get topmost segment
+      const sortedElements = visible.sort((a, b) => b.layerIndex - a.layerIndex);
+      for (const element of sortedElements) {
+        if (isPointInSegment(x, y, element)) {
+          return element;
+        }
+      }
+      return null;
+    };
+
+    // Handle mouse down to start dragging or select segment
+    const handleMouseDown = (e) => {
+      const { x, y } = getCanvasCoordinates(e.clientX, e.clientY);
+      const topSegment = findTopSegmentAtPosition(x, y);
+      if (topSegment) {
+        setDraggedSegment(topSegment);
+        setDragStartPos({ x: e.clientX, y: e.clientY });
+        setInitialSegmentPos({
+          positionX: getKeyframeValue(
+            topSegment.keyframes?.positionX,
+            topSegment.localTime,
+            topSegment.positionX || 0
+          ),
+          positionY: getKeyframeValue(
+            topSegment.keyframes?.positionY,
+            topSegment.localTime,
+            topSegment.positionY || 0
+          ),
+        });
+        setIsDragging(true);
+        // Notify parent to select the segment
+        if (onSegmentSelect) {
+          onSegmentSelect(topSegment);
+        }
+      } else {
+        // Deselect if clicking outside any segment
+        if (onSegmentSelect) {
+          onSegmentSelect(null);
+        }
+      }
+    };
+
+    // Handle mouse move during dragging
+    const handleMouseMove = (e) => {
+      if (!isDragging || !draggedSegment) return;
+
+      const scaleFactor = 1 / scale; // Adjust for canvas scaling
+      const deltaX = (e.clientX - dragStartPos.x) * scaleFactor;
+      const deltaY = (e.clientY - dragStartPos.y) * scaleFactor;
+
+      const newPositionX = initialSegmentPos.positionX + deltaX;
+      const newPositionY = initialSegmentPos.positionY + deltaY;
+
+      // Notify parent to update position (temporary, until mouse up)
+      if (onSegmentPositionUpdate) {
+        onSegmentPositionUpdate(draggedSegment, { positionX: newPositionX, positionY: newPositionY });
+      }
+    };
+
+    // Handle mouse up to finalize dragging
+    const handleMouseUp = () => {
+      if (isDragging && draggedSegment) {
+        // Finalize position update
+        const scaleFactor = 1 / scale;
+        const deltaX = (dragStartPos.x - dragStartPos.x) * scaleFactor; // Note: This seems incorrect, should use current mouse position
+        const deltaY = (dragStartPos.y - dragStartPos.y) * scaleFactor;
+        const newPositionX = initialSegmentPos.positionX + deltaX;
+        const newPositionY = initialSegmentPos.positionY + deltaY;
+
+        // Since deltaX and deltaY are zero due to using dragStartPos, we rely on the last update from mouse move
+        // The onSegmentPositionUpdate in mouse move handles the final position
+      }
+      setIsDragging(false);
+      setDraggedSegment(null);
+      setDragStartPos({ x: 0, y: 0 });
+      setInitialSegmentPos({ positionX: 0, positionY: 0 });
+    };
+
+    // Add mouse event listeners
+    useEffect(() => {
+      const canvasWrapper = document.querySelector('.canvas-wrapper');
+      if (canvasWrapper) {
+        canvasWrapper.addEventListener('mousedown', handleMouseDown);
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+      }
+
+      return () => {
+        if (canvasWrapper) {
+          canvasWrapper.removeEventListener('mousedown', handleMouseDown);
+        }
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }, [isDragging, draggedSegment, dragStartPos, initialSegmentPos, scale, onSegmentSelect, onSegmentPositionUpdate]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -668,6 +838,7 @@ const VideoPreview = ({
               overflow: 'hidden',
               backgroundColor: 'black',
               transformOrigin: 'top left',
+              cursor: isDragging ? 'grabbing' : 'pointer', // Indicate draggable state
             }}
           >
             {visibleElements.map((element) => {

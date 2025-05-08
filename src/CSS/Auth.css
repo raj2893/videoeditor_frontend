@@ -38,57 +38,31 @@ body {
   z-index: -1;
 }
 
-/* Diagonal Waveform SVG for Signup */
-.auth-page:not(.login-page) .waveform-bg {
+/* Diagonal Waveform SVG (same for both pages now) */
+.auth-page .waveform-bg {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  fill: rgba(63, 142, 252, 0.15); /* Electric Blue */
+  fill: rgba(63, 142, 252, 0.15); /* Electric Blue (match Sign Up) */
   filter: drop-shadow(0 0 10px rgba(63, 142, 252, 0.3));
-  animation: wavePulse 4s infinite, waveFlow 6s linear infinite;
+  animation: waveFlow 6s linear infinite; /* Updated: Combine animations, use linear timing */
   z-index: 0;
 }
 
-/* Diagonal Waveform SVG for Login */
-.auth-page.login-page .waveform-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  fill: rgba(139, 0, 255, 0.15); /* Electric Violet */
-  filter: drop-shadow(0 0 10px rgba(139, 0, 255, 0.3));
-  animation: wavePulse 3.5s infinite, waveFlow 7s linear infinite;
-  z-index: 0;
-}
-
-/* Floating particles */
-.auth-page:not(.login-page) .particle {
+/* Floating particles (same for both pages now) */
+.auth-page .particle {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 215, 0, 0.6); /* Golden Yellow */
+  background: rgba(255, 215, 0, 0.6); /* Golden Yellow (match Sign Up) */
   pointer-events: none;
-  animation: float 10s infinite;
+  animation: float 10s infinite; /* Match Sign Up */
 }
 
-.auth-page:not(.login-page) .particle.square {
+.auth-page .particle.square {
   border-radius: 0;
-  background: rgba(80, 227, 194, 0.6); /* Bright Aqua */
-}
-
-.auth-page.login-page .particle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(233, 30, 99, 0.6); /* Vivid Magenta */
-  pointer-events: none;
-  animation: float 8s infinite;
-}
-
-.auth-page.login-page .particle.square {
-  border-radius: 0;
-  background: rgba(255, 215, 0, 0.6); /* Golden Yellow */
+  background: rgba(80, 227, 194, 0.6); /* Bright Aqua (match Sign Up) */
 }
 
 @keyframes float {
@@ -103,15 +77,30 @@ body {
   100% { background-position: 0% 50%; }
 }
 
-@keyframes wavePulse {
-  0% { transform: translateY(0); opacity: 0.7; }
-  50% { transform: translateY(3px); opacity: 1; } /* Adjusted for new wave direction */
-  100% { transform: translateY(0); opacity: 0.7; }
-}
+/* Removed wavePulse and combined into waveFlow */
 
+/* Combined animation for smooth back-and-forth motion with pulsation */
 @keyframes waveFlow {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-30px, -18.75px); } /* Adjusted for bottom-left to top-right flow */
+  0% {
+    transform: translate(0, 0);
+    opacity: 0.7;
+  }
+  25% {
+    transform: translate(-50px, -31.25px) translateY(3px); /* Reduced distance, add pulsation */
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-100px, -62.5px); /* Peak of the forward motion */
+    opacity: 0.7;
+  }
+  75% {
+    transform: translate(-50px, -31.25px) translateY(3px); /* Mirror the forward motion on return */
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.7;
+  }
 }
 
 /* Main container */
@@ -124,8 +113,9 @@ body {
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1), 0 0 15px rgba(63, 142, 252, 0.2);
   width: 100%;
   max-width: 460px;
-  max-height: calc(100vh - 40px); /* Fit within viewport height minus padding */
-  overflow-y: auto; /* Internal scrolling if needed */
+  height: fit-content; /* Updated: Fit the content */
+  max-height: calc(100vh - 40px); /* Updated: Ensure it doesn't exceed viewport */
+  overflow: hidden; /* Updated: Prevent scrolling */
   text-align: center;
   font-family: 'Montserrat', sans-serif;
   animation: zoomIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -176,9 +166,12 @@ body {
   color: #3F8EFC; /* Electric Blue as a fallback */
 }
 
+/* Removed: Login page hover effect to match Sign Up */
+/*
 .auth-page.login-page .auth-header h1:hover {
-  transform: scale(1.05); /* Subtle scale on hover for login page */
+  transform: scale(1.05);
 }
+*/
 
 .auth-header h1 .letter {
   position: relative;
@@ -246,18 +239,11 @@ body {
   transition: all 0.3s ease;
 }
 
-.auth-page:not(.login-page) .auth-input:focus {
-  border-color: #3F8EFC; /* Electric Blue for Signup */
+.auth-input:focus {
+  border-color: #3F8EFC; /* Electric Blue for both pages */
   box-shadow: 0 0 15px rgba(63, 142, 252, 0.4);
   outline: none;
   animation: inputGlow 1.2s infinite;
-}
-
-.auth-page.login-page .auth-input:focus {
-  border-color: #3F8EFC; /* Updated: Match Sign Up (Electric Blue) */
-  box-shadow: 0 0 15px rgba(63, 142, 252, 0.4); /* Updated: Match Sign Up */
-  outline: none;
-  animation: inputGlow 1.2s infinite; /* Updated: Use same animation as Sign Up */
 }
 
 .auth-input::placeholder {
@@ -281,27 +267,17 @@ body {
   pointer-events: none;
 }
 
-.auth-page:not(.login-page) .auth-input:focus + span,
-.auth-page:not(.login-page) .auth-input:not(:placeholder-shown) + span {
+.auth-input:focus + span,
+.auth-input:not(:placeholder-shown) + span {
   top: -10px; /* Adjusted for smaller input */
   left: 12px;
   font-size: 11px; /* Slightly smaller */
-  color: #3F8EFC; /* Electric Blue for Signup */
+  color: #3F8EFC; /* Electric Blue for both pages */
   background: #FAFAFA;
   padding: 0 6px;
   border-radius: 4px;
 }
 
-.auth-page.login-page .auth-input:focus + span,
-.auth-page.login-page .auth-input:not(:placeholder-shown) + span {
-  top: -10px; /* Adjusted for smaller input */
-  left: 12px;
-  font-size: 11px; /* Slightly smaller */
-  color: #3F8EFC; /* Updated: Match Sign Up (Electric Blue) */
-  background: #FAFAFA;
-  padding: 0 6px;
-  border-radius: 4px;
-}
 /* Primary button */
 .auth-button {
   padding: 14px; /* Reduced padding */
@@ -331,18 +307,11 @@ body {
   transition: all 0.5s ease;
 }
 
-.auth-page:not(.login-page) .auth-button:hover {
+.auth-button:hover {
   background: #9446EB; /* Deep Neon Purple */
   transform: translateY(-6px);
-  box-shadow: 0 8px 20px rgba(148, 70, 235, 0.3); /* Adjusted shadow to match new hover color */
+  box-shadow: 0 8px 20px rgba(148, 70, 235, 0.3);
   animation: buttonGlow 1.5s infinite;
-}
-
-.auth-page.login-page .auth-button:hover {
-  background: #9446EB; /* Deep Neon Purple, matching Sign Up button */
-  transform: translateY(-6px); /* Adjusted to match Sign Up button */
-  box-shadow: 0 8px 20px rgba(148, 70, 235, 0.3); /* Matching Sign Up button shadow */
-  animation: buttonGlow 1.5s infinite; /* Matching Sign Up button animation */
 }
 
 .auth-button:hover::before {
@@ -354,8 +323,8 @@ body {
   box-shadow: 0 4px 10px rgba(63, 142, 252, 0.2);
 }
 
-/* Divider */
-.auth-page:not(.login-page) .divider {
+/* Divider (same for both pages now) */
+.auth-page .divider {
   margin: 20px 0; /* Reduced margin */
   font-size: 13px; /* Slightly smaller */
   color: #666666;
@@ -366,32 +335,12 @@ body {
   justify-content: center;
 }
 
-.auth-page:not(.login-page) .divider::before,
-.auth-page:not(.login-page) .divider::after {
+.auth-page .divider::before,
+.auth-page .divider::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(224, 224, 224, 0.5), transparent);
-  margin: 0 15px;
-}
-
-.auth-page.login-page .divider {
-  margin: 20px 0; /* Reduced margin */
-  font-size: 13px; /* Slightly smaller */
-  color: #666666;
-  position: relative;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.auth-page.login-page .divider::before,
-.auth-page.login-page .divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(233, 30, 99, 0.5), transparent); /* Vivid Magenta */
+  background: linear-gradient(90deg, transparent, rgba(224, 224, 224, 0.5), transparent); /* Match Sign Up */
   margin: 0 15px;
 }
 
@@ -428,108 +377,59 @@ body {
   text-align: center !important;
 }
 
-/* Link styling */
+/* Link styling (same for both pages now) */
 .auth-link {
   font-size: 13px; /* Slightly smaller */
   color: #666666;
 }
 
-.auth-page:not(.login-page) .auth-link a {
-  color: #FF5A5F; /* Coral Red for Signup */
+.auth-link a {
+  color: #FF5A5F; /* Coral Red (match Sign Up) */
   text-decoration: none;
   font-weight: 600;
   position: relative;
   transition: all 0.3s ease;
 }
 
-.auth-page:not(.login-page) .auth-link a::after {
+.auth-link a::after {
   content: '';
   position: absolute;
   width: 0;
   height: 2px;
   bottom: -2px;
   left: 0;
-  background: linear-gradient(90deg, #3F8EFC, #50E3C2);
+  background: linear-gradient(90deg, #3F8EFC, #50E3C2); /* Match Sign Up */
   transition: all 0.3s ease;
 }
 
-.auth-page:not(.login-page) .auth-link a:hover {
-  color: #3F8EFC;
+.auth-link a:hover {
+  color: #3F8EFC; /* Match Sign Up */
 }
 
-.auth-page:not(.login-page) .auth-link a:hover::after {
+.auth-link a:hover::after {
   width: 100%;
 }
 
-.auth-page.login-page .auth-link a {
-  color: #E91E63; /* Vivid Magenta for Login */
-  text-decoration: none;
-  font-weight: 600;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.auth-page.login-page .auth-link a::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 2px;
-  bottom: -2px;
-  left: 0;
-  background: linear-gradient(90deg, #E91E63, #39FF14);
-  transition: all 0.3s ease;
-}
-
-.auth-page.login-page .auth-link a:hover {
-  color: #39FF14; /* Lime Green for Login */
-}
-
-.auth-page.login-page .auth-link a:hover::after {
-  width: 100%;
-}
-
-/* Error and success messages */
-.auth-page:not(.login-page) .error-message {
-  color: #FF5A5F;
+/* Error and success messages (same for both pages now) */
+.auth-page .error-message {
+  color: #FF5A5F; /* Coral Red (match Sign Up) */
   font-size: 0.85rem; /* Slightly smaller */
   margin: 10px 0; /* Reduced margin */
   padding: 10px; /* Reduced padding */
-  background: rgba(255, 90, 95, 0.1);
+  background: rgba(255, 90, 95, 0.1); /* Match Sign Up */
   border-radius: 8px;
-  border-left: 3px solid #FF5A5F;
+  border-left: 3px solid #FF5A5F; /* Match Sign Up */
   animation: errorShake 0.5s;
 }
 
-.auth-page:not(.login-page) .success-message {
-  color: #50E3C2;
+.auth-page .success-message {
+  color: #50E3C2; /* Bright Aqua (match Sign Up) */
   font-size: 0.85rem; /* Slightly smaller */
   margin: 10px 0; /* Reduced margin */
   padding: 10px; /* Reduced padding */
-  background: rgba(80, 227, 194, 0.1);
+  background: rgba(80, 227, 194, 0.1); /* Match Sign Up */
   border-radius: 8px;
-  border-left: 3px solid #50E3C2;
-  animation: successPulse 2s infinite;
-}
-
-.auth-page.login-page .error-message {
-  color: #E91E63; /* Vivid Magenta for Login */
-  font-size: 0.85rem; /* Slightly smaller */
-  margin: 10px 0; /* Reduced margin */
-  padding: 10px; /* Reduced padding */
-  background: rgba(233, 30, 99, 0.1);
-  border-radius: 8px;
-  border-left: 3px solid #E91E63;
-  animation: errorShake 0.5s;
-}
-
-.auth-page.login-page .success-message {
-  color: #39FF14; /* Lime Green for Login */
-  font-size: 0.85rem; /* Slightly smaller */
-  margin: 10px 0; /* Reduced margin */
-  padding: 10px; /* Reduced padding */
-  background: rgba(57, 255, 20, 0.1);
-  border-radius: 8px;
-  border-left: 3px solid #39FF14;
+  border-left: 3px solid #50E3C2; /* Match Sign Up */
   animation: successPulse 2s infinite;
 }
 
@@ -554,12 +454,12 @@ body {
   font-weight: 600;
 }
 
-/* Logo element */
-.auth-page:not(.login-page) .logo-element {
+/* Logo element (same for both pages now) */
+.auth-page .logo-element {
   position: absolute;
   width: 24px; /* Slightly smaller */
   height: 24px;
-  border: 2px solid #FFD700; /* Golden Yellow for Signup */
+  border: 2px solid #FFD700; /* Golden Yellow (match Sign Up) */
   border-radius: 50%;
   top: -10px; /* Adjusted for smaller header */
   left: 50%; /* Start centered, will animate horizontally */
@@ -568,37 +468,12 @@ body {
   z-index: 15; /* Ensure it appears above the text */
 }
 
-.auth-page:not(.login-page) .logo-element::before {
+.auth-page .logo-element::before {
   content: '';
   position: absolute;
   width: 8px; /* Slightly smaller */
   height: 8px;
-  background: #3F8EFC; /* Electric Blue for Signup */
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.auth-page.login-page .logo-element {
-  position: absolute;
-  width: 24px; /* Slightly smaller */
-  height: 24px;
-  border: 2px solid #E91E63; /* Vivid Magenta for Login */
-  border-radius: 50%;
-  top: -10px; /* Adjusted for smaller header */
-  left: 50%; /* Start centered, will animate horizontally */
-  transform: translateX(-50%); /* Center the element initially */
-  animation: bounce 0.5s infinite, moveOverLetters 7s infinite; /* Combine bouncing and horizontal movement */
-  z-index: 15; /* Ensure it appears above the text */
-}
-
-.auth-page.login-page .logo-element::before {
-  content: '';
-  position: absolute;
-  width: 8px; /* Slightly smaller */
-  height: 8px;
-  background: #39FF14; /* Lime Green for Login */
+  background: #3F8EFC; /* Electric Blue (match Sign Up) */
   border-radius: 50%;
   top: 50%;
   left: 50%;
@@ -634,6 +509,7 @@ body {
   85.7%, 92.84% { left: calc(50% - 65px); } /* C */
   92.84%, 100% { left: calc(50% - 85px); } /* S */
 }
+
 /* Rotating text container */
 .rotating-text-container {
   flex: 1; /* Take up the left half of the space */
@@ -689,7 +565,6 @@ body {
   100% { clip-path: inset(0 0 0 100%); } /* Stay clipped (hidden) */
 }
 
-
 /* Animations */
 @keyframes zoomIn {
   0% { opacity: 0; transform: scale(0.8); }
@@ -717,7 +592,6 @@ body {
   50% { box-shadow: 0 0 20px rgba(63, 142, 252, 0.6); }
   100% { box-shadow: 0 0 15px rgba(63, 142, 252, 0.4); }
 }
-
 
 @keyframes errorShake {
   0%, 100% { transform: translateX(0); }
@@ -753,7 +627,7 @@ body {
     height: 80px; /* Adjusted height */
   }
   .auth-container {
-    max-height: calc(100vh - 40px); /* Adjust for smaller padding */
+    max-height: calc(100vh - 40px); /* Keep max-height for smaller screens */
   }
 }
 

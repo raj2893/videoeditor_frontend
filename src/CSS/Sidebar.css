@@ -1,34 +1,60 @@
 /* Sidebar.css */
 .sidebar {
   width: 220px;
-  background-color: #252525;
+  background-color: #1a1a1a; /* Match ProjectEditor panels */
   padding: 16px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #333;
+  border-right: 1px solid #2a2a2a;
 }
 
 .sidebar h2 {
-  font-size: 1.2rem;
-  font-weight: 500;
+  font-size: 1.1rem; /* Match ProjectEditor headers */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #a1a1a1;
   margin-bottom: 16px;
-  color: #fff;
 }
 
 .upload-button {
-  background-color: #0066cc;
-  color: white;
+  background: transparent;
+  color: #39c0ed;
+  border: 1px solid #39c0ed;
   padding: 8px;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   margin-bottom: 16px;
   text-align: center;
-  transition: background-color 0.2s;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.upload-button::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #39c0ed;
+  transition: all 0.3s ease;
 }
 
 .upload-button:hover {
-  background-color: #0055aa;
+  background: #39c0ed;
+  color: #121212;
+  transform: scale(1.02);
+}
+
+.upload-button:hover::after {
+  width: 80%;
+  left: 10%;
 }
 
 .video-list {
@@ -44,29 +70,29 @@
   cursor: pointer;
   border-radius: 6px;
   overflow: hidden;
-  background-color: #333;
-  border: 1px solid #444;
-  transition: all 0.2s;
+  background-color: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  transition: all 0.3s ease;
 }
 
 .video-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
-  border-color: #555;
+  transform: scale(1.02);
+  border-color: #39c0ed;
 }
 
 .video-item.selected {
-  border: 2px solid #0066cc;
+  border: 2px solid #39c0ed;
 }
 
-.video-thumbnail, .video-thumbnail-placeholder {
+.video-thumbnail,
+.video-thumbnail-placeholder {
   width: 100%;
   height: 80px;
-  background-color: #222;
+  background-color: #2a2a2a;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #777;
+  color: #666;
 }
 
 .video-item-title {
@@ -75,5 +101,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.5);
+  color: #a1a1a1;
 }

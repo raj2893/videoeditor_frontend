@@ -2,33 +2,76 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../CSS/Dashboard.css';
-import { FaTrash, FaUser, FaCog, FaSignOutAlt } from 'react-icons/fa';
+import { FaTrash, FaSignOutAlt, FaBars } from 'react-icons/fa';
 
 const API_BASE_URL = 'http://localhost:8080';
 
 const Dashboard = () => {
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState([
+    { id: 1, name: 'Project 1', thumbnail: null },
+    { id: 2, name: 'Project 2', thumbnail: null },
+    { id: 3, name: 'Project 3', thumbnail: null },
+    { id: 4, name: 'Project 4', thumbnail: null },
+    { id: 5, name: 'Project 5', thumbnail: null },
+    { id: 6, name: 'Project 6', thumbnail: null },
+  ]);
   const [newProjectName, setNewProjectName] = useState('');
   const [width, setWidth] = useState(1920);
   const [height, setHeight] = useState(1080);
   const [fps, setFps] = useState(25);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState({
     email: '',
     firstName: '',
     lastName: '',
     picture: null,
-    googleAuth: false
+    googleAuth: false,
   });
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     console.log('Dashboard mounted, location state:', location.state);
-    fetchUserProfile();
-    fetchProjects();
+    const loadData = async () => {
+      await fetchUserProfile();
+      await fetchProjects();
+      setIsDataLoaded(true);
+    };
+    loadData();
+
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const logScrollInfo = () => {
+      const documentHeight = document.documentElement.scrollHeight;
+      const viewportHeight = window.innerHeight;
+      console.log(`Document height: ${documentHeight}px, Viewport height: ${viewportHeight}px`);
+      console.log(`Scrollable area: ${documentHeight - viewportHeight}px`);
+    };
+
+    logScrollInfo();
+    const timer = setTimeout(logScrollInfo, 1000);
+
+    window.addEventListener('resize', logScrollInfo);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', logScrollInfo);
+    };
+  }, [projects, isDataLoaded]);
 
   const fetchUserProfile = async () => {
     try {
@@ -49,7 +92,6 @@ const Dashboard = () => {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-      // Add this debug statement
       console.log('Profile picture URL:', response.data.picture);
 
       setUserProfile({
@@ -57,7 +99,7 @@ const Dashboard = () => {
         firstName: firstName,
         lastName: lastName,
         picture: response.data.picture || null,
-        googleAuth: response.data.googleAuth || false
+        googleAuth: response.data.googleAuth || false,
       });
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -67,38 +109,12 @@ const Dashboard = () => {
       });
       if (error.response?.status === 401) {
         console.log('401 Unauthorized, redirecting to login');
-        localStorage.removeItem('token'); // Clear invalid token
+        localStorage.removeItem('token');
         navigate('/', { state: { error: 'Session expired. Please log in again.' } });
       } else {
         setUserProfile({ firstName: '', lastName: '', picture: null, googleAuth: false });
       }
     }
-  };
-
-   // Add a function to preload the profile image and check if it loads successfully
-   const preloadProfileImage = (url) => {
-    // Don't attempt to load if URL is null or empty
-    if (!url) return;
-
-    const img = new Image();
-    img.onload = () => {
-      setUserProfile(prev => ({
-        ...prev,
-        profileImageLoaded: true
-      }));
-    };
-    img.onerror = () => {
-      console.error('Failed to load profile image:', url);
-      setUserProfile(prev => ({
-        ...prev,
-        profileImageLoaded: false
-      }));
-    };
-
-    // Add a cache-busting parameter to try to avoid hitting rate limits
-    // and add a timestamp to prevent caching issues
-    const cacheBuster = `?cb=${Date.now()}`;
-    img.src = url + cacheBuster;
   };
 
   const fetchProjects = async () => {
@@ -156,7 +172,7 @@ const Dashboard = () => {
       });
       if (error.response?.status === 401) {
         console.log('401 Unauthorized, redirecting to login');
-        localStorage.removeItem('token'); // Clear invalid token
+        localStorage.removeItem('token');
         navigate('/', { state: { error: 'Session expired. Please log in again.' } });
       }
     }
@@ -178,8 +194,8 @@ const Dashboard = () => {
       video.onseeked = () => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const maxWidth = 200;
-        const maxHeight = 112;
+        const maxWidth = 300;
+        const maxHeight = 200;
         let width = video.videoWidth;
         let height = video.videoHeight;
 
@@ -219,8 +235,8 @@ const Dashboard = () => {
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const maxWidth = 200;
-        const maxHeight = 112;
+        const maxWidth = 300;
+        const maxHeight = 200;
         let width = img.width;
         let height = img.height;
 
@@ -352,111 +368,151 @@ const Dashboard = () => {
     setIsProfileDropdownOpen(!isProfileDropdownOpen);
   };
 
+  const toggleNavMenu = () => {
+    setIsNavMenuOpen(!isNavMenuOpen);
+  };
+
   const handlePresetSelect = (presetWidth, presetHeight, presetFps = 25) => {
     setWidth(presetWidth);
     setHeight(presetHeight);
     setFps(presetFps);
   };
 
-  const navigateToProfile = () => {
-    // Navigate to profile page (you'll need to implement this)
-    navigate('/profile');
-    setIsProfileDropdownOpen(false);
-  };
-
-  const navigateToSettings = () => {
-    // Navigate to settings page (you'll need to implement this)
-    navigate('/settings');
-    setIsProfileDropdownOpen(false);
-  };
-
-  // Add this function to handle image loading errors
   const handleImageError = (e) => {
     console.error('Failed to load profile image');
     e.target.style.display = 'none';
     e.target.nextSibling.style.display = 'flex';
   };
 
+  const scrollToSection = (sectionId) => {
+    console.log(`Attempting to scroll to section: ${sectionId}`);
+
+    // Force a small delay to ensure DOM is fully rendered
+    setTimeout(() => {
+      const section = document.getElementById(sectionId);
+      if (!section) {
+        console.error(`Section with ID ${sectionId} not found.`);
+        return;
+      }
+
+      // Get the navbar height for offset
+      const navBar = document.querySelector('.nav-bar');
+      const navHeight = navBar ? navBar.offsetHeight : 80;
+
+      // Calculate position with a little extra padding for better visibility
+      const offsetPosition = section.offsetTop - navHeight - 20;
+
+      console.log(`Scrolling to ${sectionId} at position: ${offsetPosition}px`);
+
+      // Use both methods for maximum browser compatibility
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+
+      // Close the mobile nav if it's open
+      setIsNavMenuOpen(false);
+    }, 150);
+  };
+
+  // 2. Add this useEffect to validate section IDs on component mount
+  useEffect(() => {
+    // Validate that all sections exist in the DOM
+    const sections = ['dashboard-section', 'about-us-section', 'contact-us-section'];
+    sections.forEach(id => {
+      const element = document.getElementById(id);
+      if (!element) {
+        console.error(`WARNING: Section with ID "${id}" not found in DOM`);
+      } else {
+        console.log(`Found section: ${id} at position ${element.offsetTop}px`);
+      }
+    });
+  }, [isDataLoaded]);
+
+  // 3. Add these fallback navigation methods to try if the main one doesn't work
+  const fallbackScrollToSection = (sectionId) => {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    // Method 1: Using scrollIntoView
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setIsNavMenuOpen(false);
+  };
+
+  const manualScrollToSection = (sectionId) => {
+    switch(sectionId) {
+      case 'dashboard-section':
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        break;
+      case 'about-us-section':
+        window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
+        break;
+      case 'contact-us-section':
+        window.scrollTo({ top: window.innerHeight * 2, behavior: 'smooth' });
+        break;
+      default:
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    setIsNavMenuOpen(false);
+  };
+
+
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
-        <div className="header-left">
-          <h1 className="product-name">VideoCraft</h1>
-        </div>
-        <div className="header-right">
-          <div className="create-dropdown">
-            <button className="create-button" onClick={toggleDropdown}>
-              <span className="plus-icon">+</span> Create
-            </button>
-            {isDropdownOpen && (
-              <div className="dropdown-menu">
-                <div className="dropdown-title">Create New Project</div>
-                <div className="dropdown-form">
-                  <input
-                    type="text"
-                    placeholder="Project Name"
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    className="dropdown-input"
-                  />
-                  <div className="dimension-inputs">
-                    <input
-                      type="number"
-                      placeholder="Width"
-                      value={width}
-                      onChange={(e) => setWidth(parseInt(e.target.value, 10))}
-                      className="dropdown-input dimension-input"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Height"
-                      value={height}
-                      onChange={(e) => setHeight(parseInt(e.target.value, 10))}
-                      className="dropdown-input dimension-input"
-                    />
-                    <input
-                      type="number"
-                      placeholder="FPS"
-                      value={fps}
-                      onChange={(e) => setFps(parseInt(e.target.value, 10))}
-                      className="dropdown-input dimension-input"
-                    />
-                  </div>
-                </div>
-                <div className="dropdown-presets">
-                  <div className="dropdown-subtitle">Presets</div>
-                  <div className="dropdown-item" onClick={() => handlePresetSelect(1920, 1080, 30)}>
-                    YouTube (1920x1080, 30 FPS)
-                  </div>
-                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920, 60)}>
-                    YouTube Shorts (1080x1920, 60 FPS)
-                  </div>
-                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920, 60)}>
-                    Instagram Reels (1080x1920, 60 FPS)
-                  </div>
-                  <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920, 60)}>
-                    TikTok (1080x1920, 60 FPS)
-                  </div>
-                  <div className="dropdown-subtitle">FPS Options</div>
-                  <div className="dropdown-item" onClick={() => setFps(24)}>
-                    24 FPS (Cinematic)
-                  </div>
-                  <div className="dropdown-item" onClick={() => setFps(25)}>
-                    25 FPS (Standard)
-                  </div>
-                  <div className="dropdown-item" onClick={() => setFps(30)}>
-                    30 FPS (Common)
-                  </div>
-                  <div className="dropdown-item" onClick={() => setFps(60)}>
-                    60 FPS (Smooth)
-                  </div>
-                </div>
-                <button className="dropdown-create-button" onClick={createNewProject}>
-                  Create
-                </button>
-              </div>
-            )}
+      {/* Navigation Bar */}
+      <nav className={`nav-bar ${isScrolled ? 'scrolled' : ''}`}>
+        <div className="nav-content">
+          <div className="branding-container">
+            <h1>
+              <span className="letter">S</span>
+              <span className="letter">C</span>
+              <span className="letter">E</span>
+              <span className="letter">N</span>
+              <span className="letter">I</span>
+              <span className="letter">T</span>
+              <span className="letter">H</span>
+            </h1>
+            <div className="logo-element"></div>
           </div>
+          <button className="hamburger-menu" onClick={toggleNavMenu}>
+            <FaBars />
+          </button>
+
+<div className={`nav-links ${isNavMenuOpen ? 'open' : ''}`}>
+  <button
+    type="button"
+    className="nav-link"
+    onClick={() => {
+      scrollToSection('dashboard-section');
+      // If the above fails, try these as backups
+      setTimeout(() => fallbackScrollToSection('dashboard-section'), 100);
+    }}
+  >
+    My Projects
+  </button>
+  <button
+    type="button"
+    className="nav-link"
+    onClick={() => {
+      scrollToSection('about-us-section');
+      // If the above fails, try these as backups
+      setTimeout(() => fallbackScrollToSection('about-us-section'), 100);
+    }}
+  >
+    About Us
+  </button>
+  <button
+    type="button"
+    className="nav-link"
+    onClick={() => {
+      scrollToSection('contact-us-section');
+      // If the above fails, try these as backups
+      setTimeout(() => fallbackScrollToSection('contact-us-section'), 100);
+    }}
+  >
+    Contact Us
+  </button>
+</div>
           <div className="profile-section">
             <div className="profile-icon" onClick={toggleProfileDropdown}>
               {userProfile.picture ? (
@@ -527,9 +583,95 @@ const Dashboard = () => {
             )}
           </div>
         </div>
-      </header>
+      </nav>
 
-      <section className="projects-section">
+      {/* Header container for buttons */}
+      <div className="header-container">
+        <div className="create-dropdown">
+          <button className="create-button" onClick={toggleDropdown}>
+            <span className="plus-icon">+</span> Create
+          </button>
+          {isDropdownOpen && (
+            <div className="dropdown-menu">
+              <div className="dropdown-title">Create New Project</div>
+              <div className="dropdown-form">
+                <input
+                  type="text"
+                  placeholder="Project Name"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  className="dropdown-input"
+                />
+                <div className="dimension-inputs">
+                  <input
+                    type="number"
+                    placeholder="Width"
+                    value={width}
+                    onChange={(e) => setWidth(parseInt(e.target.value, 10))}
+                    className="dropdown-input dimension-input"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Height"
+                    value={height}
+                    onChange={(e) => setHeight(parseInt(e.target.value, 10))}
+                    className="dropdown-input dimension-input"
+                  />
+                  <input
+                    type="number"
+                    placeholder="FPS"
+                    value={fps}
+                    onChange={(e) => setFps(parseInt(e.target.value, 10))}
+                    className="dropdown-input dimension-input"
+                  />
+                </div>
+              </div>
+              <div className="dropdown-presets">
+                <div className="dropdown-subtitle">Presets</div>
+                <div className="dropdown-item" onClick={() => handlePresetSelect(1920, 1080, 30)}>
+                  YouTube (1920x1080, 30 FPS)
+                </div>
+                <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920, 60)}>
+                  YouTube Shorts (1080x1920, 60 FPS)
+                </div>
+                <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920, 60)}>
+                  Instagram Reels (1080x1920, 60 FPS)
+                </div>
+                <div className="dropdown-item" onClick={() => handlePresetSelect(1080, 1920, 60)}>
+                  TikTok (1080x1920, 60 FPS)
+                </div>
+                <div className="dropdown-subtitle">FPS Options</div>
+                <div className="dropdown-item" onClick={() => setFps(24)}>
+                  24 FPS (Cinematic)
+                </div>
+                <div className="dropdown-item" onClick={() => setFps(25)}>
+                  25 FPS (Standard)
+                </div>
+                <div className="dropdown-item" onClick={() => setFps(30)}>
+                  30 FPS (Common)
+                </div>
+                <div className="dropdown-item" onClick={() => setFps(60)}>
+                  60 FPS (Smooth)
+                </div>
+              </div>
+              <button className="dropdown-create-button" onClick={createNewProject}>
+                Create
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Ripple effect */}
+      <div className="ripple-effect">
+        <div className="ripple-ring"></div>
+      </div>
+      {/* Particles */}
+      <div className="particle circle" style={{ width: '10px', height: '10px', top: '20%', left: '30%' }}></div>
+      <div className="particle square" style={{ width: '8px', height: '8px', top: '40%', left: '70%' }}></div>
+      <div className="particle circle" style={{ width: '12px', height: '12px', top: '60%', left: '15%' }}></div>
+
+      <section className="projects-section" id="dashboard-section">
         <h2>My Projects</h2>
         {location.state?.message && <p className="success-message">{location.state.message}</p>}
         {location.state?.error && <p className="error-message">{location.state.error}</p>}
@@ -565,6 +707,53 @@ const Dashboard = () => {
             ))
           )}
         </div>
+      </section>
+      <section className="about-us-section" id="about-us-section">
+        <div className="section-header">
+          <h2>
+            <span className="letter">A</span>
+            <span className="letter">b</span>
+            <span className="letter">o</span>
+            <span className="letter">u</span>
+            <span className="letter">t</span>
+            <span className="letter space"> </span>
+            <span className="letter">S</span>
+            <span className="letter">c</span>
+            <span className="letter">e</span>
+            <span className="letter">n</span>
+            <span className="letter">i</span>
+            <span className="letter">t</span>
+            <span className="letter">h</span>
+          </h2>
+          <div className="logo-element"></div>
+        </div>
+        <p>
+          At Scenith, we believe in the power of visual storytelling. Born from the vision of two college friends in India, our name—a fusion of "Scene" and "Zenith"—embodies our commitment to elevating content creation to its highest potential.
+        </p>
+        <p>
+          Developed with relentless dedication since February 2025, Scenith isn't just another video editor—it's a professional-grade creative platform designed by creators who understand what creators need. Our intuitive timeline interface houses a comprehensive toolkit that professional editors demand: precise audio manipulation, frame-perfect video splitting, dynamic keyframing, versatile transitions, and customizable elements.
+        </p>
+        <p>
+          We built Scenith because we recognized the explosive growth of digital influence and the need for accessible yet powerful tools to fuel it. Every feature has been meticulously crafted to streamline your workflow without compromising creative control—whether you're adjusting scale, applying filters, cropping content, or integrating custom elements.
+        </p>
+        <p>
+          Scenith represents our day and night commitment to one simple truth: when creators have the right tools, stories become more compelling, messages more impactful, and creative visions fully realized.
+        </p>
+        <p>
+          Join us at the peak of visual storytelling.
+        </p>
+      </section>
+      <section className="contact-us-section" id="contact-us-section">
+        <h2>Contact Us</h2>
+        <p>
+          Have questions or feedback? Reach out to us! We're here to help you with your creative journey.
+        </p>
+        <p>
+          Email: <a href="mailto:support@scenith.com">support@scenith.com</a>
+        </p>
+        <p>
+          Phone: +91 123-456-7890
+        </p>
       </section>
     </div>
   );

@@ -13,8 +13,8 @@ const TimelineLayer = ({
   selectedSegmentId,
   transitions,
   onTransitionSelect,
-  isSplitMode, // Add isSplitMode prop
-  handleSplit, // Add handleSplit prop to trigger splitting
+  isSplitMode,
+  handleSplit,
 }) => {
   const isAudioLayer = layer.some((item) => item.type === 'audio');
 
@@ -42,13 +42,12 @@ const TimelineLayer = ({
           const style = {
             left: `${item.startTime * timeScale}px`,
             width: `${item.duration * timeScale}px`,
-            backgroundImage: item.thumbnail
-              ? `url(${item.thumbnail})`
-              : item.type === 'image' && item.filePath
-              ? `url(${item.filePath})`
-              : item.type === 'audio'
-              ? `url(${item.waveformImage})`
-              : 'none',
+            backgroundImage:
+              item.thumbnail
+                ? `url(${item.thumbnail})`
+                : item.type === 'image' && item.filePath
+                ? `url(${item.filePath})`
+                : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             zIndex: index,
@@ -75,11 +74,10 @@ const TimelineLayer = ({
               } ${item.id === playingVideoId ? 'playing' : ''} ${isSelected ? 'selected' : ''}`}
               draggable
               onDragStart={(e) => handleDragStart(e, item, layerIndex)}
-              style={style}
+              style={item.type === 'audio' ? { ...style, backgroundImage: 'none' } : style}
               onClick={(e) => {
                 e.stopPropagation();
                 if (isSplitMode) {
-                  // In split mode, trigger split at the clicked position
                   const rect = e.currentTarget.getBoundingClientRect();
                   const clickX = e.clientX - rect.left;
                   const clickTime = item.startTime + clickX / timeScale;
@@ -123,12 +121,22 @@ const TimelineLayer = ({
                   </div>
                 </div>
               )}
+              {item.type === 'audio' && (
+                <div
+                  id={`waveform-segment-${item.id}`}
+                  className="audio-waveform"
+                  style={{ width: `${item.duration * timeScale}px`, height: '30px' }}
+                ></div>
+              )}
               {(item.type === 'video' || item.type === 'image') && (
                 <div className="video-title">
                   {item.type === 'video'
                     ? item.title || item.displayPath || item.filePath || item.filename || 'Unnamed Video'
                     : item.fileName || 'Unnamed Image'}
                 </div>
+              )}
+              {item.type === 'audio' && (
+                <div className="audio-title">{item.displayName || item.fileName}</div>
               )}
               {isSelected && (
                 <div

@@ -11,6 +11,7 @@
     import FilterControls from './FilterControls';
     import TransitionsPanel from './TransitionsPanel';
     import { v4 as uuidv4 } from 'uuid';
+    import WaveSurfer from 'wavesurfer.js';
 
     const API_BASE_URL = 'http://localhost:8080';
       const defaultTextStyles = [
@@ -160,6 +161,50 @@
       const MAX_TIME_SCALE = 250;
       const baseFontSize = 24;
       let timelineSetPlayhead = null;
+
+      useEffect(() => {
+        const initializeWaveforms = async () => {
+          audios.forEach(async (audio) => {
+            if (audio.waveformJsonPath) {
+              try {
+                const response = await axios.get(audio.waveformJsonPath, {
+                  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                });
+                const waveformData = response.data;
+
+                const wavesurfer = WaveSurfer.create({
+                  container: `#waveform-${audio.id}`,
+                  waveColor: '#00FFFF',
+                  progressColor: '#FFFFFF',
+                  height: 50,
+                  normalize: true,
+                  cursorWidth: 0,
+                  barWidth: 2,
+                  barGap: 1,
+                });
+
+                wavesurfer.load(audio.audioPath, waveformData.peaks, waveformData.sampleRate / waveformData.peaks.length);
+              } catch (error) {
+                console.error(`Error loading waveform for ${audio.fileName}:`, error);
+              }
+            }
+          });
+        };
+
+        if (audios.length > 0) {
+          initializeWaveforms();
+        }
+
+        // Cleanup on unmount
+        return () => {
+          audios.forEach((audio) => {
+            const container = document.querySelector(`#waveform-${audio.id}`);
+            if (container) {
+              container.innerHTML = '';
+            }
+          });
+        };
+      }, [audios]);
 
       // Playback animation
       useEffect(() => {
@@ -587,196 +632,197 @@
         }
       };
 
-      const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
-          if (uploading || isDragEvent) return;
-          try {
-            const token = localStorage.getItem('token');
-            if (!sessionId || !projectId || !token) {
-              throw new Error('Missing sessionId, projectId, or token');
-            }
+    const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
+      if (uploading || isDragEvent) return;
+      try {
+        const token = localStorage.getItem('token');
+        if (!sessionId || !projectId || !token) {
+          throw new Error('Missing sessionId, projectId, or token');
+        }
 
-            const duration = audio.duration || 5;
-            let timelineStartTime = roundToThreeDecimals(currentTime);
+        const duration = audio.duration || 5;
+        let timelineStartTime = roundToThreeDecimals(currentTime);
 
-            const findAvailableLayer = (start, end, layers) => {
-              for (let layerIndex = 0; layerIndex < layers.length; layerIndex++) {
-                const hasOverlap = layers[layerIndex].some((segment) => {
-                  const segmentStart = segment.startTime;
-                  const segmentEnd = segmentStart + segment.duration;
-                  return start < segmentEnd && end > segmentStart;
-                });
-                if (!hasOverlap) return layerIndex;
-              }
-              return layers.length;
-            };
-
-            const proposedEndTime = timelineStartTime + duration;
-            let selectedLayerIndex = findAvailableLayer(timelineStartTime, proposedEndTime, audioLayers);
-
-            if (selectedLayerIndex >= audioLayers.length) {
-              let earliestStartTime = timelineStartTime;
-              let foundLayer = -1;
-
-              for (let layerIndex = 0; layerIndex < audioLayers.length; layerIndex++) {
-                const layer = audioLayers[layerIndex];
-                let layerEndTime = 0;
-                layer.forEach((segment) => {
-                  const segmentEnd = segment.startTime + segment.duration;
-                  if (segmentEnd > layerEndTime) layerEndTime = segmentEnd;
-                });
-                if (layerEndTime < earliestStartTime) {
-                  earliestStartTime = layerEndTime;
-                  foundLayer = layerIndex;
-                }
-              }
-
-              if (foundLayer >= 0) {
-                selectedLayerIndex = foundLayer;
-                timelineStartTime = roundToThreeDecimals(earliestStartTime);
-              } else {
-                selectedLayerIndex = audioLayers.length;
-              }
-            }
-
-            const backendLayer = -(selectedLayerIndex + 1);
-
-            // Generate unique temporary ID
-            const doesIdExist = (id) => {
-              return audioLayers.some((layer) => layer.some((segment) => segment.id === id));
-            };
-            let tempId = `temp-${uuidv4()}`;
-            while (doesIdExist(tempId)) {
-              tempId = `temp-${uuidv4()}`;
-            }
-
-            const newSegment = {
-              id: tempId,
-              type: 'audio',
-              fileName: audio.fileName,
-              audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(audio.fileName)}`,
-              displayName: audio.displayName || audio.fileName.split('/').pop(),
-              waveformImage: audio.waveformImage || '/images/audio.jpeg',
-              startTime: timelineStartTime,
-              duration: duration,
-              layer: backendLayer,
-              volume: 1.0,
-              startTimeWithinAudio: 0,
-              endTimeWithinAudio: duration,
-              timelineStartTime: timelineStartTime,
-              timelineEndTime: timelineStartTime + duration,
-              keyframes: {},
-            };
-
-            let updatedAudioLayers = audioLayers;
-            setAudioLayers((prevLayers) => {
-              const newLayers = [...prevLayers];
-              while (newLayers.length <= selectedLayerIndex) newLayers.push([]);
-
-              // Check for existing segment with the same ID
-              let existingLayerIndex = -1;
-              let existingSegment = null;
-              for (let i = 0; i < newLayers.length; i++) {
-                const found = newLayers[i].find((s) => s.id === newSegment.id);
-                if (found) {
-                  existingSegment = found;
-                  existingLayerIndex = i;
-                  break;
-                }
-              }
-
-              if (existingSegment) {
-                console.warn(`Segment with ID ${newSegment.id} already exists in layer ${existingLayerIndex}. Updating instead.`);
-                newLayers[existingLayerIndex] = newLayers[existingLayerIndex].map((s) =>
-                  s.id === newSegment.id ? { ...s, ...newSegment, layer: backendLayer } : s
-                );
-              } else {
-                newLayers[selectedLayerIndex].push(newSegment);
-              }
-
-              updatedAudioLayers = newLayers;
-              return newLayers;
+        const findAvailableLayer = (start, end, layers) => {
+          for (let layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+            const hasOverlap = layers[layerIndex].some((segment) => {
+              const segmentStart = segment.startTime;
+              const segmentEnd = segmentStart + segment.duration;
+              return start < segmentEnd && end > segmentStart;
             });
-
-            setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
-            preloadMedia();
-            saveHistory();
-
-            const response = await axios.post(
-              `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
-              {
-                audioFileName: audio.fileName,
-                layer: backendLayer,
-                timelineStartTime: roundToThreeDecimals(timelineStartTime),
-                timelineEndTime: roundToThreeDecimals(timelineStartTime + duration),
-                startTime: roundToThreeDecimals(0),
-                endTime: roundToThreeDecimals(duration),
-                volume: 1.0,
-              },
-              { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-            );
-
-            const newAudioSegment = response.data;
-
-            if (!newAudioSegment.audioSegmentId) {
-              throw new Error('Backend did not return audioSegmentId');
-            }
-
-            // Ensure backend ID is unique
-            let finalSegmentId = newAudioSegment.audioSegmentId;
-            if (doesIdExist(finalSegmentId)) {
-              console.warn(`Backend returned duplicate audioSegmentId ${finalSegmentId}. Generating new ID.`);
-              finalSegmentId = `${finalSegmentId}-${uuidv4()}`;
-            }
-
-            setAudioLayers((prevLayers) => {
-              const newLayers = prevLayers.map((layer, index) => {
-                if (index === selectedLayerIndex) {
-                  return layer.map((item) =>
-                    item.id === tempId
-                      ? {
-                          ...item,
-                          id: finalSegmentId,
-                          volume: newAudioSegment.volume || 1.0,
-                          keyframes: newAudioSegment.keyframes || {},
-                          startTimeWithinAudio: roundToThreeDecimals(newAudioSegment.startTime || 0),
-                          endTimeWithinAudio: roundToThreeDecimals(newAudioSegment.endTime || duration),
-                          duration: roundToThreeDecimals(
-                            newAudioSegment.timelineEndTime - newAudioSegment.timelineStartTime
-                          ),
-                          timelineStartTime: roundToThreeDecimals(newAudioSegment.timelineStartTime),
-                          timelineEndTime: roundToThreeDecimals(newAudioSegment.timelineEndTime),
-                          layer: newAudioSegment.layer || backendLayer,
-                        }
-                      : item
-                  );
-                }
-                return layer;
-              });
-              updatedAudioLayers = newLayers;
-              return newLayers;
-            });
-
-            autoSaveProject(videoLayers, updatedAudioLayers);
-          } catch (error) {
-            console.error('Error adding audio to timeline:', error.response?.data || error.message);
-            setAudioLayers((prevLayers) => {
-              const newLayers = [...prevLayers];
-              newLayers.forEach((layer, index) => {
-                newLayers[index] = layer.filter((item) => !item.id.startsWith('temp-'));
-              });
-              return newLayers;
-            });
-            let maxEndTime = 0;
-            [...videoLayers, ...audioLayers].forEach((layer) => {
-              layer.forEach((item) => {
-                const endTime = item.startTime + item.duration;
-                if (endTime > maxEndTime) maxEndTime = endTime;
-              });
-            });
-            setTotalDuration(maxEndTime);
-            alert('Failed to add audio to timeline. Please try again.');
+            if (!hasOverlap) return layerIndex;
           }
-        }, 300);
+          return layers.length;
+        };
+
+        const proposedEndTime = timelineStartTime + duration;
+        let selectedLayerIndex = findAvailableLayer(timelineStartTime, proposedEndTime, audioLayers);
+
+        if (selectedLayerIndex >= audioLayers.length) {
+          let earliestStartTime = timelineStartTime;
+          let foundLayer = -1;
+
+          for (let layerIndex = 0; layerIndex < audioLayers.length; layerIndex++) {
+            const layer = audioLayers[layerIndex];
+            let layerEndTime = 0;
+            layer.forEach((segment) => {
+              const segmentEnd = segment.startTime + segment.duration;
+              if (segmentEnd > layerEndTime) layerEndTime = segmentEnd;
+            });
+            if (layerEndTime < earliestStartTime) {
+              earliestStartTime = layerEndTime;
+              foundLayer = layerIndex;
+            }
+          }
+
+          if (foundLayer >= 0) {
+            selectedLayerIndex = foundLayer;
+            timelineStartTime = roundToThreeDecimals(earliestStartTime);
+          } else {
+            selectedLayerIndex = audioLayers.length;
+          }
+        }
+
+        const backendLayer = -(selectedLayerIndex + 1);
+
+        const doesIdExist = (id) => {
+          return audioLayers.some((layer) => layer.some((segment) => segment.id === id));
+        };
+        let tempId = `temp-${uuidv4()}`;
+        while (doesIdExist(tempId)) {
+          tempId = `temp-${uuidv4()}`;
+        }
+
+        const newSegment = {
+          id: tempId,
+          type: 'audio',
+          fileName: audio.fileName,
+          audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(audio.fileName)}`,
+          displayName: audio.displayName || audio.fileName.split('/').pop(),
+          waveformJsonPath: audio.waveformJsonPath,
+          startTime: timelineStartTime,
+          duration: duration,
+          layer: backendLayer,
+          volume: 1.0,
+          startTimeWithinAudio: 0,
+          endTimeWithinAudio: duration,
+          timelineStartTime: timelineStartTime,
+          timelineEndTime: timelineStartTime + duration,
+          keyframes: {},
+        };
+
+        let updatedAudioLayers = audioLayers;
+        setAudioLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          while (newLayers.length <= selectedLayerIndex) newLayers.push([]);
+
+          let existingLayerIndex = -1;
+          let existingSegment = null;
+          for (let i = 0; i < newLayers.length; i++) {
+            const found = newLayers[i].find((s) => s.id === newSegment.id);
+            if (found) {
+              existingSegment = found;
+              existingLayerIndex = i;
+              break;
+            }
+          }
+
+          if (existingSegment) {
+            console.warn(`Segment with ID ${newSegment.id} already exists in layer ${existingLayerIndex}. Updating instead.`);
+            newLayers[existingLayerIndex] = newLayers[existingLayerIndex].map((s) =>
+              s.id === newSegment.id ? { ...s, ...newSegment, layer: backendLayer } : s
+            );
+          } else {
+            newLayers[selectedLayerIndex].push(newSegment);
+          }
+
+          updatedAudioLayers = newLayers;
+          return newLayers;
+        });
+
+        setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
+        preloadMedia();
+        saveHistory();
+
+        const response = await axios.post(
+          `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
+          {
+            audioFileName: audio.fileName,
+            layer: backendLayer,
+            timelineStartTime: roundToThreeDecimals(timelineStartTime),
+            timelineEndTime: roundToThreeDecimals(timelineStartTime + duration),
+            startTime: roundToThreeDecimals(0),
+            endTime: roundToThreeDecimals(duration),
+            volume: 1.0,
+          },
+          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        const newAudioSegment = response.data;
+
+        if (!newAudioSegment.audioSegmentId) {
+          throw new Error('Backend did not return audioSegmentId');
+        }
+
+        // Sanitize backend audioSegmentId if necessary
+        let finalSegmentId = newAudioSegment.audioSegmentId.replace(/[^a-zA-Z0-9]/g, '-');
+        if (doesIdExist(finalSegmentId)) {
+          console.warn(`Backend returned duplicate audioSegmentId ${finalSegmentId}. Generating new ID.`);
+          finalSegmentId = `${finalSegmentId}-${uuidv4()}`;
+        }
+
+        setAudioLayers((prevLayers) => {
+          const newLayers = prevLayers.map((layer, index) => {
+            if (index === selectedLayerIndex) {
+              return layer.map((item) =>
+                item.id === tempId
+                  ? {
+                      ...item,
+                      id: finalSegmentId,
+                      volume: newAudioSegment.volume || 1.0,
+                      keyframes: newAudioSegment.keyframes || {},
+                      startTimeWithinAudio: roundToThreeDecimals(newAudioSegment.startTime || 0),
+                      endTimeWithinAudio: roundToThreeDecimals(newAudioSegment.endTime || duration),
+                      duration: roundToThreeDecimals(
+                        newAudioSegment.timelineEndTime - newAudioSegment.timelineStartTime
+                      ),
+                      timelineStartTime: roundToThreeDecimals(newAudioSegment.timelineStartTime),
+                      timelineEndTime: roundToThreeDecimals(newAudioSegment.timelineEndTime),
+                      layer: newAudioSegment.layer || backendLayer,
+                      waveformJsonPath: newAudioSegment.waveformJsonPath
+                        ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(newAudioSegment.waveformJsonPath.split('/').pop())}`
+                        : audio.waveformJsonPath,
+                    }
+                  : item
+              );
+            }
+            return layer;
+          });
+          updatedAudioLayers = newLayers;
+          return newLayers;
+        });
+
+        autoSaveProject(videoLayers, updatedAudioLayers);
+      } catch (error) {
+        console.error('Error adding audio to timeline:', error.response?.data || error.message);
+        setAudioLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          newLayers.forEach((layer, index) => {
+            newLayers[index] = layer.filter((item) => !item.id.startsWith('temp-'));
+          });
+          return newLayers;
+        });
+        let maxEndTime = 0;
+        [...videoLayers, ...audioLayers].forEach((layer) => {
+          layer.forEach((item) => {
+            const endTime = item.startTime + item.duration;
+            if (endTime > maxEndTime) maxEndTime = endTime;
+          });
+        });
+        setTotalDuration(maxEndTime);
+        alert('Failed to add audio to timeline. Please try again.');
+      }
+    }, 300);
 
       const toggleTransitionsPanel = () => {
         setIsTransitionsOpen((prev) => !prev);
@@ -1345,42 +1391,44 @@
         }
       };
 
-        const fetchAudios = async () => {
-          try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
-              headers: { Authorization: `Bearer ${token}` },
+    const fetchAudios = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const project = response.data;
+        if (project.audioJson) {
+          let audioFiles =
+            typeof project.audioJson === 'string' ? JSON.parse(project.audioJson) : project.audioJson;
+          if (Array.isArray(audioFiles)) {
+            const updatedAudios = audioFiles.map((audio) => {
+              const fullFileName = audio.audioPath.split('/').pop();
+              const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
+              // Sanitize the filename for use in id
+              const sanitizedId = `audio-${fullFileName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
+              return {
+                id: sanitizedId,
+                fileName: fullFileName,
+                displayName: originalFileName,
+                audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(fullFileName)}`,
+                waveformJsonPath: audio.waveformJsonPath
+                  ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
+                  : null,
+              };
             });
-            const project = response.data;
-            if (project.audioJson) {
-              let audioFiles =
-                typeof project.audioJson === 'string' ? JSON.parse(project.audioJson) : project.audioJson;
-              if (Array.isArray(audioFiles)) {
-                const updatedAudios = audioFiles.map((audio) => {
-                  const fullFileName = audio.audioPath.split('/').pop();
-                  const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
-                  return {
-                    id: audio.audioPath || `audio-${fullFileName}-${Date.now()}`,
-                    fileName: fullFileName,
-                    displayName: originalFileName,
-                    audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(fullFileName)}`,
-                    waveformImage: audio.waveformPath
-                      ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(audio.waveformPath.split('/').pop())}`
-                      : '/images/audio.jpeg',
-                  };
-                });
-                setAudios(updatedAudios);
-              } else {
-                setAudios([]);
-              }
-            } else {
-              setAudios([]);
-            }
-          } catch (error) {
-            console.error('Error fetching audios:', error);
+            setAudios(updatedAudios);
+          } else {
             setAudios([]);
           }
-        };
+        } else {
+          setAudios([]);
+        }
+      } catch (error) {
+        console.error('Error fetching audios:', error);
+        setAudios([]);
+      }
+    };
 
       const fetchPhotos = async () => {
         try {
@@ -1513,51 +1561,51 @@
         }
       };
 
-      const preloadMedia = () => {
-        const existingPreloadElements = document.querySelectorAll('.preload-media');
-        existingPreloadElements.forEach((el) => el.remove());
+    const preloadMedia = () => {
+      const existingPreloadElements = document.querySelectorAll('.preload-media');
+      existingPreloadElements.forEach((el) => el.remove());
 
-        const preloadContainer = document.createElement('div');
-        preloadContainer.style.display = 'none';
-        preloadContainer.className = 'preload-media-container';
-        document.body.appendChild(preloadContainer);
+      const preloadContainer = document.createElement('div');
+      preloadContainer.style.display = 'none';
+      preloadContainer.className = 'preload-media-container';
+      document.body.appendChild(preloadContainer);
 
-        videoLayers.forEach((layer) => {
-          layer.forEach((segment) => {
-            if (segment.type === 'video' && segment.filePath) {
-              const video = document.createElement('video');
-              const normalizedFilePath = segment.filePath.startsWith('videos/')
-                ? segment.filePath.substring(7)
-                : segment.filePath;
-              video.src = `${API_BASE_URL}/videos/${encodeURIComponent(normalizedFilePath)}`;
-              video.preload = 'auto';
-              video.muted = true;
-              video.className = 'preload-media';
-              preloadContainer.appendChild(video);
-              video.load();
-            } else if (segment.type === 'image' && segment.filePath) {
-              const img = document.createElement('img');
-              img.src = segment.filePath;
-              img.className = 'preload-media';
-              preloadContainer.appendChild(img);
-            }
-          });
+      videoLayers.forEach((layer) => {
+        layer.forEach((segment) => {
+          if (segment.type === 'video' && segment.filePath) {
+            const video = document.createElement('video');
+            const normalizedFilePath = segment.filePath.startsWith('videos/')
+              ? segment.filePath.substring(7)
+              : segment.filePath;
+            video.src = `${API_BASE_URL}/videos/${encodeURIComponent(normalizedFilePath)}`;
+            video.preload = 'auto';
+            video.muted = true;
+            video.className = 'preload-media';
+            preloadContainer.appendChild(video);
+            video.load();
+          } else if (segment.type === 'image' && segment.filePath) {
+            const img = document.createElement('img');
+            img.src = segment.filePath;
+            img.className = 'preload-media';
+            preloadContainer.appendChild(img);
+          }
         });
+      });
 
-        audioLayers.forEach((layer) => {
-          layer.forEach((segment) => {
-            if (segment.fileName) {
-              const audio = document.createElement('audio');
-              audio.src = `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(segment.fileName)}`;
-              audio.preload = 'auto';
-              audio.className = 'preload-media';
-              preloadContainer.appendChild(audio);
-              audio.load();
-              console.log(`Preloading audio for project ${projectId}: ${segment.fileName}`);
-            }
-          });
+      audioLayers.forEach((layer) => {
+        layer.forEach((segment) => {
+          if (segment.audioPath) {
+            const audio = document.createElement('audio');
+            audio.src = segment.audioPath;
+            audio.preload = 'auto';
+            audio.className = 'preload-media';
+            preloadContainer.appendChild(audio);
+            audio.load();
+            console.log(`Preloading audio for project ${projectId}: ${segment.fileName}`);
+          }
         });
-      };
+      });
+    };
 
       useEffect(() => {
           const fetchAndSetLayers = async () => {
@@ -1793,53 +1841,53 @@
           }
         };
 
-        const handleAudioUpload = async (event) => {
-          const files = Array.from(event.target.files);
-          if (files.length === 0) return;
+      const handleAudioUpload = async (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
 
-          const formData = new FormData();
-          files.forEach((file) => {
-            formData.append('audio', file);
-            formData.append('audioFileNames', file.name);
-          });
+        const formData = new FormData();
+        files.forEach((file) => {
+          formData.append('audio', file);
+          formData.append('audioFileNames', file.name);
+        });
 
-          try {
-            setUploading(true);
-            const token = localStorage.getItem('token');
-            const response = await axios.post(
-              `${API_BASE_URL}/projects/${projectId}/upload-audio`,
-              formData,
-              { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
-            );
-            const { project, audioFiles } = response.data;
+        try {
+          setUploading(true);
+          const token = localStorage.getItem('token');
+          const response = await axios.post(
+            `${API_BASE_URL}/projects/${projectId}/upload-audio`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
+          );
+          const { project, audioFiles } = response.data;
 
-            // Update state with audioFiles from response
-            if (audioFiles && Array.isArray(audioFiles)) {
-              const updatedAudios = audioFiles.map((audio) => {
-                const fullFileName = audio.audioFileName.split('/').pop();
-                const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
-                return {
-                  id: audio.audioPath || `audio-${fullFileName}-${Date.now()}`,
-                  fileName: fullFileName,
-                  displayName: originalFileName,
-                  audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(fullFileName)}`,
-                  waveformImage: audio.waveformPath
-                    ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(audio.waveformPath.split('/').pop())}`
-                    : '/images/audio.jpeg',
-                };
-              });
-              setAudios(updatedAudios);
-            }
-
-            // Fetch audios to ensure consistency
-            if (project) await fetchAudios();
-          } catch (error) {
-            console.error('Error uploading audio files:', error);
-            alert('Failed to upload one or more audio files. Please try again.');
-          } finally {
-            setUploading(false);
+          if (audioFiles && Array.isArray(audioFiles)) {
+            const updatedAudios = audioFiles.map((audio) => {
+              const fullFileName = audio.audioFileName.split('/').pop();
+              const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
+              // Sanitize the filename for use in id
+              const sanitizedId = `audio-${fullFileName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
+              return {
+                id: sanitizedId,
+                fileName: fullFileName,
+                displayName: originalFileName,
+                audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(fullFileName)}`,
+                waveformJsonPath: audio.waveformJsonPath
+                  ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
+                  : null,
+              };
+            });
+            setAudios(updatedAudios);
           }
-        };
+
+          if (project) await fetchAudios();
+        } catch (error) {
+          console.error('Error uploading audio files:', error);
+          alert('Failed to upload one or more audio files. Please try again.');
+        } finally {
+          setUploading(false);
+        }
+      };
 
       const generateVideoThumbnail = async (video) => {
         if (!video || (!video.filePath && !video.filename)) return;
@@ -2266,7 +2314,7 @@
           },
           { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
         );
-        const { videoSegmentId, audioSegmentId } = response.data;
+        const { videoSegmentId, audioSegmentId, audioPath, waveformJsonPath } = response.data;
 
         const segmentResponse = await axios.get(
           `${API_BASE_URL}/projects/${projectId}/get-segment`,
@@ -2315,10 +2363,18 @@
         if (audioSegmentId && segmentResponse.data.audioSegment) {
           const audioSegment = segmentResponse.data.audioSegment;
           const audioLayerIndex = Math.abs(audioSegment.layer) - 1;
+          // Sanitize audioSegmentId
+          const sanitizedAudioId = audioSegment.id.replace(/[^a-zA-Z0-9]/g, '-');
           const newAudioSegment = {
-            id: audioSegment.id,
+            id: sanitizedAudioId,
             type: 'audio',
             fileName: audioSegment.audioFileName || audioSegment.audioPath.split('/').pop(),
+            audioPath: audioSegment.audioPath
+              ? `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(audioSegment.audioPath.split('/').pop())}`
+              : audioPath,
+            waveformJsonPath: audioSegment.waveformJsonPath
+              ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+              : waveformJsonPath,
             startTime: audioSegment.timelineStartTime,
             duration: audioSegment.timelineEndTime - audioSegment.timelineStartTime,
             timelineStartTime: audioSegment.timelineStartTime,
@@ -2329,8 +2385,8 @@
             displayName: audioSegment.audioPath
               ? audioSegment.audioPath.split('/').pop()
               : audioSegment.audioFileName,
-            waveformImage: '/images/audio.jpeg',
             volume: audioSegment.volume || 1.0,
+            keyframes: audioSegment.keyframes || {},
           };
 
           setAudioLayers((prevLayers) => {
@@ -4059,7 +4115,11 @@
                             onDragStart={(e) => handleMediaDragStart(e, audio, 'audio')}
                             onClick={() => handleAudioClick(audio)}
                           >
-                            <img src={audio.waveformImage || '/images/audio.jpeg'} alt="Audio Waveform" className="audio-waveform" />
+                            <div
+                              className="audio-waveform"
+                              id={`waveform-${audio.id}`}
+                              style={{ width: '100%', height: '50px' }}
+                            ></div>
                             <div className="audio-title">{audio.displayName}</div>
                           </div>
                         ))}

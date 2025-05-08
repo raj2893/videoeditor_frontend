@@ -5,34 +5,62 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+  background-color: #1a1a1a; /* Match ProjectEditor */
 }
 
 .timeline-controls {
   display: flex;
   align-items: center;
   padding: 10px;
-  background-color: #2a2a2a;
-  border-bottom: 1px solid #444;
+  background-color: #1e1e1e;
+  border-bottom: 1px solid #2a2a2a;
 }
 
 .timeline-controls button {
   margin-right: 10px;
   padding: 5px 10px;
-  background-color: #444;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  background: transparent;
+  color: #5E8AB4; /* Muted blue for Play button */
+  border: 1px solid #5E8AB4;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: none; /* Ensure no glow */
+}
+
+.timeline-controls button::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #5E8AB4; /* Match the Play button color */
+  transition: all 0.3s ease;
 }
 
 .timeline-controls button:hover {
-  background-color: #555;
+  /* Removed background change to prevent glowing effect */
+  color: #5E8AB4;
+  border-color: #5E8AB4;
+  transform: scale(1.02);
+}
+
+.timeline-controls button:hover::after {
+  width: 80%;
+  left: 10%;
 }
 
 .time-display {
   margin: 0 15px;
-  color: #fff;
+  color: #d1d1d1;
   font-family: monospace;
+  font-size: 12px;
 }
 
 /* Make the timeline scrollable */
@@ -51,24 +79,24 @@
 }
 
 .timeline-scroll-container::-webkit-scrollbar-track {
-  background: #222;
+  background: #2a2a2a;
 }
 
 .timeline-scroll-container::-webkit-scrollbar-thumb {
-  background: #555;
+  background: #444;
   border-radius: 4px;
 }
 
 .timeline-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: #777;
+  background: #555;
 }
 
 .timeline-ruler {
   position: sticky;
   top: 0;
   height: 30px;
-  background-color: #333;
-  border-bottom: 1px solid #444;
+  background-color: #1e1e1e;
+  border-bottom: 1px solid #2a2a2a;
   z-index: 5;
 }
 
@@ -86,7 +114,7 @@
 
 .marker-label {
   font-size: 10px;
-  color: #aaa;
+  color: #a1a1a1;
   white-space: nowrap;
   transform: translateX(-50%);
 }
@@ -94,7 +122,7 @@
 .timeline {
   position: relative;
   min-height: 120px;
-  background-color: #2a2a2a;
+  background-color: #1a1a1a;
   min-width: max-content;
 }
 
@@ -103,15 +131,15 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: #ff0000;
+  background-color: #ff5555;
   z-index: 10;
 }
 
 .timeline-layer {
   position: relative;
   height: 40px;
-  border-bottom: 1px solid #444;
-  background-color: #333;
+  border-bottom: 1px solid #2a2a2a;
+  background-color: #1e1e1e;
   transition: background-color 0.2s;
 }
 
@@ -120,7 +148,7 @@
   left: 5px;
   top: 5px;
   font-size: 12px;
-  color: #aaa;
+  color: #a1a1a1;
   pointer-events: none;
 }
 
@@ -140,28 +168,26 @@
   justify-content: center;
   user-select: none;
   overflow: visible;
-  background-size: cover; /* Ensure thumbnail fills the container */
+  background-size: cover;
   background-position: center;
   box-sizing: border-box;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.5); /* Thin, semi-transparent white border */
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Ensure consistent border for specific segment types */
 .timeline-item.video-segment,
 .timeline-item.image-segment,
 .timeline-item.audio-segment {
-  border: 1px solid rgba(255, 255, 255, 0.5); /* Consistent thin border for segments with thumbnails */
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Remove the box-shadow to eliminate the black shadow effect */
 .timeline-item:hover {
-  border: 1px solid rgba(255, 255, 255, 0.7); /* Slightly brighter border on hover */
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .timeline-item.selected {
   border: 2px solid #ff9800;
-  box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
+  box-shadow: 0 0 8px rgba(255, 152, 0, 0.4);
 }
 
 .resize-handle {
@@ -218,16 +244,18 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   box-sizing: border-box;
+  color: #d1d1d1;
 }
 
 .text-segment-icon {
   display: inline-block;
   margin-right: 4px;
   font-weight: bold;
-  border: 1px solid currentColor;
+  border: 1px solid #d1d1d1;
   border-radius: 3px;
   padding: 0 2px;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #d1d1d1;
 }
 
 .text-segment-content {
@@ -239,9 +267,9 @@
 
 .video-title {
   font-size: 12px;
-  color: white;
+  color: #d1d1d1;
   background-color: rgba(0, 0, 0, 0.5);
-  padding: 4px 4px; /* Added small vertical padding */
+  padding: 4px;
   width: 100%;
   height: 100%;
   text-align: left;
@@ -281,14 +309,14 @@
   left: 0;
   right: 0;
   height: 40px;
-  background-color: rgba(100, 100, 255, 0.2);
-  border: 2px dashed #6464ff;
+  background-color: rgba(57, 192, 237, 0.1);
+  border: 2px dashed #39c0ed;
   pointer-events: none;
 }
 
 .new-layer-drop-area {
-  border: 2px dashed #ccc;
-  background-color: rgba(200, 200, 200, 0.1);
+  border: 2px dashed #666;
+  background-color: rgba(255, 255, 255, 0.05);
   min-height: 20px;
   display: flex;
   align-items: center;
@@ -296,12 +324,12 @@
 
 .new-layer-drop-area:hover,
 .new-layer-drop-area.drag-over {
-  background-color: rgba(200, 200, 200, 0.2);
-  border-color: #999;
+  background-color: rgba(57, 192, 237, 0.1);
+  border-color: #39c0ed;
 }
 
 .new-layer-drop-area .layer-label {
-  color: #999;
+  color: #a1a1a1;
   font-style: italic;
 }
 
@@ -312,16 +340,18 @@
   left: 0;
   right: 0;
   height: 40px;
-  background-color: rgba(0, 128, 255, 0.2);
-  border: 2px dashed #0080ff;
+  background-color: rgba(57, 192, 237, 0.1);
+  border: 2px dashed #39c0ed;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
+  color: #d1d1d1;
+  font-size: 12px;
 }
 
 .timeline-layer.drag-over {
-  background-color: rgba(100, 149, 237, 0.2);
+  background-color: rgba(57, 192, 237, 0.1);
 }
 
 .history-controls {
@@ -333,21 +363,51 @@
 .history-controls button {
   margin: 0 5px;
   padding: 5px 10px;
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  background: transparent;
+  color: #39c0ed;
+  border: 1px solid #39c0ed;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: none; /* Ensure no glow */
+}
+
+.history-controls button::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #39c0ed;
+  transition: all 0.3s ease;
+}
+
+.history-controls button:hover {
+  background: #39c0ed;
+  color: #121212;
+  transform: scale(1.02);
+}
+
+.history-controls button:hover::after {
+  width: 80%;
+  left: 10%;
 }
 
 .history-controls button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  color: #666;
+  border-color: #666;
 }
 
 .saving-indicator {
   margin-left: 10px;
   font-size: 0.8em;
-  color: #777;
+  color: #a1a1a1;
   animation: pulsate 1.5s infinite;
 }
 
@@ -374,24 +434,24 @@
 .timeline-item.dragging {
   opacity: 0.8;
   z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
 }
 
 .timeline-item.playing {
   border: 2px solid #ff9800 !important;
-  box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
+  box-shadow: 0 0 8px rgba(255, 152, 0, 0.4);
 }
 
 .text-segment-dialog {
   position: fixed;
   width: 320px;
-  background-color: #252525;
-  border: 1px solid #444;
+  background-color: #1e1e1e;
+  border: 1px solid #2a2a2a;
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   z-index: 1000;
   transform: translate(-50%, -50%);
-  color: #e0e0e0;
+  color: #d1d1d1;
   display: none;
 }
 
@@ -404,24 +464,25 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid #2a2a2a;
 }
 
 .dialog-header h3 {
   margin: 0;
   font-size: 16px;
+  color: #a1a1a1;
 }
 
 .close-button {
   background: none;
   border: none;
-  color: #999;
+  color: #a1a1a1;
   font-size: 20px;
   cursor: pointer;
 }
 
 .close-button:hover {
-  color: #fff;
+  color: #d1d1d1;
 }
 
 .dialog-content {
@@ -441,7 +502,7 @@
 .form-group label {
   display: block;
   margin-bottom: 4px;
-  color: #bbb;
+  color: #a1a1a1;
   font-size: 12px;
 }
 
@@ -451,15 +512,41 @@
 .form-group select {
   width: 100%;
   padding: 6px 8px;
-  background-color: #333;
-  border: 1px solid #555;
+  background-color: #2a2a2a;
+  border: 1px solid #2a2a2a;
   border-radius: 4px;
-  color: #fff;
+  color: #d1d1d1;
 }
 
 .form-group input[type="range"] {
   width: 80%;
   vertical-align: middle;
+  height: 4px;
+  background: #2a2a2a;
+  border-radius: 4px;
+  -webkit-appearance: none;
+  transition: all 0.3s ease;
+}
+
+.form-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #4A919E; /* Replace pinkish #b76cfd with muted teal */
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.form-group input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #4A919E; /* Replace pinkish #b76cfd with muted teal */
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.form-group input[type="range"]:hover {
+  background: #444;
 }
 
 .form-group span {
@@ -467,6 +554,7 @@
   margin-left: 8px;
   width: 36px;
   text-align: right;
+  color: #d1d1d1;
 }
 
 .form-group input[type="color"] {
@@ -490,20 +578,70 @@
 .cancel-button,
 .save-button {
   padding: 6px 14px;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   border: none;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: none; /* Ensure no glow */
 }
 
 .cancel-button {
-  background-color: #555;
-  color: #fff;
+  background: transparent;
+  color: #d1d1d1;
+  border: 1px solid #d1d1d1;
+}
+
+.cancel-button::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #d1d1d1;
+  transition: all 0.3s ease;
+}
+
+.cancel-button:hover {
+  background: #555;
+  border-color: #555;
+  transform: scale(1.02);
+}
+
+.cancel-button:hover::after {
+  width: 80%;
+  left: 10%;
 }
 
 .save-button {
-  background-color: #4a6ddf;
-  color: #fff;
+  background: transparent;
+  color: #4A919E; /* Muted teal for Save Project button */
+  border: 1px solid #4A919E;
+}
+
+.save-button::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #4A919E; /* Match the Save button color */
+  transition: all 0.3s ease;
+}
+
+.save-button:hover {
+  /* Removed background change to prevent glowing effect */
+  color: #4A919E;
+  border-color: #4A919E;
+  transform: scale(1.02);
+}
+
+.save-button:hover::after {
+  width: 80%;
+  left: 10%;
 }
 
 .add-text-control {
@@ -511,15 +649,43 @@
 }
 
 .add-text-control button {
-  background-color: #4a6ddf;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  background: transparent;
+  color: #D4A017; /* Soft amber for Add Text button */
+  border: 1px solid #D4A017;
+  border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: none; /* Ensure no glow */
+}
+
+.add-text-control button::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #D4A017; /* Match the Add Text button color */
+  transition: all 0.3s ease;
+}
+
+.add-text-control button:hover {
+  /* Removed background change to prevent glowing effect */
+  color: #D4A017;
+  border-color: #D4A017;
+  transform: scale(1.02);
+}
+
+.add-text-control button:hover::after {
+  width: 80%;
+  left: 10%;
 }
 
 .add-text-control button:before {
@@ -527,32 +693,55 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  background-color: white;
-  color: #4a6ddf;
+  background-color: transparent;
+  color: #D4A017; /* Match the Add Text button color */
   font-weight: bold;
   text-align: center;
   line-height: 16px;
+  border: 1px solid #D4A017;
   border-radius: 2px;
 }
 
 .split-control button {
   margin-left: 10px;
   padding: 6px;
-  background-color: #444;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  background: transparent;
+  color: #E07B39; /* Subtle orange for Scissors (Split) button */
+  border: 1px solid #E07B39;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: none; /* Ensure no glow */
+}
+
+.split-control button::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #E07B39; /* Match the Split button color */
+  transition: all 0.3s ease;
 }
 
 .split-control button:hover {
-  background-color: #555;
+  /* Removed background change to prevent glowing effect */
+  color: #E07B39;
+  border-color: #E07B39;
+  transform: scale(1.02);
+}
+
+.split-control button:hover::after {
+  width: 80%;
+  left: 10%;
 }
 
 .split-control button.active {
-  background-color: #ff9800;
-  color: #fff;
+  background: #E07B39;
+  color: #121212;
 }
 
 .timeline.split-mode {
@@ -564,12 +753,12 @@
 }
 
 .timeline.split-mode .timeline-item:hover {
-  border: 2px dashed #ff9800;
+  border: 2px dashed #E07B39; /* Match the Split button color */
 }
 
 .audio-layer {
-  background-color: #2a2a2a;
-  border-bottom: 1px solid #555;
+  background-color: #1e1e1e;
+  border-bottom: 1px solid #2a2a2a;
 }
 
 .audio-layer .layer-label {
@@ -593,11 +782,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   box-sizing: border-box;
-  color: #fff;
+  color: #121212;
 }
 
 .snap-indicator.snap-playhead {
-  background-color: #ff5555; /* Example: Red for playhead snap */
+  background-color: #ff5555;
   opacity: 0.8;
   width: 2px;
   z-index: 1000;
@@ -618,16 +807,16 @@
 
 .timeline-separator {
   height: 20px;
-  background-color: #444;
+  background-color: #2a2a2a;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-top: 1px solid #555;
-  border-bottom: 1px solid #555;
+  border-top: 1px solid #2a2a2a;
+  border-bottom: 1px solid #2a2a2a;
 }
 
 .separator-label {
-  color: #aaa;
+  color: #a1a1a1;
   font-size: 12px;
   font-weight: bold;
 }
@@ -648,7 +837,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   box-sizing: border-box;
-  color: #fff;
+  color: #121212;
 }
 
 .audio-section-label {
@@ -656,20 +845,20 @@
   line-height: 20px;
   text-align: left;
   padding-left: 10px;
-  background: #333;
-  color: #ccc;
+  background: #1e1e1e;
+  color: #a1a1a1;
   font-size: 12px;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid #2a2a2a;
 }
 
 .transition-overlay {
-  border: 1px solid #00ffff;
+  border: 1px solid #39c0ed;
   box-sizing: border-box;
 }
 
 .transition-label {
   font-size: 10px;
-  color: #fff;
+  color: #d1d1d1;
   text-align: center;
   text-shadow: 0 0 2px #000;
 }
@@ -680,7 +869,7 @@
   height: 100%;
   position: absolute;
   top: 0;
-  background-color: #00ffff;
+  background-color: #39c0ed;
   cursor: ew-resize;
 }
 
@@ -692,3 +881,32 @@
   right: 0;
 }
 
+.audio-segment {
+  position: absolute;
+  height: 40px;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.audio-waveform {
+  height: 30px;
+  background: #222;
+  overflow: hidden;
+}
+
+.audio-title {
+  width: 100%;
+  font-size: 10px;
+  color: #fff;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 10px;
+}

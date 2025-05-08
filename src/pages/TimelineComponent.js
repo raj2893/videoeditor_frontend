@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import '../CSS/Timeline.css';
 import axios from 'axios';
+import WaveSurfer from 'wavesurfer.js';
 import TimelineControls from './TimelineControls';
 import TimelineRuler from './TimelineRuler';
 import TimelineLayer from './TimelineLayer';
@@ -69,6 +70,63 @@ const TimelineComponent = ({
   const timelineRef = useRef(null);
   const playheadRef = useRef(null);
   const playIntervalRef = useRef(null);
+
+  useEffect(() => {
+    const initializeWaveforms = async () => {
+      const token = localStorage.getItem('token');
+      audioLayers.forEach((layer, layerIndex) => {
+        layer.forEach(async (segment) => {
+          if (segment.waveformJsonPath && segment.type === 'audio') {
+            console.log(`Initializing waveform for segment.id: ${segment.id}`);
+            try {
+              const response = await axios.get(segment.waveformJsonPath, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const waveformData = response.data;
+
+              const containerId = `waveform-segment-${segment.id}`;
+              const container = document.querySelector(`#${containerId}`);
+              if (!container) {
+                console.warn(`Waveform container #${containerId} not found for segment: ${segment.fileName}`);
+                return;
+              }
+
+              const wavesurfer = WaveSurfer.create({
+                container: `#${containerId}`,
+                waveColor: '#00FFFF',
+                progressColor: '#FFFFFF',
+                height: 30,
+                normalize: true,
+                cursorWidth: 0,
+                barWidth: 2,
+                barGap: 1,
+              });
+
+              wavesurfer.load(segment.url, waveformData.peaks, waveformData.sampleRate / waveformData.peaks.length);
+            } catch (error) {
+              console.error(`Error loading waveform for segment ${segment.id} (file: ${segment.fileName}):`, error);
+            }
+          }
+        });
+      });
+    };
+
+    if (audioLayers.length > 0 && audioLayers.some(layer => layer.length > 0)) {
+      initializeWaveforms();
+    }
+
+    return () => {
+      audioLayers.forEach((layer) => {
+        layer.forEach((segment) => {
+          const containerId = `waveform-segment-${segment.id}`;
+          const container = document.querySelector(`#${containerId}`);
+          if (container) {
+            container.innerHTML = '';
+          }
+        });
+      });
+    };
+  }, [audioLayers, projectId]);
 
   // Removed localIsPlaying state and sync logic
   const autoSave = useCallback(
@@ -347,13 +405,14 @@ const TimelineComponent = ({
               while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
               const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
               const audioUrl = `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(filename)}`;
-              // Construct waveform URL if waveformPath exists, else use default
-              const waveformImage = audioSegment.waveformPath
-                ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformPath.split('/').pop())}`
-                : '/images/audio.jpeg';
+              const waveformJsonPath = audioSegment.waveformJsonPath
+                ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+                : null;
               console.log(`Audio segment ID ${audioSegment.id}: no filters applied`);
+              // Sanitize audioSegment.id
+              const sanitizedId = audioSegment.id.replace(/[^a-zA-Z0-9]/g, '-');
               const newSegment = {
-                id: audioSegment.id,
+                id: sanitizedId,
                 type: 'audio',
                 fileName: filename,
                 url: audioUrl,
@@ -365,12 +424,12 @@ const TimelineComponent = ({
                 startTimeWithinAudio: audioSegment.startTime || 0,
                 endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
                 displayName: filename,
-                waveformImage: waveformImage,
+                waveformJsonPath: waveformJsonPath,
                 volume: audioSegment.volume || 1.0,
                 keyframes: audioSegment.keyframes || {},
-                isExtracted: audioSegment.isExtracted || false, // Include isExtracted from backend
+                isExtracted: audioSegment.isExtracted || false,
               };
-              console.log(`Created audio segment, ${audioSegment.id} with URL: ${audioUrl}, waveform: ${waveformImage}`, newSegment);
+              console.log(`Created audio segment, ${sanitizedId} with URL: ${audioUrl}, waveformJsonPath: ${waveformJsonPath}`, newSegment);
               newAudioLayers[layerIndex].push(newSegment);
             }
           } else {
@@ -659,10 +718,10 @@ const TimelineComponent = ({
         snapIndicators
       );
       if (audioDropResult && audioDropResult.newSegment) {
-        // Update waveformImage and isExtracted based on backend response
-        const waveformImage = audioDropResult.response.waveformPath
-          ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(audioDropResult.response.waveformPath.split('/').pop())}`
-          : '/images/audio.jpeg';
+        // Update waveformJsonPath and isExtracted based on backend response
+        const waveformJsonPath = audioDropResult.response.waveformJsonPath
+          ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audioDropResult.response.waveformJsonPath.split('/').pop())}`
+          : null;
         setAudioLayers((prevLayers) => {
           const newLayers = [...prevLayers];
           const layerIndex = Math.abs(audioDropResult.newSegment.layer) - 1;
@@ -670,7 +729,7 @@ const TimelineComponent = ({
             segment.id === audioDropResult.newSegment.id
               ? {
                   ...segment,
-                  waveformImage,
+                  waveformJsonPath,
                   isExtracted: audioDropResult.response.isExtracted || false, // Include isExtracted from backend
                 }
               : segment

@@ -6,14 +6,40 @@ import "../CSS/Auth.css";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({}); // Added for validation
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
+
+  const validate = () => {
+    const newErrors = {};
+
+    if (!email) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    if (!password) {
+      newErrors.password = "Password is required";
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+    } else if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      newErrors.password = "Password must contain both letters and numbers";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setErrors({}); // Clear previous errors
+
+    if (!validate()) return; // Validate before proceeding
+
     try {
       const response = await axios.post("http://localhost:8080/auth/login", {
         email,
@@ -35,6 +61,7 @@ const Login = () => {
   const handleGoogleLogin = useCallback(async (credentialResponse) => {
     setError("");
     setSuccess("");
+    setErrors({}); // Clear errors on Google login
     try {
       const response = await axios.post("http://localhost:8080/auth/google", {
         token: credentialResponse.credential,
@@ -65,17 +92,17 @@ const Login = () => {
     initializeGoogleSignIn();
   }, [handleGoogleLogin]);
 
-  // Generate particles
-  const particles = Array.from({ length: 50 }).map((_, i) => (
+  // Generate particles (match Sign Up: 40 particles)
+  const particles = Array.from({ length: 40 }).map((_, i) => (
     <div
       key={i}
       className={`particle ${i % 2 === 0 ? "square" : ""}`}
       style={{
         left: `${Math.random() * 100}%`,
-        width: `${3 + Math.random() * 6}px`,
-        height: `${3 + Math.random() * 6}px`,
-        animationDelay: `${Math.random() * 4}s`,
-        animationDuration: `${4 + Math.random() * 4}s`,
+        width: `${3 + Math.random() * 5}px`, // Match Sign Up particle size
+        height: `${3 + Math.random() * 5}px`,
+        animationDelay: `${Math.random() * 5}s`, // Match Sign Up timing
+        animationDuration: `${5 + Math.random() * 5}s`, // Match Sign Up timing
       }}
     />
   ));
@@ -86,7 +113,7 @@ const Login = () => {
       <svg className="waveform-bg" viewBox="0 0 1440 900" preserveAspectRatio="none">
         <path
           d="M0,900 C180,750 360,900 540,750 C720,600 900,750 1080,600 C1260,450 1350,600 1440,0 L1440,0 H0 Z"
-          fill="rgba(139, 0, 255, 0.15)"
+          fill="rgba(63, 142, 252, 0.15)" // Updated in CSS to match Sign Up
         />
       </svg>
       <div className="rotating-text-container">
@@ -123,10 +150,11 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="auth-input"
+              className={`auth-input ${errors.email ? "error" : ""}`} // Updated to show error styling
               aria-label="Email address"
             />
             <span>Email</span>
+            {errors.email && <div className="error-message">{errors.email}</div>} {/* Added error message */}
           </div>
           <div className="auth-input-label">
             <input
@@ -135,10 +163,11 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="auth-input"
+              className={`auth-input ${errors.password ? "error" : ""}`} // Updated to show error styling
               aria-label="Password"
             />
             <span>Password</span>
+            {errors.password && <div className="error-message">{errors.password}</div>} {/* Added error message */}
           </div>
           <button type="submit" className="auth-button">Login</button>
         </form>

@@ -27,6 +27,7 @@
     "three": "^0.175.0",
     "troika-three-text": "^0.52.4",
     "uuid": "^11.1.0",
+    "wavesurfer.js": "^7.9.5",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

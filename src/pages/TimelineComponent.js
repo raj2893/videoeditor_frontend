@@ -91,6 +91,28 @@ const TimelineComponent = ({
                 return;
               }
 
+              // Calculate full audio duration
+              const sampleRate = waveformData.sampleRate; // e.g., 44100 Hz
+              const peaks = waveformData.peaks;
+              const fullDuration = peaks.length / sampleRate; // Duration in seconds
+
+              // Get segment's time range
+              const startTime = segment.startTimeWithinAudio || 0;
+              const endTime = segment.endTimeWithinAudio || segment.duration;
+
+              // Validate time range
+              if (startTime < 0 || endTime > fullDuration || startTime >= endTime) {
+                console.warn(
+                  `Invalid time range for segment ${segment.id}: startTime=${startTime}, endTime=${endTime}, fullDuration=${fullDuration}`
+                );
+                return;
+              }
+
+              // Calculate indices for slicing peaks
+              const startIndex = Math.floor((startTime / fullDuration) * peaks.length);
+              const endIndex = Math.ceil((endTime / fullDuration) * peaks.length);
+              const slicedPeaks = peaks.slice(startIndex, endIndex);
+
               const wavesurfer = WaveSurfer.create({
                 container: `#${containerId}`,
                 waveColor: '#00FFFF',
@@ -102,7 +124,8 @@ const TimelineComponent = ({
                 barGap: 1,
               });
 
-              wavesurfer.load(segment.url, waveformData.peaks, waveformData.sampleRate / waveformData.peaks.length);
+              // Load waveform with sliced peaks
+              wavesurfer.load(segment.url, slicedPeaks, sampleRate);
             } catch (error) {
               console.error(`Error loading waveform for segment ${segment.id} (file: ${segment.fileName}):`, error);
             }

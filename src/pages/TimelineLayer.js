@@ -135,9 +135,6 @@ const TimelineLayer = ({
                     : item.fileName || 'Unnamed Image'}
                 </div>
               )}
-              {item.type === 'audio' && (
-                <div className="audio-title">{item.displayName || item.fileName}</div>
-              )}
               {isSelected && (
                 <div
                   className="resize-handle resize-right"

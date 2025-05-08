@@ -2267,6 +2267,11 @@
             keyframes: newImageSegment.keyframes || {},
             thumbnail: photo?.thumbnail,
             isElement: isElement || newImageSegment.element || false, // Explicitly set isElement
+            width: newImageSegment.width,
+            height: newImageSegment.height,
+            effectiveWidth: newImageSegment.effectiveWidth,
+            effectiveHeight: newImageSegment.effectiveHeight,
+            maintainAspectRatio: newImageSegment.maintainAspectRatio,
           };
 
           let updatedVideoLayers = videoLayers;

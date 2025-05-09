@@ -18,10 +18,10 @@
   width: 250px;
   max-height: 100vh;
   background-color: #1a1a1a;
-  padding: 15px;
+  padding: 15px 20px; /* Increased padding on left and right to prevent clipping */
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
   transition: width 0.3s ease;
-  overflow-x: hidden;
+  overflow-x: visible; /* Allow scaled buttons to extend slightly without clipping */
   overflow-y: auto;
 }
 
@@ -67,7 +67,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 100%;
+  width: calc(100% - 10px); /* Reduced width to allow margin on both sides */
+  margin: 0 5px; /* Added margin to create buffer on left and right */
   padding: 10px;
   background-color: transparent;
   color: #d1d1d1;
@@ -81,20 +82,15 @@
   letter-spacing: 1px;
   transition: all 0.3s ease;
   margin-bottom: 10px;
+  transform-origin: center; /* Scale from the center */
+  box-sizing: border-box;
 }
 
 .section-button:hover {
   background-color: #2a2a2a;
   border-color: #39c0ed;
   color: #39c0ed;
-  transform: scale(1.02);
-}
-
-.section-button:focus {
-  outline: none;
-  border-color: #39c0ed;
-  background-color: #2a2a2a;
-  color: #39c0ed;
+  transform: scale(1.01); /* Reduced scale to minimize clipping */
 }
 
 .section-button::before {
@@ -110,8 +106,36 @@
   transition: filter 0.3s ease;
 }
 
+.section-button:focus {
+  outline: none;
+  border-color: #39c0ed;
+  background-color: #2a2a2a;
+  color: #39c0ed;
+}
+
 .section-button:hover::before {
   filter: brightness(1.2) drop-shadow(0 0 5px rgba(57, 192, 237, 0.3));
+}
+
+/* Specific icons for each section */
+.section-button[data-section="videos"]::before {
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/TextM.jpeg');
+}
+
+.section-button[data-section="photos"]::before {
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/PhotoM.jpeg');
+}
+
+.section-button[data-section="audios"]::before {
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/AudioM.jpeg');
+}
+
+.section-button[data-section="elements"]::before {
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/ElementsM.jpeg');
+}
+
+.section-button[data-section="textStyles"]::before {
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/TextM.jpeg');
 }
 
 .section-button.active {
@@ -542,12 +566,11 @@
   width: 250px;
   max-height: 100vh;
   background-color: #1a1a1a;
-  padding: 15px;
+  padding: 15px 20px; /* Increased padding on left and right to prevent clipping */
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.5);
   transition: width 0.3s ease;
-  overflow-x: hidden;
+  overflow-x: visible; /* Allow scaled buttons to extend slightly without clipping */
   overflow-y: auto;
-  box-sizing: border-box;
 }
 
 .tools-panel.closed {
@@ -592,7 +615,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 100%;
+  width: calc(100% - 10px); /* Reduced width to allow margin on both sides */
+  margin: 0 5px; /* Added margin to create buffer on left and right */
   padding: 10px;
   background-color: transparent;
   color: #d1d1d1;
@@ -606,20 +630,15 @@
   letter-spacing: 1px;
   transition: all 0.3s ease;
   margin-bottom: 10px;
+  transform-origin: center; /* Scale from the center */
+  box-sizing: border-box;
 }
 
 .tool-button:hover {
   background-color: #2a2a2a;
-  border-color: #4A919E; /* Use the muted teal to replace the pinkish #b76cfd */
-  color: #4A919E;
-  transform: scale(1.02);
-}
-
-.tool-button:focus {
-  outline: none;
   border-color: #4A919E;
-  background-color: #2a2a2a;
   color: #4A919E;
+  transform: scale(1.01); /* Reduced scale to minimize clipping */
 }
 
 .tool-button::before {
@@ -635,25 +654,32 @@
   transition: filter 0.3s ease;
 }
 
+.tool-button:focus {
+  outline: none;
+  border-color: #4A919E;
+  background-color: #2a2a2a;
+  color: #4A919E;
+}
+
 .tool-button:hover::before {
   filter: brightness(1.2) drop-shadow(0 0 5px rgba(74, 145, 158, 0.3)); /* Adjusted to match the muted teal */
 }
 
 /* Specific icons for each tool section */
 .tool-button[data-section="transform"]::before {
-  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/transform-icon.jpg');
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/transform-icon.jpg');
 }
 
 .tool-button[data-section="filters"]::before {
-  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/transform-icon.jpg');
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/transform-icon.jpg');
 }
 
 .tool-button[data-section="text"]::before {
-  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/TextM.jpeg');
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/TextM.jpeg');
 }
 
 .tool-button[data-section="transitions"]::before {
-  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/transform-icon.jpg');
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/transform-icon.jpg');
 }
 
 .tool-button.active {
@@ -692,16 +718,16 @@
 
 /* Control Group Styles */
 .control-group {
-  margin-bottom: 10px;
+  margin-bottom: 12px; /* Increased for consistency with KeyframeControls.css */
   width: 100%;
   box-sizing: border-box;
 }
 
 .control-group label {
   display: block;
-  font-size: 12px;
+  font-size: 13px; /* Matches KeyframeControls.css labels */
   font-weight: 500;
-  margin-bottom: 5px;
+  margin-bottom: 6px; /* Slightly increased for spacing */
   color: #a1a1a1;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -725,7 +751,8 @@
 .control-group input:focus,
 .control-group select:focus,
 .control-group textarea:focus {
-  border-color: #4A919E; /* Replace pinkish #b76cfd with muted teal */
+  border-color: #4A919E; /* Muted teal consistent with KeyframeControls.css */
+  transform: scale(1.01); /* Subtle scale for interactivity */
 }
 
 .control-group input[type="color"] {
@@ -734,7 +761,7 @@
 }
 
 .control-group input[type="number"] {
-  width: 50px;
+  width: 60px; /* Matches KeyframeControls.css for consistency */
 }
 
 .control-group textarea {
@@ -761,7 +788,7 @@
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: #4A919E; /* Replace pinkish #b76cfd with muted teal */
+  background: #4A919E; /* Muted teal consistent with KeyframeControls.css */
   border-radius: 50%;
   cursor: pointer;
 }
@@ -769,7 +796,7 @@
 .slider-container input[type="range"]::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  background: #4A919E; /* Replace pinkish #b76cfd with muted teal */
+  background: #4A919E; /* Muted teal */
   border-radius: 50%;
   cursor: pointer;
 }
@@ -780,19 +807,54 @@
 
 .slider-container input[type="number"] {
   margin-left: 8px;
+  width: 60px; /* Matches KeyframeControls.css */
+  padding: 6px;
+  background: #1e1e1e;
+  color: #d1d1d1;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  font-size: 12px;
 }
 
 /* Filter Panel Specific */
+.filter-panel {
+  padding: 15px; /* Increased for consistency with KeyframeControls.css */
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+  box-sizing: border-box;
+}
+
 .filter-select,
 .filter-input {
   margin-bottom: 12px;
+}
+
+.filter-select select,
+.filter-input input {
+  width: 100%;
+  padding: 6px;
+  background-color: #1e1e1e;
+  color: #d1d1d1;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.filter-select select:focus,
+.filter-input input:focus {
+  border-color: #4A919E;
+  transform: scale(1.01);
 }
 
 .apply-filter-btn {
   width: 100%;
   padding: 8px 16px;
   background: transparent;
-  color: #4A919E; /* Replace pinkish #b76cfd with muted teal */
+  color: #4A919E; /* Muted teal consistent with KeyframeControls.css */
   border: 1px solid #4A919E;
   border-radius: 8px;
   cursor: pointer;
@@ -802,8 +864,13 @@
   letter-spacing: 1px;
   position: relative;
   transition: all 0.3s ease;
-  margin-bottom: 12px;
   box-shadow: none; /* Ensure no glow */
+}
+
+.apply-filter-btn:hover {
+  background: #4A919E;
+  color: #121212;
+  transform: scale(1.02);
 }
 
 .apply-filter-btn::after {
@@ -813,14 +880,8 @@
   left: 50%;
   width: 0;
   height: 2px;
-  background-color: #4A919E; /* Match the new color */
+  background-color: #4A919E;
   transition: all 0.3s ease;
-}
-
-.apply-filter-btn:hover {
-  background: #4A919E;
-  color: #121212;
-  transform: scale(1.02);
 }
 
 .apply-filter-btn:hover::after {
@@ -834,21 +895,28 @@
 
 .filter-item {
   display: flex;
+  align-items: center; /* Align items vertically */
   justify-content: space-between;
-  align-items: center;
-  padding: 8px;
+  padding: 8px 12px; /* Increased padding for consistency */
   background-color: #1e1e1e;
+  border: 1px solid #2a2a2a; /* Matches KeyframeControls.css borders */
   border-radius: 6px;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
   font-size: 12px;
   font-weight: 500;
   color: #d1d1d1;
+  transition: all 0.3s ease;
+}
+
+.filter-item:hover {
+  background-color: #2a2a2a;
+  transform: scale(1.02);
 }
 
 .remove-filter-btn {
   padding: 4px 8px;
   background: transparent;
-  color: #ff5a5f;
+  color: #ff5a5f; /* Matches KeyframeControls.css error color */
   border: 1px solid #ff5a5f;
   border-radius: 6px;
   cursor: pointer;
@@ -856,9 +924,15 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
-  position: relative;
   transition: all 0.3s ease;
   box-shadow: none; /* Ensure no glow */
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.remove-filter-btn:hover {
+  background: #ff5a5f;
+  color: #121212;
+  transform: scale(1.02);
 }
 
 .remove-filter-btn::after {
@@ -870,11 +944,6 @@
   height: 2px;
   background-color: #ff5a5f;
   transition: all 0.3s ease;
-}
-
-.remove-filter-btn:hover {
-  background: #ff5a5f;
-  color: #121212;
 }
 
 .remove-filter-btn:hover::after {
@@ -889,42 +958,144 @@
 }
 
 .filter-option {
+  padding: 10px 12px; /* Increased padding for consistency */
   background-color: #1e1e1e;
-  padding: 10px;
+  border: 1px solid #2a2a2a; /* Matches KeyframeControls.css */
   border-radius: 6px;
   margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.filter-option:hover {
+  background-color: #2a2a2a;
+  transform: scale(1.02);
 }
 
 .filter-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
 .filter-header span {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600; /* Increased weight for emphasis */
   color: #d1d1d1;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .filter-params {
-  padding-left: 10px;
+  padding-left: 12px; /* Increased for better hierarchy */
+}
+
+.filter-params .control-group {
+  margin-bottom: 10px;
+}
+
+/* Text Tool Panel Specific */
+.text-tool-panel {
+  padding: 15px; /* Increased for consistency with KeyframeControls.css */
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+  box-sizing: border-box;
+}
+
+.text-tool-panel .control-group {
+  margin-bottom: 12px;
+}
+
+.text-tool-panel textarea {
+  min-height: 60px;
+  max-height: 120px;
+}
+
+.text-tool-panel select,
+.text-tool-panel input {
+  width: 100%;
+  padding: 6px;
+  background-color: #1e1e1e;
+  color: #d1d1d1;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.text-tool-panel select:focus,
+.text-tool-panel input:focus {
+  border-color: #4A919E;
+  transform: scale(1.01);
+}
+
+.text-tool-panel .apply-text-btn {
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  color: #4A919E; /* Muted teal consistent with KeyframeControls.css */
+  border: 1px solid #4A919E;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: none; /* Ensure no glow */
+}
+
+.text-tool-panel .apply-text-btn:hover {
+  background: #4A919E;
+  color: #121212;
+  transform: scale(1.02);
+}
+
+.text-tool-panel .apply-text-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #4A919E;
+  transition: all 0.3s ease;
+}
+
+.text-tool-panel .apply-text-btn:hover::after {
+  width: 80%;
+  left: 10%;
 }
 
 /* Transitions Panel Specific */
+.transitions-panel {
+  padding: 15px; /* Increased for consistency with KeyframeControls.css */
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+  box-sizing: border-box;
+}
+
 .transitions-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .transition-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px;
+  padding: 8px 12px; /* Increased padding for consistency */
   background-color: #1e1e1e;
+  border: 1px solid #2a2a2a; /* Matches KeyframeControls.css */
   border-radius: 6px;
   cursor: grab;
   transition: all 0.3s ease;
@@ -940,8 +1111,20 @@
 }
 
 .transition-icon {
-  width: 20px;
-  height: 20px;
+  width: 24px; /* Slightly larger for visibility */
+  height: 24px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.transition-item span {
+  font-size: 12px;
+  font-weight: 500;
+  color: #d1d1d1;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 /* Dialog Buttons */
@@ -1046,24 +1229,31 @@
   .tool-subpanel {
     max-height: 150px;
   }
-}
 
-.section-button[data-section="videos"]::before {
-  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/VideoM.jpeg');
-}
+  .filter-panel,
+  .text-tool-panel,
+  .transitions-panel {
+    padding: 10px;
+  }
 
-.section-button[data-section="photos"]::before {
-  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/PhotoM.jpeg');
-}
+  .filter-item,
+  .transition-item {
+    padding: 6px 10px;
+  }
 
-.section-button[data-section="audios"]::before {
-  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/AudioM.jpeg');
-}
+  .apply-filter-btn,
+  .text-tool-panel .apply-text-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
 
-.section-button[data-section="elements"]::before {
-  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/ElementsM.jpeg');
-}
+  .remove-filter-btn {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
 
-.section-button[data-section="textStyles"]::before {
-  background-image: url('D:/VideoEditor Frontend/video-editor-frontend/public/images/TextM.jpeg');
+  .control-group input[type="number"],
+  .slider-container input[type="number"] {
+    width: 50px;
+  }
 }

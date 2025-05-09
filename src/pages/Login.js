@@ -6,9 +6,10 @@ import "../CSS/Auth.css";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState({}); // Added for validation
+  const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // Add loading state
   const navigate = useNavigate();
 
   const validate = () => {
@@ -36,10 +37,11 @@ const Login = () => {
     e.preventDefault();
     setError("");
     setSuccess("");
-    setErrors({}); // Clear previous errors
+    setErrors({});
 
-    if (!validate()) return; // Validate before proceeding
+    if (!validate()) return;
 
+    setIsLoading(true); // Show loading state
     try {
       const response = await axios.post("http://localhost:8080/auth/login", {
         email,
@@ -48,29 +50,53 @@ const Login = () => {
 
       if (response.data.token) {
         localStorage.setItem("token", response.data.token);
-        setSuccess("Login successful! Ready to edit...");
-        setTimeout(() => navigate("/dashboard"), 1000);
+        localStorage.setItem("userProfile", JSON.stringify({
+          email: response.data.email,
+          name: response.data.name,
+          picture: null,
+          googleAuth: false,
+        }));
+        setSuccess("Login successful! Redirecting to dashboard...");
+        setTimeout(() => {
+          setIsLoading(false);
+          navigate("/dashboard");
+        }, 1000);
       } else {
+        setIsLoading(false);
         setError(response.data.message || "Please verify your email first");
       }
     } catch (error) {
+      setIsLoading(false);
       setError(error.response?.data?.message || error.response?.data || "Login failed");
+      setTimeout(() => setError(""), 8000); // Clear error after 8 seconds
     }
   };
 
   const handleGoogleLogin = useCallback(async (credentialResponse) => {
     setError("");
     setSuccess("");
-    setErrors({}); // Clear errors on Google login
+    setErrors({});
+    setIsLoading(true);
     try {
       const response = await axios.post("http://localhost:8080/auth/google", {
         token: credentialResponse.credential,
       });
       localStorage.setItem("token", response.data.token);
-      setSuccess("Google login successful! Ready to edit...");
-      setTimeout(() => navigate("/dashboard"), 1000);
+      localStorage.setItem("userProfile", JSON.stringify({
+        email: response.data.email,
+        name: response.data.name,
+        picture: response.data.picture || null,
+        googleAuth: true,
+      }));
+      setSuccess("Google login successful! Redirecting to dashboard...");
+      setTimeout(() => {
+        setIsLoading(false);
+        navigate("/dashboard");
+      }, 1000);
     } catch (error) {
+      setIsLoading(false);
       setError(error.response?.data?.message || "Google login failed");
+      setTimeout(() => setError(""), 8000);
     }
   }, [navigate]);
 
@@ -99,10 +125,10 @@ const Login = () => {
       className={`particle ${i % 2 === 0 ? "square" : ""}`}
       style={{
         left: `${Math.random() * 100}%`,
-        width: `${3 + Math.random() * 5}px`, // Match Sign Up particle size
+        width: `${3 + Math.random() * 5}px`,
         height: `${3 + Math.random() * 5}px`,
-        animationDelay: `${Math.random() * 5}s`, // Match Sign Up timing
-        animationDuration: `${5 + Math.random() * 5}s`, // Match Sign Up timing
+        animationDelay: `${Math.random() * 5}s`,
+        animationDuration: `${5 + Math.random() * 5}s`,
       }}
     />
   ));
@@ -113,7 +139,7 @@ const Login = () => {
       <svg className="waveform-bg" viewBox="0 0 1440 900" preserveAspectRatio="none">
         <path
           d="M0,900 C180,750 360,900 540,750 C720,600 900,750 1080,600 C1260,450 1350,600 1440,0 L1440,0 H0 Z"
-          fill="rgba(63, 142, 252, 0.15)" // Updated in CSS to match Sign Up
+          fill="rgba(63, 142, 252, 0.15)"
         />
       </svg>
       <div className="rotating-text-container">
@@ -126,6 +152,12 @@ const Login = () => {
         </div>
       </div>
       <div className="auth-container">
+        {isLoading && (
+          <div className="loading-overlay">
+            <div className="spinner"></div>
+            <p>Logging in...</p>
+          </div>
+        )}
         <div className="auth-header">
           <h1>
             <span className="letter">S</span>
@@ -139,7 +171,7 @@ const Login = () => {
           <p>The Peak of Visual Storytelling</p>
           <div className="logo-element" />
         </div>
-        <h2>Create Your Story</h2>
+        <h2>Login to Your Account</h2>
         {error && <div className="error-message">{error}</div>}
         {success && <div className="success-message">{success}</div>}
         <form onSubmit={handleLogin} className="auth-form">
@@ -149,12 +181,12 @@ const Login = () => {
               placeholder=" "
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
-              className={`auth-input ${errors.email ? "error" : ""}`} // Updated to show error styling
+              className={`auth-input ${errors.email ? "error" : ""}`}
               aria-label="Email address"
+              disabled={isLoading}
             />
             <span>Email</span>
-            {errors.email && <div className="error-message">{errors.email}</div>} {/* Added error message */}
+            {errors.email && <div className="error-message">{errors.email}</div>}
           </div>
           <div className="auth-input-label">
             <input
@@ -162,19 +194,24 @@ const Login = () => {
               placeholder=" "
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              className={`auth-input ${errors.password ? "error" : ""}`} // Updated to show error styling
+              className={`auth-input ${errors.password ? "error" : ""}`}
               aria-label="Password"
+              disabled={isLoading}
             />
             <span>Password</span>
-            {errors.password && <div className="error-message">{errors.password}</div>} {/* Added error message */}
+            {errors.password && <div className="error-message">{errors.password}</div>}
           </div>
-          <button type="submit" className="auth-button">Login</button>
+          <button type="submit" className="auth-button" disabled={isLoading}>
+            {isLoading ? "Logging in..." : "Login"}
+          </button>
         </form>
         <div className="divider">OR</div>
         <div id="googleSignInButton" className="google-button"></div>
         <p className="auth-link">
           New to Scenith? <Link to="/signup">Sign up</Link>
+        </p>
+        <p className="auth-link">
+          Forgot your password? <Link to="/forgot-password">Reset Password</Link>
         </p>
       </div>
     </div>

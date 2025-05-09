@@ -6,6 +6,7 @@ import "../CSS/Auth.css";
 const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState(""); // Add name state
   const [errors, setErrors] = useState({});
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const [serverError, setServerError] = useState("");
@@ -22,6 +23,12 @@ const Signup = () => {
 
   const validate = () => {
     const newErrors = {};
+
+    if (!name) {
+      newErrors.name = "Name is required";
+    } else if (name.trim().length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
+    }
 
     if (!email) {
       newErrors.email = "Email is required";
@@ -50,10 +57,12 @@ const Signup = () => {
       const response = await axios.post("http://localhost:8080/auth/register", {
         email,
         password,
+        name,
       });
 
       if (response.status === 200 && response.data.message) {
         setShowVerificationMessage(true);
+        localStorage.setItem('email', email); // Store email for resend
       }
     } catch (error) {
       if (error.response && error.response.status === 400) {
@@ -91,6 +100,12 @@ const Signup = () => {
         token: credentialResponse.credential,
       });
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem("userProfile", JSON.stringify({
+        email: response.data.email,
+        name: response.data.name,
+        picture: null,
+        googleAuth: true,
+      }));
       navigate("/dashboard");
     } catch (error) {
       setServerError(error.response?.data?.message || "Google signup failed. Please try again.");
@@ -115,7 +130,6 @@ const Signup = () => {
     initializeGoogleSignIn();
   }, [handleGoogleSignup]);
 
-  // Generate particles
   const particles = Array.from({ length: 40 }).map((_, i) => (
     <div
       key={i}
@@ -189,6 +203,18 @@ const Signup = () => {
           <>
             <form onSubmit={handleSignup} className="auth-form">
               {serverError && <div className="error-message">{serverError}</div>}
+              <div className="auth-input-label">
+                <input
+                  type="text"
+                  placeholder=" "
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={`auth-input ${errors.name ? "error" : ""}`}
+                  aria-label="Full name"
+                />
+                <span>Full Name</span>
+                {errors.name && <div className="error-message">{errors.name}</div>}
+              </div>
               <div className="auth-input-label">
                 <input
                   type="email"

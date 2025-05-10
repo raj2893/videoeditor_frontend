@@ -44,7 +44,14 @@ const TimelineRuler = ({ totalDuration, timeScale, formatTime }) => {
     return markers;
   };
 
-  return <div className="timeline-ruler">{generateTimeMarkers()}</div>;
+  return (
+    <div
+      className="timeline-ruler"
+      style={{ width: `${totalDuration * timeScale}px` }} // Set dynamic width
+    >
+      {generateTimeMarkers()}
+    </div>
+  );
 };
 
 export default TimelineRuler;

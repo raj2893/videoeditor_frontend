@@ -2,10 +2,11 @@
 .timeline-container {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: calc(100% - 20px); /* Account for 10px left + 10px right margins */
   height: 100%;
   overflow: hidden;
-  background-color: #1a1a1a; /* Match ProjectEditor */
+  background-color: #1a1a1a;
+  margin: 0 auto; /* Center the container within timeline-section */
 }
 
 .timeline-controls {
@@ -70,12 +71,13 @@
   overflow-x: auto;
   overflow-y: auto;
   min-height: 150px;
-  scrollbar-width: thin;
+  scrollbar-width: none; /* Hide scrollbar for Firefox */
+  -ms-overflow-style: none; /* Hide scrollbar for IE/Edge */
+  background: none; /* Explicitly remove any background */
 }
 
 .timeline-scroll-container::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
+  display: none; /* Hide scrollbar for Chrome, Safari, and WebKit browsers */
 }
 
 .timeline-scroll-container::-webkit-scrollbar-track {
@@ -97,7 +99,18 @@
   height: 30px;
   background-color: #1e1e1e;
   border-bottom: 1px solid #2a2a2a;
-  z-index: 5;
+  z-index: 50000;
+}
+
+.timeline-ruler::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%; /* Match the full timeline width */
+  height: 100%;
+  background-color: #1e1e1e; /* Solid background */
+  z-index: -1; /* Behind time markers */
 }
 
 .time-marker {
@@ -124,6 +137,8 @@
   min-height: 120px;
   background-color: #1a1a1a;
   min-width: max-content;
+  width: 100%; /* Ensure it matches the full timeline width */
+  z-index: 1000;
 }
 
 .playhead {
@@ -132,7 +147,7 @@
   bottom: 0;
   width: 2px;
   background-color: #ff5555;
-  z-index: 10;
+  z-index: 2000;
 }
 
 .timeline-layer {
@@ -805,6 +820,10 @@
   white-space: nowrap;
 }
 
+.timeline-section.selected {
+  border: 2px solid #4A919E; /* Muted teal border for selection */
+}
+
 .timeline-separator {
   height: 20px;
   background-color: #2a2a2a;
@@ -896,4 +915,10 @@
 .audio-waveform {
   background: #222;
   overflow: hidden;
+}
+
+.timeline.split-mode .playhead.magnetic {
+  background-color: #ff5555; /* Brighter color to indicate snapping */
+  width: 3px; /* Slightly thicker for visibility */
+  z-index: 1000;
 }

@@ -48,6 +48,7 @@ const TimelineComponent = ({
   canRedo,
   currentTime, // Added prop to receive currentTime from ProjectEditor
   preloadMedia, // Add preloadMedia prop
+  onTimelineClick, // Add this prop
 }) => {
   // Removed local playhead and currentTime states
   const [timelineVideos, setTimelineVideos] = useState([]);
@@ -66,6 +67,7 @@ const TimelineComponent = ({
   const API_BASE_URL = 'http://localhost:8080';
   const MIN_TIME_SCALE = 0.1;
   const MAX_TIME_SCALE = 200;
+  const MAGNETIC_THRESHOLD = 0.2; // Time in seconds for magnetic snap to playhead
 
   const timelineRef = useRef(null);
   const playheadRef = useRef(null);
@@ -118,7 +120,7 @@ const TimelineComponent = ({
                 waveColor: '#00FFFF',
                 progressColor: '#FFFFFF',
                 height: 30,
-                normalize: true,
+                normalize: false,
                 cursorWidth: 0,
                 barWidth: 2,
                 barGap: 1,
@@ -150,6 +152,76 @@ const TimelineComponent = ({
       });
     };
   }, [audioLayers, projectId]);
+
+  useEffect(() => {
+    if (!isSplitMode || !timelineRef.current) return;
+
+    const handleMouseMove = (e) => {
+      const rect = timelineRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseTime = mouseX / timeScale;
+
+      if (Math.abs(mouseTime - currentTime) <= MAGNETIC_THRESHOLD) {
+        // Add magnetic class to playhead and timeline for cursor
+        if (playheadRef.current) {
+          playheadRef.current.classList.add('magnetic');
+        }
+        timelineRef.current.classList.add('magnetic-cursor');
+      } else {
+        // Remove magnetic class
+        if (playheadRef.current) {
+          playheadRef.current.classList.remove('magnetic');
+        }
+        timelineRef.current.classList.remove('magnetic-cursor');
+      }
+    };
+
+    const handleMouseLeave = () => {
+      // Reset playhead and cursor when leaving timeline
+      if (playheadRef.current) {
+        playheadRef.current.classList.remove('magnetic');
+      }
+      timelineRef.current.classList.remove('magnetic-cursor');
+    };
+
+    const timelineEl = timelineRef.current;
+    timelineEl.addEventListener('mousemove', handleMouseMove);
+    timelineEl.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      timelineEl.removeEventListener('mousemove', handleMouseMove);
+      timelineEl.removeEventListener('mouseleave', handleMouseLeave);
+      if (timelineRef.current) {
+        timelineRef.current.classList.remove('magnetic-cursor');
+      }
+    };
+  }, [isSplitMode, currentTime, timeScale]);
+
+  const handleVideoSelect = (videoId) => {
+    if (isSplitMode) return;
+    setPlayingVideoId(videoId);
+    let selected = null;
+    for (let i = 0; i < videoLayers.length; i++) {
+      const item = videoLayers[i].find((v) => v.id === videoId);
+      if (item) {
+        selected = { ...item, layerIndex: i };
+        setSelectedSegment(selected);
+        break;
+      }
+    }
+    if (!selected) {
+      for (let i = 0; i < audioLayers.length; i++) {
+        const item = audioLayers[i].find((v) => v.id === videoId);
+        if (item) {
+          selected = { ...item, layerIndex: i };
+          setSelectedSegment(selected);
+          break;
+        }
+      }
+    }
+    if (onSegmentSelect) onSegmentSelect(selected);
+    if (selected && onTimelineClick) onTimelineClick(); // Add this line to select the timeline
+  };
 
   // Removed localIsPlaying state and sync logic
   const autoSave = useCallback(
@@ -593,7 +665,8 @@ const TimelineComponent = ({
     fetchVideoDuration: videoHandler.fetchVideoDuration,
     fetchAudioDuration: audioHandler.fetchAudioDuration, // Pass fetchAudioDuration
     currentTime,
-    roundToThreeDecimals
+    roundToThreeDecimals,
+    handleVideoSelect, // Automatically select the segment
   });
 
   useEffect(() => {
@@ -951,7 +1024,15 @@ const TimelineComponent = ({
     const rect = timelineRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
-    const clickTime = clickX / timeScale;
+    let clickTime = clickX / timeScale;
+
+    // Apply magnetic snapping to playhead in split mode
+    const isMagneticSnap = isSplitMode && Math.abs(clickTime - currentTime) <= MAGNETIC_THRESHOLD;
+    if (isMagneticSnap) {
+      clickTime = currentTime;
+      console.log('Magnetic snap: Adjusted clickTime to playhead at:', clickTime);
+    }
+
     const layerHeight = 40;
     const totalVideoLayers = videoLayers.length;
     const totalAudioLayers = audioLayers.length;
@@ -960,7 +1041,7 @@ const TimelineComponent = ({
     let clickedLayerIndex;
     let isAudioLayer = false;
 
-    console.log('handleTimelineClick: isSplitMode=', isSplitMode, 'clickTime=', clickTime, 'reversedIndex=', reversedIndex, 'totalVideoLayers=', totalVideoLayers, 'totalAudioLayers=', totalAudioLayers, 'clickX=', clickX, 'timeScale=', timeScale);
+    console.log('handleTimelineClick: isSplitMode=', isSplitMode, 'isMagneticSnap=', isMagneticSnap, 'clickTime=', clickTime, 'reversedIndex=', reversedIndex, 'totalVideoLayers=', totalVideoLayers, 'totalAudioLayers=', totalAudioLayers, 'clickX=', clickX, 'timeScale=', timeScale);
 
     // Check if the click is on the separator bar (audio-section-label)
     if (reversedIndex === totalVideoLayers + 1) {
@@ -1032,7 +1113,7 @@ const TimelineComponent = ({
 
     // In split mode, prioritize the clicked segment for splitting
     if (isSplitMode && foundItem) {
-      console.log('Split mode active, splitting segment:', foundItem.id, 'type:', foundItem.type);
+      console.log('Split mode active, splitting segment:', foundItem.id, 'type:', foundItem.type, 'at time:', clickTime);
       if (foundItem.type === 'video') {
         console.log('Splitting video:', foundItem.id);
         await videoHandler.handleVideoSplit(foundItem, clickTime, clickedLayerIndex);
@@ -1050,7 +1131,6 @@ const TimelineComponent = ({
         await imageHandler.handleImageSplit(foundItem, clickTime, clickedLayerIndex);
         saveHistory();
       }
-      setIsSplitMode(false);
       setSelectedSegment(null);
       setPlayingVideoId(null);
       return;
@@ -1137,31 +1217,6 @@ const TimelineComponent = ({
     const secs = Math.floor(seconds % 60);
     const ms = Math.floor((seconds % 1) * 100);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-  };
-
-  const handleVideoSelect = (videoId) => {
-    if (isSplitMode) return;
-    setPlayingVideoId(videoId);
-    let selected = null;
-    for (let i = 0; i < videoLayers.length; i++) {
-      const item = videoLayers[i].find((v) => v.id === videoId);
-      if (item) {
-        selected = { ...item, layerIndex: i };
-        setSelectedSegment(selected);
-        break;
-      }
-    }
-    if (!selected) {
-      for (let i = 0; i < audioLayers.length; i++) {
-        const item = audioLayers[i].find((v) => v.id === videoId);
-        if (item) {
-          selected = { ...item, layerIndex: i };
-          setSelectedSegment(selected);
-          break;
-        }
-      }
-    }
-    if (onSegmentSelect) onSegmentSelect(selected);
   };
 
   const flattenLayersToSegments = (layers) => {
@@ -1258,7 +1313,13 @@ const TimelineComponent = ({
     };
 
   const toggleSplitMode = () => {
-    setIsSplitMode((prev) => !prev);
+    setIsSplitMode((prev) => {
+      const newSplitMode = !prev;
+      if (newSplitMode && isPlaying) {
+        setIsPlaying(false); // Pause playback if entering split mode while playing
+      }
+      return newSplitMode;
+    });
     setDraggingItem(null);
     setResizingItem(null);
   };
@@ -1279,13 +1340,16 @@ const TimelineComponent = ({
       await imageHandler.handleImageSplit(item, clickTime, layerIndex);
       saveHistory();
     }
-    setIsSplitMode(false);
     setSelectedSegment(null);
     setPlayingVideoId(null);
   };
 
   return (
-    <div className="timeline-container">
+    <div className="timeline-container"
+      onClick={(e) => {
+        if (onTimelineClick) onTimelineClick(); // Select timeline for any click
+      }}
+    >
       <TimelineControls
         isPlaying={isPlaying}
         togglePlayback={togglePlayback}

@@ -154,9 +154,11 @@
   position: absolute;
   width: 2px;
   height: 100%;
-  background: #4A919E; /* Muted teal instead of red */
+  background: #4A919E; /* Muted teal */
   top: 0;
-  transform: translateX(-50%);
+  /* Remove transform to prevent offset at edges */
+  /* Ensure playhead stays within bounds */
+  box-sizing: border-box;
 }
 
 /* Keyframe markers in the timeline */

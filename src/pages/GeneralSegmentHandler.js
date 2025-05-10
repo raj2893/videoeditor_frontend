@@ -30,6 +30,7 @@ const GeneralSegmentHandler = ({
   fetchAudioDuration, // Add fetchAudioDuration prop
   currentTime,
   roundToThreeDecimals, // Add this prop
+  handleVideoSelect, // Add handleVideoSelect prop
 }) => {
   const durationCache = useRef(new Map()); // Cache for both video and audio durations
 
@@ -46,6 +47,7 @@ const GeneralSegmentHandler = ({
     const offsetX = e.clientX - rect.left;
     setDragOffset(offsetX / timeScale);
     e.currentTarget.classList.add('dragging');
+    handleVideoSelect(item.id); // Automatically select the segment
   };
 
   useEffect(() => {

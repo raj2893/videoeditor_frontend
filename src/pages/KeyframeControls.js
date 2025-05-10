@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import '../CSS/KeyframeControls.css'; // Ensure this CSS file is imported
+import React, { useState, useEffect, useRef } from 'react';
+import '../CSS/KeyframeControls.css';
 
 const KeyframeControls = ({
   selectedSegment,
@@ -20,13 +20,14 @@ const KeyframeControls = ({
   addKeyframe,
   updateKeyframe,
 }) => {
-  const [errorMessage, setErrorMessage] = useState(''); // New state for custom error message
+  const [errorMessage, setErrorMessage] = useState('');
   const [localCropValues, setLocalCropValues] = useState({
     cropL: 0,
     cropR: 0,
     cropT: 0,
     cropB: 0,
   });
+  const timelineRefs = useRef({}); // Store refs for each mini-timeline
 
   useEffect(() => {
     if (selectedSegment) {
@@ -42,7 +43,7 @@ const KeyframeControls = ({
 
   useEffect(() => {
     if (errorMessage) {
-      const timer = setTimeout(() => setErrorMessage(''), 3000); // Clear error after 3 seconds
+      const timer = setTimeout(() => setErrorMessage(''), 3000);
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
@@ -96,7 +97,6 @@ const KeyframeControls = ({
     let cropT = propName === 'cropT' ? newValue : localCropValues.cropT;
     let cropB = propName === 'cropB' ? newValue : localCropValues.cropB;
 
-    // Validate horizontal crop (left + right)
     if (propName === 'cropL' || propName === 'cropR') {
       const maxAllowed = 100 - (propName === 'cropL' ? cropR : cropL);
       if (newValue > maxAllowed) {
@@ -111,7 +111,6 @@ const KeyframeControls = ({
       }
     }
 
-    // Validate vertical crop (top + bottom)
     if (propName === 'cropT' || propName === 'cropB') {
       const maxAllowed = 100 - (propName === 'cropT' ? cropB : cropT);
       if (newValue > maxAllowed) {
@@ -164,7 +163,6 @@ const KeyframeControls = ({
         setTempSegmentValues((prev) => ({ ...prev, [property.name]: newValue }));
         updateSegmentProperty(property.name, newValue);
 
-        // Handle keyframes
         if (property.supportsKeyframes && keyframes[property.name]?.length > 0) {
           const existingKeyframe = keyframes[property.name].find((kf) =>
             areTimesEqual(kf.time, currentTimeInSegment)
@@ -203,7 +201,6 @@ const KeyframeControls = ({
       setTempSegmentValues((prev) => ({ ...prev, [property.name]: newValue }));
       updateSegmentProperty(property.name, newValue);
 
-      // Handle keyframes
       if (property.supportsKeyframes && keyframes[property.name]?.length > 0) {
         const existingKeyframe = keyframes[property.name].find((kf) =>
           areTimesEqual(kf.time, currentTimeInSegment)
@@ -244,8 +241,12 @@ const KeyframeControls = ({
           : tempSegmentValues[prop.name] !== undefined
           ? tempSegmentValues[prop.name]
           : selectedSegment[prop.name] || (prop.name === 'scale' || prop.name === 'opacity' ? 1 : 0);
-        const miniTimelineWidth = 200;
         const duration = selectedSegment.duration;
+
+        // Get the actual width of the mini-timeline
+        const miniTimelineWidth = timelineRefs.current[prop.name]?.offsetWidth || 160; // Fallback to 160px if not rendered
+        const playheadPositionRatio = duration > 0 ? Math.min(Math.max(currentTimeInSegment / duration, 0), 1) : 0;
+        const playheadPosition = playheadPositionRatio * miniTimelineWidth;
 
         return (
           <div key={prop.name} className="property-row">
@@ -294,23 +295,26 @@ const KeyframeControls = ({
               )}
             </div>
             {prop.supportsKeyframes && (
-              <div className="mini-timeline">
+              <div className="mini-timeline" ref={(el) => (timelineRefs.current[prop.name] = el)}>
                 <div
                   className="mini-playhead"
-                  style={{ left: `${(currentTimeInSegment / duration) * miniTimelineWidth}px` }}
+                  style={{ left: `${playheadPosition}px` }}
                 />
-                {(keyframes[prop.name] || []).map((kf, index) => (
-                  <div
-                    key={index}
-                    className="keyframe-marker"
-                    style={{ left: `${(kf.time / duration) * miniTimelineWidth}px` }}
-                    onClick={() => {
-                      setTempSegmentValues((prev) => ({ ...prev, [prop.name]: kf.value }));
-                      setCurrentTimeInSegment(kf.time);
-                      handleTimeUpdate(selectedSegment.startTime + kf.time);
-                    }}
-                  />
-                ))}
+                {(keyframes[prop.name] || []).map((kf, index) => {
+                  const keyframePosition = duration > 0 ? (kf.time / duration) * miniTimelineWidth : 0;
+                  return (
+                    <div
+                      key={index}
+                      className="keyframe-marker"
+                      style={{ left: `${keyframePosition}px` }}
+                      onClick={() => {
+                        setTempSegmentValues((prev) => ({ ...prev, [prop.name]: kf.value }));
+                        setCurrentTimeInSegment(kf.time);
+                        handleTimeUpdate(selectedSegment.startTime + kf.time);
+                      }}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>

@@ -584,6 +584,7 @@ const AudioSegmentHandler = ({
         endTimeWithinAudio: roundToThreeDecimals(startWithinAudio + item.duration),
         fileName: audioFileName,
         waveformImage: item.waveformImage || '/images/audio.jpeg',
+        extracted: item.extracted || false, // Preserve isExtracted flag
       };
       console.log('firstPart=', firstPart);
       console.log('secondPart=', secondPart);
@@ -676,6 +677,7 @@ const AudioSegmentHandler = ({
                       endTimeWithinAudio: roundToThreeDecimals(newAudioSegment.endTime),
                       volume: newAudioSegment.volume || 1.0,
                       keyframes: newAudioSegment.keyframes || {},
+                      extracted: item.extracted || false, // Preserve isExtracted from original item
                     }
                   : segment
               );

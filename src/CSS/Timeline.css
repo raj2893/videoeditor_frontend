@@ -205,6 +205,11 @@
   box-shadow: 0 0 8px rgba(255, 152, 0, 0.4);
 }
 
+.timeline-item.multi-selected {
+  border: 2px solid #FF00FF; /* Magenta border for multi-selected segments */
+  background-color: rgba(255, 0, 255, 0.2);
+}
+
 .resize-handle {
   position: absolute;
   top: 0;

@@ -62,6 +62,9 @@ const TimelineComponent = ({
   const [resizeEdge, setResizeEdge] = useState(null);
   const [selectedSegment, setSelectedSegment] = useState(null);
   const [isSplitMode, setIsSplitMode] = useState(false);
+  const waveSurferInstances = useRef(new Map()); // Cache WaveSurfer instances
+  const waveformDataCache = useRef(new Map()); // Cache waveform JSON data
+  const [isResizing, setIsResizing] = useState(false); // Track resize state
 
   const SNAP_THRESHOLD = 0.5;
   const API_BASE_URL = 'http://localhost:8080';
@@ -73,85 +76,143 @@ const TimelineComponent = ({
   const playheadRef = useRef(null);
   const playIntervalRef = useRef(null);
 
-  useEffect(() => {
-    const initializeWaveforms = async () => {
-      const token = localStorage.getItem('token');
-      audioLayers.forEach((layer, layerIndex) => {
-        layer.forEach(async (segment) => {
-          if (segment.waveformJsonPath && segment.type === 'audio') {
-            console.log(`Initializing waveform for segment.id: ${segment.id}`);
-            try {
-              const response = await axios.get(segment.waveformJsonPath, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              const waveformData = response.data;
-
-              const containerId = `waveform-segment-${segment.id}`;
-              const container = document.querySelector(`#${containerId}`);
-              if (!container) {
-                console.warn(`Waveform container #${containerId} not found for segment: ${segment.fileName}`);
-                return;
-              }
-
-              // Calculate full audio duration
-              const sampleRate = waveformData.sampleRate; // e.g., 44100 Hz
-              const peaks = waveformData.peaks;
-              const fullDuration = peaks.length / sampleRate; // Duration in seconds
-
-              // Get segment's time range
-              const startTime = segment.startTimeWithinAudio || 0;
-              const endTime = segment.endTimeWithinAudio || segment.duration;
-
-              // Validate time range
-              if (startTime < 0 || endTime > fullDuration || startTime >= endTime) {
-                console.warn(
-                  `Invalid time range for segment ${segment.id}: startTime=${startTime}, endTime=${endTime}, fullDuration=${fullDuration}`
-                );
-                return;
-              }
-
-              // Calculate indices for slicing peaks
-              const startIndex = Math.floor((startTime / fullDuration) * peaks.length);
-              const endIndex = Math.ceil((endTime / fullDuration) * peaks.length);
-              const slicedPeaks = peaks.slice(startIndex, endIndex);
-
-              const wavesurfer = WaveSurfer.create({
-                container: `#${containerId}`,
-                waveColor: '#00FFFF',
-                progressColor: '#FFFFFF',
-                height: 30,
-                normalize: false,
-                cursorWidth: 0,
-                barWidth: 2,
-                barGap: 1,
-              });
-
-              // Load waveform with sliced peaks
-              wavesurfer.load(segment.url, slicedPeaks, sampleRate);
-            } catch (error) {
-              console.error(`Error loading waveform for segment ${segment.id} (file: ${segment.fileName}):`, error);
-            }
-          }
-        });
-      });
-    };
-
-    if (audioLayers.length > 0 && audioLayers.some(layer => layer.length > 0)) {
-      initializeWaveforms();
+  // Initialize and update waveforms
+  const initializeWaveform = useCallback(async (segment) => {
+    if (!segment.waveformJsonPath || segment.type !== 'audio') {
+      console.warn(`Skipping waveform initialization for segment ${segment.id}: ${!segment.waveformJsonPath ? 'Missing waveformJsonPath' : 'Not an audio segment'}`);
+      return undefined; // Explicitly return undefined
+    }
+    const segmentId = segment.id;
+    if (waveSurferInstances.current.has(segmentId)) {
+      console.log(`Waveform for segment ${segmentId} already initialized`);
+      return undefined; // Skip if already initialized
     }
 
-    return () => {
-      audioLayers.forEach((layer) => {
-        layer.forEach((segment) => {
-          const containerId = `waveform-segment-${segment.id}`;
-          const container = document.querySelector(`#${containerId}`);
-          if (container) {
-            container.innerHTML = '';
-          }
+    try {
+      const token = localStorage.getItem('token');
+      let waveformData = waveformDataCache.current.get(segment.waveformJsonPath);
+      if (!waveformData) {
+        const response = await axios.get(segment.waveformJsonPath, {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        waveformData = response.data;
+        waveformDataCache.current.set(segment.waveformJsonPath, waveformData);
+      }
+
+      const containerId = `waveform-segment-${segmentId}`;
+      const container = document.querySelector(`#${containerId}`);
+      if (!container) {
+        console.warn(`Waveform container #${containerId} not found for segment ${segmentId}`);
+        return undefined;
+      }
+
+      const { sampleRate, peaks } = waveformData;
+      const fullDuration = peaks.length / sampleRate;
+      const startTime = segment.startTimeWithinAudio || 0;
+      const endTime = segment.endTimeWithinAudio || segment.duration;
+
+      if (startTime < 0 || endTime > fullDuration || startTime >= endTime) {
+        console.warn(`Invalid time range for segment ${segmentId}: startTime=${startTime}, endTime=${endTime}, fullDuration=${fullDuration}`);
+        return undefined;
+      }
+
+      const startIndex = Math.floor((startTime / fullDuration) * peaks.length);
+      const endIndex = Math.ceil((endTime / fullDuration) * peaks.length);
+      const slicedPeaks = peaks.slice(startIndex, endIndex);
+
+      const wavesurfer = WaveSurfer.create({
+        container: `#${containerId}`,
+        waveColor: '#00FFFF',
+        progressColor: '#FFFFFF',
+        height: 30,
+        normalize: false,
+        cursorWidth: 0,
+        barWidth: 2,
+        barGap: 1,
       });
+
+      wavesurfer.load(segment.url, slicedPeaks, sampleRate);
+      waveSurferInstances.current.set(segmentId, wavesurfer);
+
+      console.log(`Waveform initialized for segment ${segmentId}`);
+
+      return () => {
+        console.log(`Cleaning up waveform for segment ${segmentId}`);
+        wavesurfer.destroy();
+        waveSurferInstances.current.delete(segmentId);
+      };
+    } catch (error) {
+      console.error(`Error initializing waveform for segment ${segmentId}:`, error);
+      return undefined;
+    }
+  }, []);
+
+  // Update waveform for a specific segment (called after resize)
+  const updateWaveform = useCallback((segment) => {
+    const segmentId = segment.id;
+    const wavesurfer = waveSurferInstances.current.get(segmentId);
+    if (!wavesurfer) {
+      console.warn(`No WaveSurfer instance found for segment ${segmentId}`);
+      return;
+    }
+
+    const waveformData = waveformDataCache.current.get(segment.waveformJsonPath);
+    if (!waveformData) {
+      console.warn(`No waveform data found for segment ${segmentId}`);
+      return;
+    }
+
+    const { sampleRate, peaks } = waveformData;
+    const fullDuration = peaks.length / sampleRate;
+    const startTime = segment.startTimeWithinAudio || 0;
+    const endTime = segment.endTimeWithinAudio || segment.duration;
+
+    const startIndex = Math.floor((startTime / fullDuration) * peaks.length);
+    const endIndex = Math.ceil((endTime / fullDuration) * peaks.length);
+    const slicedPeaks = peaks.slice(startIndex, endIndex);
+
+    wavesurfer.load(segment.url, slicedPeaks, sampleRate);
+    console.log(`Waveform updated for segment ${segmentId}`);
+  }, []);
+
+  // Initialize waveforms only on mount or when new segments are added
+  useEffect(() => {
+    const cleanup = [];
+    audioLayers.forEach((layer) => {
+      layer.forEach(async (segment) => {
+        if (!waveSurferInstances.current.has(segment.id)) {
+          const cleanupFn = await initializeWaveform(segment); // Await async function
+          if (typeof cleanupFn === 'function') {
+            cleanup.push(cleanupFn); // Only push valid functions
+          } else {
+            console.warn(`No cleanup function returned for segment ${segment.id}`);
+          }
+        }
+      });
+    });
+
+    return () => {
+      cleanup.forEach((fn) => {
+        if (typeof fn === 'function') {
+          fn(); // Ensure fn is a function before calling
+        } else {
+          console.warn('Invalid cleanup function detected:', fn);
+        }
+      });
+      waveSurferInstances.current.forEach((ws) => {
+        ws.destroy();
+      });
+      waveSurferInstances.current.clear();
     };
-  }, [audioLayers, projectId]);
+  }, [audioLayers, initializeWaveform]);
+
+  // Expose updateWaveform globally
+  useEffect(() => {
+    window.updateWaveform = updateWaveform;
+    return () => {
+      delete window.updateWaveform;
+    };
+  }, [updateWaveform]);
 
   useEffect(() => {
     if (!isSplitMode || !timelineRef.current) return;
@@ -667,6 +728,8 @@ const TimelineComponent = ({
     currentTime,
     roundToThreeDecimals,
     handleVideoSelect, // Automatically select the segment
+    isResizing, // Add isResizing
+    setIsResizing, // Add setIsResizing
   });
 
   useEffect(() => {

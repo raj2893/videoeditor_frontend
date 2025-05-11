@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
+import { throttle } from 'lodash'; // Requires lodash: npm install lodash
 
 const GeneralSegmentHandler = ({
   videoLayers,
@@ -27,12 +28,15 @@ const GeneralSegmentHandler = ({
   updateImageSegment,
   updateAudioSegment,
   fetchVideoDuration,
-  fetchAudioDuration, // Add fetchAudioDuration prop
+  fetchAudioDuration,
   currentTime,
-  roundToThreeDecimals, // Add this prop
-  handleVideoSelect, // Add handleVideoSelect prop
+  roundToThreeDecimals,
+  handleVideoSelect,
+  isResizing, // Added prop from TimelineComponent
+  setIsResizing, // Added prop from TimelineComponent
 }) => {
   const durationCache = useRef(new Map()); // Cache for both video and audio durations
+  const resizingElementRef = useRef(null); // Store reference to resizing DOM element
 
   const handleDragStart = (e, item, layerIndex) => {
     if (isSplitMode) return;
@@ -226,21 +230,21 @@ const GeneralSegmentHandler = ({
       originalEndWithinAudio: item.endTimeWithinAudio,
     });
     setResizeEdge(edge);
+    setIsResizing(true); // Signal resizing start
     e.preventDefault();
   };
 
   const handleResizeMove = useCallback(
-    (e) => {
+    throttle((e) => {
       if (!resizingItem || !timelineRef.current) return;
+
       const timelineRect = timelineRef.current.getBoundingClientRect();
       const mouseX = e.clientX - timelineRect.left;
       let newTime = Math.max(0, mouseX / timeScale);
       const isAudioLayer = resizingItem.layer < 0;
-      const layerArray = isAudioLayer ? audioLayers : videoLayers;
       const layerIndex = isAudioLayer ? Math.abs(resizingItem.layer) - 1 : resizingItem.layerIndex;
-      let newVideoLayers = [...videoLayers];
-      let newAudioLayers = [...audioLayers];
-      const layer = isAudioLayer ? newAudioLayers[layerIndex] : newVideoLayers[layerIndex];
+      const layerArray = isAudioLayer ? audioLayers : videoLayers;
+      const layer = layerArray[layerIndex];
       const itemIndex = layer.findIndex((i) => i.id === resizingItem.id);
       if (itemIndex === -1) {
         console.error('Item not found during resize:', resizingItem);
@@ -291,11 +295,6 @@ const GeneralSegmentHandler = ({
         }
       });
 
-      let closestSnapPoint = null;
-      let minDistance = SNAP_THRESHOLD;
-      let isSnapping = false;
-
-      // Fetch source duration for audio or video
       let sourceDuration = durationCache.current.get(item.filePath || item.fileName);
       if (sourceDuration === undefined) {
         if (item.type === 'video') {
@@ -314,6 +313,10 @@ const GeneralSegmentHandler = ({
           sourceDuration = item.duration;
         }
       }
+
+      let closestSnapPoint = null;
+      let minDistance = SNAP_THRESHOLD;
+      let isSnapping = false;
 
       if (resizeEdge === 'left') {
         const originalEndTime = originalStartTime + item.duration;
@@ -397,41 +400,30 @@ const GeneralSegmentHandler = ({
         }
       }
 
-      // Update item properties with rounded values
-      item.startTime = roundToThreeDecimals(newStartTime);
-      item.duration = roundToThreeDecimals(newDuration);
-      item.timelineStartTime = roundToThreeDecimals(newStartTime);
-      item.timelineEndTime = roundToThreeDecimals(newStartTime + newDuration);
-      if (item.type === 'video') {
-        item.startTimeWithinVideo = roundToThreeDecimals(newStartWithin);
-        item.endTimeWithinVideo = roundToThreeDecimals(newEndWithin);
-      } else if (item.type === 'audio') {
-        item.startTimeWithinAudio = roundToThreeDecimals(newStartWithin);
-        item.endTimeWithinAudio = roundToThreeDecimals(newEndWithin);
-      }
-      layer[itemIndex] = item;
-
-      if (isAudioLayer) {
-        newAudioLayers[layerIndex] = layer;
-        setAudioLayers(newAudioLayers);
-      } else {
-        newVideoLayers[layerIndex] = layer;
-        setVideoLayers(newVideoLayers);
-      }
-
+      // Update DOM directly instead of state
       const resizingElement = document.querySelector(`.timeline-item[data-id="${resizingItem.id}"]`);
       if (resizingElement) {
+        resizingElementRef.current = resizingElement;
+        resizingElement.style.left = `${roundToThreeDecimals(newStartTime) * timeScale}px`;
+        resizingElement.style.width = `${roundToThreeDecimals(newDuration) * timeScale}px`;
         resizingElement.classList.toggle('snapping', isSnapping);
+        // Hide waveform during resize to prevent redraw
+        const waveform = resizingElement.querySelector('.audio-waveform');
+        if (waveform) waveform.style.visibility = 'hidden';
       }
-    },
+
+      // Store temporary values in resizingItem for use in handleResizeEnd
+      resizingItem.tempStartTime = roundToThreeDecimals(newStartTime);
+      resizingItem.tempDuration = roundToThreeDecimals(newDuration);
+      resizingItem.tempStartWithin = roundToThreeDecimals(newStartWithin);
+      resizingItem.tempEndWithin = roundToThreeDecimals(newEndWithin);
+    }, 16), // Throttle to ~60fps
     [
       resizingItem,
       resizeEdge,
       videoLayers,
       audioLayers,
       timeScale,
-      setVideoLayers,
-      setAudioLayers,
       SNAP_THRESHOLD,
       fetchVideoDuration,
       fetchAudioDuration,
@@ -442,32 +434,57 @@ const GeneralSegmentHandler = ({
 
   const handleResizeEnd = async () => {
     if (!resizingItem) return;
+    setIsResizing(false); // Signal resizing complete
 
     const isAudioLayer = resizingItem.layer < 0;
     const layerArray = isAudioLayer ? audioLayers : videoLayers;
     const layerIndex = isAudioLayer ? Math.abs(resizingItem.layer) - 1 : resizingItem.layerIndex;
     const layer = layerArray[layerIndex];
-    const item = layer.find(i => i.id === resizingItem.id);
+    const itemIndex = layer.findIndex((i) => i.id === resizingItem.id);
 
-    if (item) {
-      saveHistory(videoLayers, audioLayers);
-      autoSave(videoLayers, audioLayers);
+    if (itemIndex !== -1) {
+      const newVideoLayers = [...videoLayers];
+      const newAudioLayers = [...audioLayers];
+      const item = { ...layer[itemIndex] };
 
-      const newStartTime = item.startTime;
-      const newDuration = item.duration;
+      // Apply temporary values from resize
+      item.startTime = resizingItem.tempStartTime;
+      item.duration = resizingItem.tempDuration;
+      item.timelineStartTime = resizingItem.tempStartTime;
+      item.timelineEndTime = resizingItem.tempStartTime + resizingItem.tempDuration;
+      if (item.type === 'video') {
+        item.startTimeWithinVideo = resizingItem.tempStartWithin;
+        item.endTimeWithinVideo = resizingItem.tempEndWithin;
+      } else if (item.type === 'audio') {
+        item.startTimeWithinAudio = resizingItem.tempStartWithin;
+        item.endTimeWithinAudio = resizingItem.tempEndWithin;
+      }
+
+      layer[itemIndex] = item;
+
+      if (isAudioLayer) {
+        newAudioLayers[layerIndex] = layer;
+        setAudioLayers(newAudioLayers);
+      } else {
+        newVideoLayers[layerIndex] = layer;
+        setVideoLayers(newVideoLayers);
+      }
+
+      saveHistory(newVideoLayers, newAudioLayers);
+      autoSave(newVideoLayers, newAudioLayers);
 
       if (item.type === 'video') {
         await updateSegmentPosition(
           item.id,
-          newStartTime,
+          item.startTime,
           item.layer,
-          newDuration,
+          item.duration,
           item.startTimeWithinVideo,
           item.endTimeWithinVideo
         );
       } else if (item.type === 'text') {
-        const updatedTextSettings = { ...item, duration: newDuration };
-        await updateTextSegment(item.id, updatedTextSettings, newStartTime, item.layer);
+        const updatedTextSettings = { ...item, duration: item.duration };
+        await updateTextSegment(item.id, updatedTextSettings, item.startTime, item.layer);
       } else if (item.type === 'image') {
         const updatedSettings = {
           positionX: item.positionX,
@@ -480,21 +497,31 @@ const GeneralSegmentHandler = ({
           effectiveHeight: item.effectiveHeight,
           maintainAspectRatio: item.maintainAspectRatio,
         };
-        await updateImageSegment(item.id, newStartTime, item.layer, newDuration, updatedSettings);
+        await updateImageSegment(item.id, item.startTime, item.layer, item.duration, updatedSettings);
       } else if (item.type === 'audio') {
         await updateAudioSegment(
           item.id,
-          newStartTime,
+          item.startTime,
           item.layer,
-          newDuration,
+          item.duration,
           item.startTimeWithinAudio,
           item.endTimeWithinAudio
         );
+      }
+
+      // Restore waveform visibility and trigger update
+      if (item.type === 'audio' && resizingElementRef.current) {
+        const waveform = resizingElementRef.current.querySelector('.audio-waveform');
+        if (waveform) waveform.style.visibility = 'visible';
+        if (typeof window.updateWaveform === 'function') {
+          window.updateWaveform(item);
+        }
       }
     }
 
     setResizingItem(null);
     setResizeEdge(null);
+    resizingElementRef.current = null;
   };
 
   useEffect(() => {

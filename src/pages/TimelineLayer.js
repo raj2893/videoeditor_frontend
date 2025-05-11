@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import '../CSS/Timeline.css';
 
 const TimelineLayer = ({
@@ -38,7 +38,7 @@ const TimelineLayer = ({
     <div className="layer">
       <div className="layer-label">{isAudioLayer ? `Layer ${layerIndex}` : `Layer ${layerIndex}`}</div>
       <div className="layer-items">
-        {layer.map((item, index) => {
+        {layer.map((item) => {
           const style = {
             left: `${item.startTime * timeScale}px`,
             width: `${item.duration * timeScale}px`,
@@ -50,7 +50,6 @@ const TimelineLayer = ({
                 : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            zIndex: index,
             top: '5px',
           };
           const isSelected = item.id === selectedSegmentId;
@@ -126,7 +125,7 @@ const TimelineLayer = ({
                   id={`waveform-segment-${item.id}`}
                   className="audio-waveform"
                   style={{ width: `${item.duration * timeScale}px`, height: '30px' }}
-                ></div>
+                />
               )}
               {(item.type === 'video' || item.type === 'image') && (
                 <div className="video-title">
@@ -161,7 +160,7 @@ const TimelineLayer = ({
                         : 'rgba(0, 255, 255, 0.5)',
                       position: 'absolute',
                       top: '0',
-                      zIndex: index + 100,
+                      zIndex: 100,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -186,4 +185,15 @@ const TimelineLayer = ({
   );
 };
 
-export default TimelineLayer;
+// Memoize to prevent unnecessary re-renders
+export default memo(TimelineLayer, (prevProps, nextProps) => {
+  return (
+    prevProps.layer === nextProps.layer &&
+    prevProps.layerIndex === nextProps.layerIndex &&
+    prevProps.timeScale === nextProps.timeScale &&
+    prevProps.playingVideoId === nextProps.playingVideoId &&
+    prevProps.selectedSegmentId === nextProps.selectedSegmentId &&
+    prevProps.transitions === nextProps.transitions &&
+    prevProps.isSplitMode === nextProps.isSplitMode
+  );
+});

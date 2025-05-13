@@ -473,6 +473,7 @@ const TimelineComponent = ({
                     cropT: segment.cropT ?? 0,
                     cropB: segment.cropB ?? 0,
                     opacity: segment.opacity ?? 1,
+                    speed: segment.speed ?? 1.0, // Add speed
                   });
                 }
               }
@@ -652,6 +653,7 @@ const TimelineComponent = ({
     API_BASE_URL,
     timelineRef,
     roundToThreeDecimals,
+    setTotalDuration
   });
 
   const textHandler = TextSegmentHandler({
@@ -1332,6 +1334,7 @@ const TimelineComponent = ({
               cropR: item.cropR ?? 0,
               cropT: item.cropT ?? 0,
               cropB: item.cropB ?? 0,
+              speed: item.speed ?? 1.0, // Add speed
             });
           } else if (item.type === 'image') {
             segments.push({

@@ -720,10 +720,23 @@ const VideoPreview = ({
             videoRef.load();
           }
 
+          // Set playback rate based on speed
+          const speed = element.speed || 1.0;
+          if (speed < 0.1 || speed > 5.0) {
+            console.warn(`Invalid speed value for video ${element.id}: ${speed}. Using default speed of 1.0.`);
+            videoRef.playbackRate = 1.0;
+          } else {
+            videoRef.playbackRate = speed;
+          }
+
           const setVideoTime = () => {
-            const targetTime = element.localTime + (element.startTimeWithinVideo || 0);
+            const startTimeWithinVideo = element.startTimeWithinVideo || 0;
+            // Adjust localTime by speed to get the correct position in the video
+            const adjustedLocalTime = element.localTime * speed;
+            const targetTime = startTimeWithinVideo + adjustedLocalTime;
             if (Math.abs(videoRef.currentTime - targetTime) > 0.05) {
               videoRef.currentTime = targetTime;
+              console.log(`Set video ${element.id} time to ${targetTime} (speed: ${speed})`);
             }
           };
           setVideoTimeFunctions.set(element.id, setVideoTime);

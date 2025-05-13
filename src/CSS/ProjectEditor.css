@@ -449,7 +449,7 @@
 }
 
 .preview-section {
-  background-color: #0d0d0d;
+  background-color: #1a1a1a; /* Lighter background than #0d0d0d */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -466,6 +466,7 @@
   max-width: 100%;
   max-height: calc(100% - 40px);
   object-fit: contain;
+  background-color: #1a1a1a; /* Lighter background than #0d0d0d */
 }
 
 .resize-preview-section {
@@ -1357,62 +1358,89 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .project-editor {
+    flex-direction: column;
+  }
+
+  .media-panel {
+    width: 100%;
+    max-height: 35vh;
+  }
+
+  .media-panel.closed {
+    max-height: 40px;
+  }
+
   .tools-panel {
     width: 100%;
-    height: auto;
-    max-height: 200px;
-    overflow-y: auto;
-    overflow-x: hidden;
+    max-height: 35vh;
   }
 
   .tools-panel.closed {
-    width: 100%;
-    height: 50px;
+    max-height: 40px;
   }
 
-  .tools-panel .panel-content {
-    max-height: 160px;
+  .main-content {
+    flex: 1;
   }
 
-  .tool-subpanel {
-    max-height: 300px; /* Already updated in previous changes */
-    overflow-y: auto; /* Ensure scrollability */
-    /* Hide scrollbar for Firefox */
-    scrollbar-width: none;
-    /* Ensure smooth scrolling on touch devices */
-    -webkit-overflow-scrolling: touch;
+  .preview-section {
+    min-height: 150px;
+    background-color: #1a1a1a; /* Lighter background than #0d0d0d */
   }
 
-  /* Hide scrollbar for WebKit browsers */
-  .tool-subpanel::-webkit-scrollbar {
-    display: none;
+  .controls-panel {
+    flex-wrap: wrap;
+    height: auto;
   }
 
-  .filter-panel,
-  .text-tool-panel,
-  .transitions-panel {
-    padding: 10px;
+  .timeline-section {
+    min-height: 100px;
+    max-height: 25vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .media-panel,
+  .tools-panel {
+    max-height: 30vh;
   }
 
-  .filter-item,
-  .transition-item {
-    padding: 6px 10px;
+  .preview-section {
+    min-height: 120px;
+    background-color: #1a1a1a; /* Lighter background than #0d0d0d */
   }
 
-  .apply-filter-btn,
-  .text-tool-panel .apply-text-btn {
-    padding: 6px 12px;
-    font-size: 12px;
+  .timeline-section {
+    min-height: 80px;
+    max-height: 20vh;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .toggle-button {
+    padding: 8px 0; /* Add top and bottom padding for mobile */
+    justify-content: center; /* Ensure horizontal centering */
   }
 
-  .remove-filter-btn {
-    padding: 3px 6px;
-    font-size: 10px;
+  .media-panel.closed .toggle-button,
+  .tools-panel.closed .toggle-button {
+    padding: 8px 0; /* Consistent padding in closed state */
+    justify-content: center; /* Ensure horizontal centering */
+  }
+}
+
+@media (max-width: 480px) {
+  .toggle-button {
+    padding: 6px 0; /* Slightly reduced padding for smaller screens */
+    justify-content: center; /* Ensure horizontal centering */
   }
 
-  .control-group input[type="number"],
-  .slider-container input[type="number"] {
-    width: 50px;
+  .media-panel.closed .toggle-button,
+  .tools-panel.closed .toggle-button {
+    padding: 6px 0; /* Consistent padding in closed state */
+    justify-content: center; /* Ensure horizontal centering */
   }
 }
 

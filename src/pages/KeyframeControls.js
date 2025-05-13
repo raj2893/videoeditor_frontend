@@ -63,6 +63,7 @@ const KeyframeControls = ({
         { name: 'cropR', label: 'Crop Right', unit: '%', step: 0.1, min: 0, max: 100, supportsKeyframes: false, isCrop: true },
         { name: 'cropT', label: 'Crop Top', unit: '%', step: 0.1, min: 0, max: 100, supportsKeyframes: false, isCrop: true },
         { name: 'cropB', label: 'Crop Bottom', unit: '%', step: 0.1, min: 0, max: 100, supportsKeyframes: false, isCrop: true },
+        { name: 'speed', label: 'Speed', unit: 'x', step: 0.1, min: 0.1, max: 5.0, supportsKeyframes: false }, // Add speed
       ];
       break;
     case 'text':

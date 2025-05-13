@@ -259,6 +259,7 @@ const GeneralSegmentHandler = ({
       const originalEndWithin = item.type === 'video'
         ? (item.endTimeWithinVideo ?? item.duration)
         : (item.endTimeWithinAudio ?? item.duration);
+      const speed = item.type === 'video' ? (item.speed ?? 1.0) : 1.0; // Get speed for video segments
 
       let newStartTime = originalStartTime;
       let newDuration = item.duration;
@@ -303,7 +304,7 @@ const GeneralSegmentHandler = ({
               durationCache.current.set(item.filePath, duration);
             }
           });
-          sourceDuration = item.duration;
+          sourceDuration = (item.endTimeWithinVideo - item.startTimeWithinVideo) / speed; // Estimate based on current segment
         } else if (item.type === 'audio') {
           fetchAudioDuration(item.fileName).then((duration) => {
             if (duration !== null) {
@@ -348,7 +349,22 @@ const GeneralSegmentHandler = ({
         }
 
         newDuration = originalEndTime - newStartTime;
-        if (item.type === 'video' || item.type === 'audio') {
+        if (item.type === 'video') {
+          const timeShift = (newStartTime - originalStartTime) * speed; // Adjust shift by speed
+          newStartWithin = originalStartWithin + timeShift;
+          if (newStartWithin < 0) {
+            newStartWithin = 0;
+            newStartTime = originalStartTime - (originalStartWithin / speed);
+            newDuration = originalEndTime - newStartTime;
+          }
+          newEndWithin = originalEndWithin;
+          // Ensure newStartWithin doesn't exceed source duration
+          if (newStartWithin > sourceDuration - (0.1 * speed)) {
+            newStartWithin = sourceDuration - (0.1 * speed);
+            newStartTime = originalStartTime + ((newStartWithin - originalStartWithin) / speed);
+            newDuration = originalEndTime - newStartTime;
+          }
+        } else if (item.type === 'audio') {
           const timeShift = newStartTime - originalStartTime;
           newStartWithin = originalStartWithin + timeShift;
           if (newStartWithin < 0) {
@@ -388,10 +404,17 @@ const GeneralSegmentHandler = ({
         }
 
         newDuration = clampedEndTime - originalStartTime;
-        if (item.type === 'video' || item.type === 'audio') {
+        if (item.type === 'video') {
+          newStartWithin = originalStartWithin;
+          newEndWithin = originalStartWithin + (newDuration * speed); // Scale duration by speed
+          if (newEndWithin > sourceDuration) {
+            newEndWithin = sourceDuration;
+            newDuration = (newEndWithin - originalStartWithin) / speed;
+            clampedEndTime = originalStartTime + newDuration;
+          }
+        } else if (item.type === 'audio') {
           newStartWithin = originalStartWithin;
           newEndWithin = originalStartWithin + newDuration;
-
           if (newEndWithin > sourceDuration) {
             newEndWithin = sourceDuration;
             newDuration = newEndWithin - originalStartWithin;
@@ -400,7 +423,7 @@ const GeneralSegmentHandler = ({
         }
       }
 
-      // Update DOM directly instead of state
+      // Update DOM directly
       const resizingElement = document.querySelector(`.timeline-item[data-id="${resizingItem.id}"]`);
       if (resizingElement) {
         resizingElementRef.current = resizingElement;
@@ -412,12 +435,12 @@ const GeneralSegmentHandler = ({
         if (waveform) waveform.style.visibility = 'hidden';
       }
 
-      // Store temporary values in resizingItem for use in handleResizeEnd
+      // Store temporary values
       resizingItem.tempStartTime = roundToThreeDecimals(newStartTime);
       resizingItem.tempDuration = roundToThreeDecimals(newDuration);
       resizingItem.tempStartWithin = roundToThreeDecimals(newStartWithin);
       resizingItem.tempEndWithin = roundToThreeDecimals(newEndWithin);
-    }, 16), // Throttle to ~60fps
+    }, 16),
     [
       resizingItem,
       resizeEdge,
@@ -434,7 +457,7 @@ const GeneralSegmentHandler = ({
 
   const handleResizeEnd = async () => {
     if (!resizingItem) return;
-    setIsResizing(false); // Signal resizing complete
+    setIsResizing(false);
 
     const isAudioLayer = resizingItem.layer < 0;
     const layerArray = isAudioLayer ? audioLayers : videoLayers;
@@ -446,8 +469,9 @@ const GeneralSegmentHandler = ({
       const newVideoLayers = [...videoLayers];
       const newAudioLayers = [...audioLayers];
       const item = { ...layer[itemIndex] };
+      const speed = item.type === 'video' ? (item.speed ?? 1.0) : 1.0;
 
-      // Apply temporary values from resize
+      // Apply temporary values
       item.startTime = resizingItem.tempStartTime;
       item.duration = resizingItem.tempDuration;
       item.timelineStartTime = resizingItem.tempStartTime;
@@ -455,6 +479,7 @@ const GeneralSegmentHandler = ({
       if (item.type === 'video') {
         item.startTimeWithinVideo = resizingItem.tempStartWithin;
         item.endTimeWithinVideo = resizingItem.tempEndWithin;
+        item.duration = (item.endTimeWithinVideo - item.startTimeWithinVideo) / speed;
       } else if (item.type === 'audio') {
         item.startTimeWithinAudio = resizingItem.tempStartWithin;
         item.endTimeWithinAudio = resizingItem.tempEndWithin;

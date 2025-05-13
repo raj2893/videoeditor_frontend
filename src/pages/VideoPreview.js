@@ -551,9 +551,14 @@ const VideoPreview = ({
         console.log('Flip filter applied via transform, not CSS filter.');
         return '';
       },
+      vignette: (value) => {
+        // Vignette is handled via a wrapper div, not CSS filter
+        return '';
+      },
     };
 
     const cssStyles = [];
+    const webglFilters = [];
 
     filters.forEach((filter) => {
       const { filterName, filterValue } = filter;
@@ -567,7 +572,7 @@ const VideoPreview = ({
 
     return {
       css: cssStyles.length > 0 ? cssStyles.join(' ') : '',
-      webgl: [],
+      webgl: webglFilters,
     };
   };
 
@@ -833,10 +838,6 @@ const VideoPreview = ({
     return visibleElements.sort((a, b) => a.layerIndex - b.layerIndex);
   };
 
-  const applyWebGLFilters = (element, sourceElement) => {
-    return sourceElement;
-  };
-
   const visibleElements = getVisibleElements();
 
     return (
@@ -947,108 +948,15 @@ const VideoPreview = ({
                 let displayWidth = videoWidth * scaleFactor;
                 let displayHeight = videoHeight * scaleFactor;
 
-                // Center the element on the canvas
                 const centerX = canvasDimensions.width / 2 - displayWidth / 2;
                 const centerY = canvasDimensions.height / 2 - displayHeight / 2;
 
-                return (
-                  <React.Fragment key={element.id}>
-                    <video
-                      ref={(el) => (videoRefs.current[element.id] = el)}
-                      className="preview-video"
-                      muted={true}
-                      crossOrigin="anonymous"
-                      style={{
-                        position: 'absolute',
-                        left: `${centerX}px`, // Center horizontally
-                        top: `${centerY}px`, // Center vertically
-                        width: `${displayWidth}px`,
-                        height: `${displayHeight}px`,
-                        zIndex: element.layerIndex,
-                        opacity,
-                        objectFit: 'contain',
-                        filter: filterStyle,
-                        transform: transform.trim(),
-                        clipPath,
-                        display: webglFilters.length > 0 ? 'none' : 'block',
-                        transition: 'transform 0.016s linear, opacity 0.016s linear',
-                        transformOrigin: 'center center',
-                      }}
-                      onError={(e) => console.error(`Error loading video ${element.filePath}:`, e)}
-                      onLoadedData={() => {
-                        console.log(`Video ${element.filePath} loaded`);
-                        // Update dimensions if not already set
-                        if (videoRefs.current[element.id] && !videoDimensions[element.id]) {
-                          setVideoDimensions((prev) => ({
-                            ...prev,
-                            [element.id]: {
-                              width: videoRefs.current[element.id].videoWidth,
-                              height: videoRefs.current[element.id].videoHeight,
-                            },
-                          }));
-                        }
-                      }}
-                      preload="auto"
-                    />
-                    {webglFilters.length > 0 && (
-                      <canvas
-                        style={{
-                          position: 'absolute',
-                          left: `${centerX}px`,
-                          top: `${centerY}px`,
-                          width: `${displayWidth}px`,
-                          height: `${displayHeight}px`,
-                          zIndex: element.layerIndex,
-                          opacity,
-                          transform: transform.trim(),
-                          clipPath,
-                          transition: 'transform 0.016s linear, opacity 0.016s linear',
-                          transformOrigin: 'center center',
-                        }}
-                        ref={(canvas) => {
-                          if (canvas && videoRefs.current[element.id]) {
-                            const filtered = applyWebGLFilters(element, videoRefs.current[element.id]);
-                            if (filtered === videoRefs.current[element.id]) {
-                              canvas.style.display = 'none';
-                              if (videoRefs.current[element.id]) {
-                                videoRefs.current[element.id].style.display = 'block';
-                              }
-                            } else {
-                              canvas.width = displayWidth;
-                              canvas.height = displayHeight;
-                              const ctx = canvas.getContext('2d');
-                              ctx.drawImage(filtered, 0, 0, displayWidth, displayHeight);
-                            }
-                          }
-                        }}
-                      />
-                    )}
-                  </React.Fragment>
-                );
-              } else if (element.type === 'image') {
-                const imgWidth = element.width || canvasDimensions.width;
-                const imgHeight = element.height || canvasDimensions.height;
-                const displayWidth = imgWidth * scaleFactor;
-                const displayHeight = imgHeight * scaleFactor;
-
-                // Center the element on the canvas
-                const centerX = canvasDimensions.width / 2 - displayWidth / 2;
-                const centerY = canvasDimensions.height / 2 - displayHeight / 2;
-
-                const photo = photos.find((p) => p.fileName === element.fileName) || {
-                  filePath: element.filePath,
-                };
-
-                const safeFilters = Array.isArray(element.filters) ? element.filters : [];
-                const rotateFilter = safeFilters.find((f) => f.filterName === 'rotate');
-                const flipFilter = safeFilters.find((f) => f.filterName === 'flip');
+                const vignetteFilter = element.filters?.find((f) => f.filterName === 'vignette');
+                const vignetteValue = vignetteFilter ? parseFloat(vignetteFilter.filterValue) : 0;
 
                 return (
                   <React.Fragment key={element.id}>
-                    <img
-                      src={webglFilters.length > 0 ? null : photo.filePath}
-                      alt="Preview"
-                      crossOrigin="anonymous"
+                    <div
                       style={{
                         position: 'absolute',
                         left: `${centerX}px`,
@@ -1057,48 +965,117 @@ const VideoPreview = ({
                         height: `${displayHeight}px`,
                         zIndex: element.layerIndex,
                         opacity,
-                        filter: filterStyle,
                         transform: transform.trim(),
                         clipPath,
-                        display: webglFilters.length > 0 ? 'none' : 'block',
                         transition: 'transform 0.016s linear, opacity 0.016s linear',
                         transformOrigin: 'center center',
+                        overflow: 'hidden',
                       }}
-                    />
-                    {webglFilters.length > 0 && (
-                      <canvas
+                    >
+                      <video
+                        ref={(el) => (videoRefs.current[element.id] = el)}
+                        className="preview-video"
+                        muted={true}
+                        crossOrigin="anonymous"
                         style={{
-                          position: 'absolute',
-                          left: `${centerX}px`,
-                          top: `${centerY}px`,
-                          width: `${displayWidth}px`,
-                          height: `${displayHeight}px`,
-                          zIndex: element.layerIndex,
-                          opacity,
-                          transform: transform.trim(),
-                          clipPath,
-                          transition: 'transform 0.016s linear, opacity 0.016s linear',
-                          transformOrigin: 'center center',
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          filter: filterStyle,
+                          display: 'block',
                         }}
-                        ref={(canvas) => {
-                          if (canvas) {
-                            const img = new Image();
-                            img.crossOrigin = 'anonymous';
-                            img.src = photo.filePath;
-                            img.onload = () => {
-                              const filtered = applyWebGLFilters(element, img);
-                              canvas.width = displayWidth;
-                              canvas.height = displayHeight;
-                              const ctx = canvas.getContext('2d');
-                              ctx.drawImage(filtered, 0, 0, displayWidth, displayHeight);
-                            };
-                            img.onerror = () => {
-                              console.error(`Failed to load image for WebGL filtering: ${photo.filePath}`);
-                            };
+                        onError={(e) => console.error(`Error loading video ${element.filePath}:`, e)}
+                        onLoadedData={() => {
+                          console.log(`Video ${element.filePath} loaded`);
+                          if (videoRefs.current[element.id] && !videoDimensions[element.id]) {
+                            setVideoDimensions((prev) => ({
+                              ...prev,
+                              [element.id]: {
+                                width: videoRefs.current[element.id].videoWidth,
+                                height: videoRefs.current[element.id].videoHeight,
+                              },
+                            }));
                           }
                         }}
+                        preload="auto"
                       />
-                    )}
+                      {vignetteValue > 0 && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            background: `radial-gradient(circle, transparent 20%, rgba(0, 0, 0, ${vignetteValue}) 70%)`,
+                            pointerEvents: 'none',
+                          }}
+                        />
+                      )}
+                    </div>
+                  </React.Fragment>
+                );
+              } else if (element.type === 'image') {
+                const imgWidth = element.width || canvasDimensions.width;
+                const imgHeight = element.height || canvasDimensions.height;
+                const displayWidth = imgWidth * scaleFactor;
+                const displayHeight = imgHeight * scaleFactor;
+
+                const centerX = canvasDimensions.width / 2 - displayWidth / 2;
+                const centerY = canvasDimensions.height / 2 - displayHeight / 2;
+
+                const photo = photos.find((p) => p.fileName === element.fileName) || {
+                  filePath: element.filePath,
+                };
+
+                const safeFilters = Array.isArray(element.filters) ? element.filters : [];
+                const vignetteFilter = safeFilters.find((f) => f.filterName === 'vignette');
+                const vignetteValue = vignetteFilter ? parseFloat(vignetteFilter.filterValue) : 0;
+
+                return (
+                  <React.Fragment key={element.id}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: `${centerX}px`,
+                        top: `${centerY}px`,
+                        width: `${displayWidth}px`,
+                        height: `${displayHeight}px`,
+                        zIndex: element.layerIndex,
+                        opacity,
+                        transform: transform.trim(),
+                        clipPath,
+                        transition: 'transform 0.016s linear, opacity 0.016s linear',
+                        transformOrigin: 'center center',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <img
+                        src={photo.filePath}
+                        alt="Preview"
+                        crossOrigin="anonymous"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          filter: filterStyle,
+                          display: 'block',
+                        }}
+                      />
+                      {vignetteValue > 0 && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            background: `radial-gradient(circle, transparent 20%, rgba(0, 0, 0, ${vignetteValue}) 70%)`,
+                            pointerEvents: 'none',
+                          }}
+                        />
+                      )}
+                    </div>
                   </React.Fragment>
                 );
               } else if (element.type === 'text') {

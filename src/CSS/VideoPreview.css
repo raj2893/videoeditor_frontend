@@ -4,7 +4,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #0d0d0d; /* Match preview-section in ProjectEditor */
+  background-color: #1a1a1a; /* Changed from #0d0d0d to a lighter shade */
   position: relative;
 }
 

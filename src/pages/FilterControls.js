@@ -169,6 +169,28 @@ const FilterControls = ({
                 <span style={{ margin: 0 }}></span>
               </div>
             </div>
+            <div className="control-group">
+              <label>Vignette (0 to 1)</label>
+              <div className="slider-container">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={filterParams.vignette !== undefined ? filterParams.vignette : 0}
+                  onChange={(e) => updateFilterSetting('vignette', parseFloat(e.target.value))}
+                />
+                <input
+                  type="number"
+                  value={filterParams.vignette !== undefined ? filterParams.vignette : 0}
+                  onChange={(e) => updateFilterSetting('vignette', parseFloat(e.target.value))}
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  style={{ width: '60px', marginLeft: '10px' }}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Transformation */}

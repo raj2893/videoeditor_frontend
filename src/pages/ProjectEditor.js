@@ -2289,6 +2289,7 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
         timelineEndTime: timelineEndTime || null,
         startTime: startTimeWithinVideo || 0,
         endTime: endTimeWithinVideo || null,
+        speed: 1.0, // Add default speed
       },
       { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
     );
@@ -2326,6 +2327,7 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
       thumbnail: video.thumbnail,
       filters: videoSegment.filters || [],
       audioSegmentId: audioSegmentId || null,
+      speed: videoSegment.speed || 1.0, // Add speed to segment
     };
 
     let updatedVideoLayers = videoLayers;
@@ -2613,6 +2615,7 @@ const handleSegmentSelect = async (segment) => {
           cropR: segment.cropR !== undefined ? segment.cropR : 0,
           cropT: segment.cropT !== undefined ? segment.cropT : 0,
           cropB: segment.cropB !== undefined ? segment.cropB : 0,
+          speed: segment.speed || 1.0, // Add speed with default 1.0
         };
         break;
       case 'text':
@@ -3021,6 +3024,16 @@ const navigateKeyframes = (property, direction) => {
 };
 
   const updateSegmentProperty = (property, value) => {
+
+    // Validate speed property
+    if (property === 'speed') {
+      const speedValue = Number(value);
+      if (isNaN(speedValue) || speedValue < 0.1 || speedValue > 5.0) {
+        console.warn(`Invalid speed value: ${value}. Speed must be between 0.1 and 5.0.`);
+        return; // Skip update and rely on KeyframeControls error message
+      }
+    }
+
     // Validate crop properties
     if (['cropL', 'cropR', 'cropT', 'cropB'].includes(property)) {
       const currentValues = {
@@ -3130,6 +3143,7 @@ const navigateKeyframes = (property, direction) => {
             cropR: tempValues.cropR !== undefined ? Number(tempValues.cropR) : 0,
             cropT: tempValues.cropT !== undefined ? Number(tempValues.cropT) : 0,
             cropB: tempValues.cropB !== undefined ? Number(tempValues.cropB) : 0,
+            speed: tempValues.speed !== undefined ? Number(tempValues.speed) : 1.0,
           };
 
           console.log('Normalized temp values for video:', normalizedTempValues);
@@ -3149,6 +3163,7 @@ const navigateKeyframes = (property, direction) => {
             cropR: normalizedTempValues.cropR,
             cropT: normalizedTempValues.cropT,
             cropB: normalizedTempValues.cropB,
+            speed: updatedKeyframes.speed && updatedKeyframes.speed.length > 0 ? undefined : normalizedTempValues.speed,
             keyframes: updatedKeyframes || {},
           };
 
@@ -3161,7 +3176,21 @@ const navigateKeyframes = (property, direction) => {
           );
           console.log('Server response for video segment update:', videoResponse.data);
 
-          // Update videoLayers
+          // Fetch updated segment data to get the latest timelineEndTime and other properties
+          const segmentResponse = await axios.get(
+            `${API_BASE_URL}/projects/${projectId}/get-segment`,
+            {
+              params: { sessionId, segmentId: selectedSegment.id },
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          const updatedSegment = segmentResponse.data.videoSegment;
+
+          if (!updatedSegment) {
+            throw new Error(`Failed to fetch updated video segment ${selectedSegment.id}`);
+          }
+
+          // Update videoLayers with the latest segment data from backend
           setVideoLayers((prev) => {
             const newLayers = [...prev];
             const layerIndex = selectedSegment.layer;
@@ -3169,23 +3198,33 @@ const navigateKeyframes = (property, direction) => {
             if (segmentIndex !== -1) {
               newLayers[layerIndex][segmentIndex] = {
                 ...newLayers[layerIndex][segmentIndex],
-                cropL: videoPayload.cropL,
-                cropR: videoPayload.cropR,
-                cropT: videoPayload.cropT,
-                cropB: videoPayload.cropB,
-                positionX: videoPayload.positionX !== undefined ? videoPayload.positionX : newLayers[layerIndex][segmentIndex].positionX || 0,
-                positionY: videoPayload.positionY !== undefined ? videoPayload.positionY : newLayers[layerIndex][segmentIndex].positionY || 0,
-                scale: videoPayload.scale !== undefined ? videoPayload.scale : newLayers[layerIndex][segmentIndex].scale || 1,
-                opacity: videoPayload.opacity !== undefined ? videoPayload.opacity : newLayers[layerIndex][segmentIndex].opacity || 1,
-                startTime: videoPayload.timelineStartTime,
-                duration: videoPayload.timelineEndTime - videoPayload.timelineStartTime,
-                startTimeWithinVideo: videoPayload.startTime,
-                endTimeWithinVideo: videoPayload.endTime,
-                layer: videoPayload.layer,
-                keyframes: videoPayload.keyframes,
+                cropL: updatedSegment.cropL ?? videoPayload.cropL,
+                cropR: updatedSegment.cropR ?? videoPayload.cropR,
+                cropT: updatedSegment.cropT ?? videoPayload.cropT,
+                cropB: updatedSegment.cropB ?? videoPayload.cropB,
+                positionX: updatedSegment.positionX ?? (videoPayload.positionX !== undefined ? videoPayload.positionX : newLayers[layerIndex][segmentIndex].positionX || 0),
+                positionY: updatedSegment.positionY ?? (videoPayload.positionY !== undefined ? videoPayload.positionY : newLayers[layerIndex][segmentIndex].positionY || 0),
+                scale: updatedSegment.scale ?? (videoPayload.scale !== undefined ? videoPayload.scale : newLayers[layerIndex][segmentIndex].scale || 1),
+                opacity: updatedSegment.opacity ?? (videoPayload.opacity !== undefined ? videoPayload.opacity : newLayers[layerIndex][segmentIndex].opacity || 1),
+                speed: updatedSegment.speed ?? (videoPayload.speed !== undefined ? videoPayload.speed : newLayers[layerIndex][segmentIndex].speed || 1.0),
+                startTime: updatedSegment.timelineStartTime ?? videoPayload.timelineStartTime,
+                duration: (updatedSegment.timelineEndTime - updatedSegment.timelineStartTime) ?? (videoPayload.timelineEndTime - videoPayload.timelineStartTime),
+                startTimeWithinVideo: updatedSegment.startTime ?? videoPayload.startTime,
+                endTimeWithinVideo: updatedSegment.endTime ?? videoPayload.endTime,
+                layer: updatedSegment.layer ?? videoPayload.layer,
+                keyframes: updatedSegment.keyframes ?? videoPayload.keyframes,
               };
             }
             updatedVideoLayers = newLayers;
+            // Update totalDuration based on new segment duration
+            let maxEndTime = 0;
+            newLayers.forEach((layer) => {
+              layer.forEach((item) => {
+                const endTime = item.startTime + item.duration;
+                if (endTime > maxEndTime) maxEndTime = endTime;
+              });
+            });
+            setTotalDuration(maxEndTime);
             return newLayers;
           });
           break;
@@ -3217,10 +3256,10 @@ const navigateKeyframes = (property, direction) => {
             cropB: normalizedImageValues.cropB,
             keyframes: updatedKeyframes || {},
             filters: Array.isArray(appliedFilters)
-              ? appliedFilters.map(filter => ({
+              ? appliedFilters.map((filter) => ({
                   filterName: filter.filterName,
                   filterValue: String(filter.filterValue),
-                  filterId: filter.filterId
+                  filterId: filter.filterId,
                 }))
               : [],
             filtersToRemove: [],
@@ -3239,7 +3278,7 @@ const navigateKeyframes = (property, direction) => {
           setVideoLayers((prev) => {
             const newLayers = [...prev];
             const layerIndex = selectedSegment.layer;
-            const segmentIndex = newLayers[layerIndex].findIndex(s => s.id === selectedSegment.id);
+            const segmentIndex = newLayers[layerIndex].findIndex((s) => s.id === selectedSegment.id);
             if (segmentIndex !== -1) {
               newLayers[layerIndex][segmentIndex] = {
                 ...newLayers[layerIndex][segmentIndex],
@@ -3993,7 +4032,6 @@ return (
       </div>
       {isMediaPanelOpen && (
         <div className="panel-content">
-          <h2 onClick={() => setExpandedSection(null)}>Media Library</h2>
           <div className="media-section">
             <button className="section-button" data-section="videos" onClick={() => toggleSection('videos')}>
               Videos
@@ -4008,8 +4046,11 @@ return (
                   className="hidden-input"
                   multiple
                 />
-                <label htmlFor="upload-video" className="upload-button">
-                  {uploading ? 'Uploading...' : 'Upload Video'}
+                <label htmlFor="upload-video" className="upload-icon-button">
+                  <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </label>
                 {videos.length === 0 ? (
                   <div className="empty-state">Pour it in, I am waiting!</div>
@@ -4067,8 +4108,11 @@ return (
                   className="hidden-input"
                   multiple
                 />
-                <label htmlFor="upload-photo" className="upload-button">
-                  {uploading ? 'Uploading...' : 'Upload Photo'}
+                <label htmlFor="upload-photo" className="upload-icon-button">
+                  <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </label>
                 {photos.length === 0 ? (
                   <div className="empty-state">Pour it in, I am waiting!</div>
@@ -4105,8 +4149,11 @@ return (
                   className="hidden-input"
                   multiple
                 />
-                <label htmlFor="upload-audio" className="upload-button">
-                  {uploading ? 'Uploading...' : 'Upload Audio'}
+                <label htmlFor="upload-audio" className="upload-icon-button">
+                  <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </label>
                 {audios.length === 0 ? (
                   <div className="empty-state">Pour it in, I am waiting!</div>
@@ -4331,11 +4378,11 @@ return (
   </div>
   {isToolsPanelOpen && (
     <div className="panel-content">
-      <h2>Tools</h2>
       <div className="tools-sections">
         <div className="tools-section">
           <button
             className={`tool-button ${isTransformOpen ? 'active' : ''}`}
+            data-section="transform" // Add this
             onClick={toggleTransformPanel}
           >
             Transform
@@ -4368,6 +4415,7 @@ return (
         <div className="tools-section">
           <button
             className={`tool-button ${isFiltersOpen ? 'active' : ''}`}
+            data-section="filters" // Add this
             onClick={toggleFiltersPanel}
           >
             Filters
@@ -4387,6 +4435,7 @@ return (
         <div className="tools-section">
           <button
             className={`tool-button ${isTextToolOpen ? 'active' : ''}`}
+            data-section="text" // Add this
             onClick={toggleTextTool}
             disabled={!selectedSegment || selectedSegment.type !== 'text'}
           >
@@ -4583,6 +4632,7 @@ return (
         <div className="tools-section">
           <button
             className={`tool-button ${isTransitionsOpen ? 'active' : ''}`}
+            data-section="transitions" // Add this
             onClick={toggleTransitionsPanel}
           >
             Transitions

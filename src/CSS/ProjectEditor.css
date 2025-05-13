@@ -1,6 +1,6 @@
 /* Specific icons for each section */
 .section-button[data-section="videos"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/TextM.jpeg');
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/VideoM.jpeg');
 }
 
 .section-button[data-section="photos"]::before {
@@ -22,11 +22,11 @@
 
 /* Specific icons for each tool section */
 .tool-button[data-section="transform"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/transform-icon.jpg');
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/TransformT.jpg');
 }
 
 .tool-button[data-section="filters"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/transform-icon.jpg');
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/FiltersT.jpg');
 }
 
 .tool-button[data-section="text"]::before {
@@ -34,7 +34,7 @@
 }
 
 .tool-button[data-section="transitions"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/transform-icon.jpg');
+  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/TransitionT.jpg');
 }
 
 /* Import Montserrat font for consistency with dashboard.css */
@@ -131,6 +131,11 @@
   transition: width 0.3s ease;
   overflow-x: visible; /* Allow scaled buttons to extend slightly without clipping */
   overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.media-panel::-webkit-scrollbar {
+  display: none; /* Chrome, Edge, Safari */
 }
 
 .media-panel.closed {
@@ -240,47 +245,53 @@
   overflow-y: auto;
   border: 1px solid #2a2a2a;
   box-sizing: border-box;
+  /* Hide scrollbar for Firefox */
+  scrollbar-width: none;
+  /* Hide scrollbar for WebKit browsers (Chrome, Safari, Edge) */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
 }
 
-.upload-button {
-  display: block;
-  padding: 8px 16px;
-  background: transparent;
-  color: #39c0ed;
-  border: 1px solid #39c0ed;
+/* Hide scrollbar for WebKit browsers */
+.section-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Replace the .upload-button styles */
+.upload-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: transparent;
+  border: 1px solid #39c0ed; /* Vibrant cyan border */
   border-radius: 8px;
   cursor: pointer;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 15px;
+  margin: 0 auto 15px; /* Center horizontally and add bottom margin */
+  transition: all 0.3s ease;
   position: relative;
-  transition: all 0.3s ease;
-  box-shadow: none; /* Ensure no glow */
+  overflow: visible; /* Ensure scaled SVG doesn't get clipped */
 }
 
-.upload-button::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background-color: #39c0ed;
-  transition: all 0.3s ease;
+.upload-icon-button:hover {
+  background-color: #39c0ed; /* Cyan background on hover */
+  transform: scale(1.1); /* Slightly larger scale for emphasis */
+  box-shadow: 0 0 8px rgba(57, 192, 237, 0.3); /* Subtle cyan glow */
 }
 
-.upload-button:hover {
-  background: #39c0ed;
-  color: #121212;
-  transform: scale(1.02);
+.upload-icon-button:active {
+  transform: scale(0.95); /* Slight shrink on click */
 }
 
-.upload-button:hover::after {
-  width: 80%;
-  left: 10%;
+.upload-icon-button .upload-arrow {
+  width: 24px; /* Size of the SVG */
+  height: 24px;
+  color: #39c0ed; /* Cyan stroke color */
+  transition: color 0.3s ease;
+}
+
+.upload-icon-button:hover .upload-arrow {
+  color: #121212; /* Dark color for contrast against cyan background */
 }
 
 .hidden-input {
@@ -290,12 +301,24 @@
 .video-list,
 .photo-list,
 .audio-list,
-.element-list {
+.element-list,
+.text-style-list {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   max-height: 450px;
   overflow-y: auto;
+  /* Hide scrollbar for Firefox */
+  scrollbar-width: none;
+}
+
+/* Hide scrollbar for WebKit browsers */
+.video-list::-webkit-scrollbar,
+.photo-list::-webkit-scrollbar,
+.audio-list::-webkit-scrollbar,
+.element-list::-webkit-scrollbar,
+.text-style-list::-webkit-scrollbar {
+  display: none;
 }
 
 .element-list {
@@ -426,7 +449,7 @@
 }
 
 .preview-section {
-  background-color: #0d0d0d;
+  background-color: #1a1a1a; /* Lighter background than #0d0d0d */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -443,6 +466,7 @@
   max-width: 100%;
   max-height: calc(100% - 40px);
   object-fit: contain;
+  background-color: #1a1a1a; /* Lighter background than #0d0d0d */
 }
 
 .resize-preview-section {
@@ -668,6 +692,11 @@
   transition: width 0.3s ease;
   overflow-x: visible; /* Allow scaled buttons to extend slightly without clipping */
   overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.tools-panel::-webkit-scrollbar {
+  display: none; /* Chrome, Edge, Safari */
 }
 
 .tools-panel.closed {
@@ -780,6 +809,15 @@
   overflow-y: auto;
   border: 1px solid #2a2a2a;
   box-sizing: border-box;
+  /* Hide scrollbar for Firefox */
+  scrollbar-width: none;
+  /* Hide scrollbar for WebKit browsers (Chrome, Safari, Edge) */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar for WebKit browsers */
+.tool-subpanel::-webkit-scrollbar {
+  display: none;
 }
 
 .transform-panel,
@@ -1189,6 +1227,15 @@
   gap: 8px;
   max-height: 300px;
   overflow-y: auto;
+  /* Hide scrollbar for Firefox */
+  scrollbar-width: none;
+  /* Ensure smooth scrolling on touch devices */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar for WebKit browsers */
+.transitions-list::-webkit-scrollbar {
+  display: none;
 }
 
 .transition-item {
@@ -1311,62 +1358,89 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .project-editor {
+    flex-direction: column;
+  }
+
+  .media-panel {
+    width: 100%;
+    max-height: 35vh;
+  }
+
+  .media-panel.closed {
+    max-height: 40px;
+  }
+
   .tools-panel {
     width: 100%;
-    height: auto;
-    max-height: 200px;
-    overflow-y: auto;
-    overflow-x: hidden;
+    max-height: 35vh;
   }
 
   .tools-panel.closed {
-    width: 100%;
-    height: 50px;
+    max-height: 40px;
   }
 
-  .tools-panel .panel-content {
-    max-height: 160px;
+  .main-content {
+    flex: 1;
   }
 
-  .tool-subpanel {
-    max-height: 300px; /* Already updated in previous changes */
-    overflow-y: auto; /* Ensure scrollability */
-    /* Hide scrollbar for Firefox */
-    scrollbar-width: none;
-    /* Ensure smooth scrolling on touch devices */
-    -webkit-overflow-scrolling: touch;
+  .preview-section {
+    min-height: 150px;
+    background-color: #1a1a1a; /* Lighter background than #0d0d0d */
   }
 
-  /* Hide scrollbar for WebKit browsers */
-  .tool-subpanel::-webkit-scrollbar {
-    display: none;
+  .controls-panel {
+    flex-wrap: wrap;
+    height: auto;
   }
 
-  .filter-panel,
-  .text-tool-panel,
-  .transitions-panel {
-    padding: 10px;
+  .timeline-section {
+    min-height: 100px;
+    max-height: 25vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .media-panel,
+  .tools-panel {
+    max-height: 30vh;
   }
 
-  .filter-item,
-  .transition-item {
-    padding: 6px 10px;
+  .preview-section {
+    min-height: 120px;
+    background-color: #1a1a1a; /* Lighter background than #0d0d0d */
   }
 
-  .apply-filter-btn,
-  .text-tool-panel .apply-text-btn {
-    padding: 6px 12px;
-    font-size: 12px;
+  .timeline-section {
+    min-height: 80px;
+    max-height: 20vh;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .toggle-button {
+    padding: 8px 0; /* Add top and bottom padding for mobile */
+    justify-content: center; /* Ensure horizontal centering */
   }
 
-  .remove-filter-btn {
-    padding: 3px 6px;
-    font-size: 10px;
+  .media-panel.closed .toggle-button,
+  .tools-panel.closed .toggle-button {
+    padding: 8px 0; /* Consistent padding in closed state */
+    justify-content: center; /* Ensure horizontal centering */
+  }
+}
+
+@media (max-width: 480px) {
+  .toggle-button {
+    padding: 6px 0; /* Slightly reduced padding for smaller screens */
+    justify-content: center; /* Ensure horizontal centering */
   }
 
-  .control-group input[type="number"],
-  .slider-container input[type="number"] {
-    width: 50px;
+  .media-panel.closed .toggle-button,
+  .tools-panel.closed .toggle-button {
+    padding: 6px 0; /* Consistent padding in closed state */
+    justify-content: center; /* Ensure horizontal centering */
   }
 }
 

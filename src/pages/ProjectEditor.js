@@ -3993,7 +3993,6 @@ return (
       </div>
       {isMediaPanelOpen && (
         <div className="panel-content">
-          <h2 onClick={() => setExpandedSection(null)}>Media Library</h2>
           <div className="media-section">
             <button className="section-button" data-section="videos" onClick={() => toggleSection('videos')}>
               Videos
@@ -4008,8 +4007,11 @@ return (
                   className="hidden-input"
                   multiple
                 />
-                <label htmlFor="upload-video" className="upload-button">
-                  {uploading ? 'Uploading...' : 'Upload Video'}
+                <label htmlFor="upload-video" className="upload-icon-button">
+                  <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </label>
                 {videos.length === 0 ? (
                   <div className="empty-state">Pour it in, I am waiting!</div>
@@ -4067,8 +4069,11 @@ return (
                   className="hidden-input"
                   multiple
                 />
-                <label htmlFor="upload-photo" className="upload-button">
-                  {uploading ? 'Uploading...' : 'Upload Photo'}
+                <label htmlFor="upload-photo" className="upload-icon-button">
+                  <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </label>
                 {photos.length === 0 ? (
                   <div className="empty-state">Pour it in, I am waiting!</div>
@@ -4105,8 +4110,11 @@ return (
                   className="hidden-input"
                   multiple
                 />
-                <label htmlFor="upload-audio" className="upload-button">
-                  {uploading ? 'Uploading...' : 'Upload Audio'}
+                <label htmlFor="upload-audio" className="upload-icon-button">
+                  <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </label>
                 {audios.length === 0 ? (
                   <div className="empty-state">Pour it in, I am waiting!</div>
@@ -4331,11 +4339,11 @@ return (
   </div>
   {isToolsPanelOpen && (
     <div className="panel-content">
-      <h2>Tools</h2>
       <div className="tools-sections">
         <div className="tools-section">
           <button
             className={`tool-button ${isTransformOpen ? 'active' : ''}`}
+            data-section="transform" // Add this
             onClick={toggleTransformPanel}
           >
             Transform
@@ -4368,6 +4376,7 @@ return (
         <div className="tools-section">
           <button
             className={`tool-button ${isFiltersOpen ? 'active' : ''}`}
+            data-section="filters" // Add this
             onClick={toggleFiltersPanel}
           >
             Filters
@@ -4387,6 +4396,7 @@ return (
         <div className="tools-section">
           <button
             className={`tool-button ${isTextToolOpen ? 'active' : ''}`}
+            data-section="text" // Add this
             onClick={toggleTextTool}
             disabled={!selectedSegment || selectedSegment.type !== 'text'}
           >
@@ -4583,6 +4593,7 @@ return (
         <div className="tools-section">
           <button
             className={`tool-button ${isTransitionsOpen ? 'active' : ''}`}
+            data-section="transitions" // Add this
             onClick={toggleTransitionsPanel}
           >
             Transitions

@@ -76,7 +76,7 @@ const KeyframeControls = ({
       break;
     case 'audio':
       properties = [
-        { name: 'volume', label: 'Volume', unit: '', step: 0.01, min: 0, max: 1, supportsKeyframes: true },
+        { name: 'volume', label: 'Volume', unit: '', step: 0.01, min: 0, max: 15, supportsKeyframes: true },
       ];
       break;
     default:

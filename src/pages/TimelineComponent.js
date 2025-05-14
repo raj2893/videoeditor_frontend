@@ -626,15 +626,16 @@ const TimelineComponent = ({
     };
 
   useEffect(() => {
-    if (projectId && sessionId && videos.length > 0 && thumbnailsGenerated) {
+    if (projectId && sessionId && thumbnailsGenerated) {
       loadProjectTimeline().then(() => {
         setVideoLayers((prev) => [...prev]);
+        setAudioLayers((prev) => [...prev]);
         if (onSegmentSelect) {
           onSegmentSelect(null);
         }
       });
     }
-  }, [projectId, sessionId, videos, thumbnailsGenerated]);
+  }, [projectId, sessionId, thumbnailsGenerated]);
 
   const roundToThreeDecimals = (value) => {
     if (value == null || isNaN(value)) return 0;

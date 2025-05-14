@@ -1042,6 +1042,18 @@ html {
   box-shadow: 0 4px 10px rgba(255, 90, 95, 0.4);
 }
 
+.error-message {
+  color: #FF5A5F;
+  font-size: 0.85rem;
+  margin: 10px 0;
+  padding: 10px;
+  background: rgba(255, 90, 95, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #FF5A5F;
+  animation: errorShake 0.5s;
+  text-align: left;
+}
+
 /* Animations */
 @keyframes gradientShift {
   0% { background-position: 0% 50%; }

@@ -1482,3 +1482,190 @@
   flex-direction: column;
   gap: 8px; /* Space between sections */
 }
+
+/* Loading container */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6); /* Black background with 60% opacity */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+/* Branding container for Scenith text and logo element */
+.branding-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+/* Scenith text styling */
+.branding-container h1 {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  animation: shimmer 3s infinite;
+  background: linear-gradient(90deg, #3F8EFC, #B76CFD);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #3F8EFC;
+  position: relative;
+  display: inline-block;
+}
+
+.branding-container h1::after {
+  content: '';
+  position: absolute;
+  width: 45px;
+  height: 3px;
+  background: linear-gradient(90deg, #3F8EFC, #B76CFD);
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+
+.branding-container .letter {
+  position: relative;
+  display: inline-block;
+  background: inherit;
+  -webkit-background-clip: inherit;
+  background-clip: inherit;
+  -webkit-text-fill-color: inherit;
+  color: inherit;
+}
+
+/* Define CSS custom properties for letter positions */
+:root {
+  --nav-s: -74px;
+  --nav-c: -49.5px;
+  --nav-e: -24.5px;
+  --nav-n: 0px;
+  --nav-i: 24.5px;
+  --nav-t: 49.5px;
+  --nav-h: 68px;
+}
+
+/* Bouncing ball (logo element) */
+.branding-container .logo-element {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #FFD700;
+  border-radius: 50%;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: bounce 0.5s infinite, moveOverLetters 7s infinite;
+  z-index: 15;
+}
+
+.branding-container .logo-element::before {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #3F8EFC;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Animations */
+@keyframes shimmer {
+  0% { background-position: -200%; }
+  100% { background-position: 200%; }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes moveOverLetters {
+  0% { left: calc(50% + var(--nav-s)); }
+  7.14% { left: calc(50% + var(--nav-c)); }
+  14.28% { left: calc(50% + var(--nav-e)); }
+  21.42% { left: calc(50% + var(--nav-n)); }
+  28.56% { left: calc(50% + var(--nav-i)); }
+  35.7% { left: calc(50% + var(--nav-t)); }
+  42.84% { left: calc(50% + var(--nav-h)); }
+  50% { left: calc(50% + var(--nav-h)); }
+  57.14% { left: calc(50% + var(--nav-t)); }
+  64.28% { left: calc(50% + var(--nav-i)); }
+  71.42% { left: calc(50% + var(--nav-n)); }
+  78.56% { left: calc(50% + var(--nav-e)); }
+  85.7% { left: calc(50% + var(--nav-c)); }
+  92.84% { left: calc(50% + var(--nav-s)); }
+  100% { left: calc(50% + var(--nav-s)); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  :root {
+    --nav-s: -61px;
+    --nav-c: -41px;
+    --nav-e: -20px;
+    --nav-n: 0px;
+    --nav-i: 20px;
+    --nav-t: 41px;
+    --nav-h: 56px;
+  }
+
+  .branding-container h1 {
+    font-size: 20px;
+  }
+
+  .branding-container .logo-element {
+    width: 20px;
+    height: 20px;
+  }
+
+  .branding-container .logo-element::before {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --nav-s: -55px;
+    --nav-c: -36.5px;
+    --nav-e: -18px;
+    --nav-n: 0px;
+    --nav-i: 18px;
+    --nav-t: 36.5px;
+    --nav-h: 50px;
+  }
+
+  .branding-container h1 {
+    font-size: 18px;
+  }
+
+  .branding-container .logo-element {
+    width: 18px;
+    height: 18px;
+  }
+
+  .branding-container .logo-element::before {
+    width: 5px;
+    height: 5px;
+  }
+}
+
+textarea {
+  outline: none;
+}
+textarea[style*="border: 2px solid red"] {
+  border: 2px solid red !important;
+}

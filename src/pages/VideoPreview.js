@@ -37,11 +37,12 @@ const VideoPreview = ({
   const glTextureRefs = useRef({});
   const fxCanvasRef = useRef(null);
   const [videoDimensions, setVideoDimensions] = useState({});
+  const audioContextRefs = useRef({});
 
-    const [isDragging, setIsDragging] = useState(false);
-    const [draggedSegment, setDraggedSegment] = useState(null);
-    const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
-    const [initialSegmentPos, setInitialSegmentPos] = useState({ positionX: 0, positionY: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedSegment, setDraggedSegment] = useState(null);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  const [initialSegmentPos, setInitialSegmentPos] = useState({ positionX: 0, positionY: 0 });
 
     // Convert canvas coordinates to normalized canvas space
     const getCanvasCoordinates = (clientX, clientY) => {
@@ -229,7 +230,7 @@ const VideoPreview = ({
     return defaultValue;
   };
 
-  // Initialize audio elements
+  // Initialize audio elements with Web Audio API
   useEffect(() => {
     console.log('Audio initialization useEffect triggered with audioLayers:', audioLayers);
     const token = localStorage.getItem('token');
@@ -237,6 +238,8 @@ const VideoPreview = ({
       console.error('No token found in localStorage for audio initialization');
       return;
     }
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
     const promises = audioLayers.flat().map((segment) => {
       console.log(`Processing audio segment ${segment.id}:`, segment);
@@ -256,6 +259,15 @@ const VideoPreview = ({
       audio.crossOrigin = 'anonymous';
       audio.preload = 'auto';
       audio.playbackRate = 1.0;
+      audio.volume = 1.0; // Set to maximum to allow gain node to control volume
+
+      // Set up Web Audio API
+      const source = audioContext.createMediaElementSource(audio);
+      const gainNode = audioContext.createGain();
+      source.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      audioContextRefs.current[segment.id] = { audioContext, source, gainNode };
 
       return fetch(segment.url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -290,7 +302,7 @@ const VideoPreview = ({
     });
 
     return () => {
-      console.log('Cleaning up audio elements');
+      console.log('Cleaning up audio elements and Web Audio API');
       Object.entries(audioRefs.current).forEach(([id, audio]) => {
         audio.pause();
         if (audio.src) {
@@ -304,6 +316,12 @@ const VideoPreview = ({
           return newSet;
         });
       });
+      Object.entries(audioContextRefs.current).forEach(([id, { source, gainNode }]) => {
+        source.disconnect();
+        gainNode.disconnect();
+        delete audioContextRefs.current[id];
+      });
+      audioContext.close().catch((e) => console.error('Error closing AudioContext:', e));
     };
   }, [audioLayers]);
 
@@ -317,6 +335,13 @@ const VideoPreview = ({
   // Synchronize audio playback
   useEffect(() => {
     console.log(`Playback state: isPlaying=${isPlaying}, currentTime=${currentTime}, loadedAudioSegments=`, Array.from(loadedAudioSegments));
+
+    // Resume AudioContext if suspended
+    Object.values(audioContextRefs.current).forEach(({ audioContext }) => {
+      if (audioContext.state === 'suspended' && isPlaying) {
+        audioContext.resume().catch((e) => console.error('Error resuming AudioContext:', e));
+      }
+    });
 
     // Pause all audio elements when not playing
     if (!isPlaying) {
@@ -338,10 +363,13 @@ const VideoPreview = ({
         }
 
         const audio = audioRefs.current[segment.id];
-        if (!audio) {
-          console.warn(`No audio element for segment ${segment.id}`);
+        const audioContextData = audioContextRefs.current[segment.id];
+        if (!audio || !audioContextData) {
+          console.warn(`No audio element or context for segment ${segment.id}`);
           return;
         }
+
+        const { gainNode } = audioContextData;
 
         // Ensure playback rate is 1.0
         audio.playbackRate = 1.0;
@@ -384,12 +412,12 @@ const VideoPreview = ({
           }
         }
 
-        // Apply volume with keyframe support
-        const volume = segment.keyframes?.volume
+        // Apply volume with keyframe support, using raw volume for gain
+        const rawVolume = segment.keyframes?.volume
           ? getKeyframeValue(segment.keyframes.volume, relativeTime - startWithinAudio, segment.volume || 1.0)
           : segment.volume || 1.0;
-        audio.volume = Math.max(0, Math.min(1, volume));
-        console.log(`Set audio ${segment.id} volume to ${audio.volume}`);
+        gainNode.gain.setValueAtTime(Math.max(0, rawVolume), audioContextData.audioContext.currentTime);
+        console.log(`Set audio ${segment.id} gain to ${rawVolume}`);
       });
     });
   }, [currentTime, isPlaying, audioLayers, loadedAudioSegments, setIsPlaying, getKeyframeValue]);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import '../CSS/ProjectEditor.css';
 import TimelineComponent from './TimelineComponent.js';
@@ -147,6 +147,9 @@ const ProjectEditor = () => {
   const [elementSearchQuery, setElementSearchQuery] = useState('');
   // Add this to the existing state declarations at the top of ProjectEditor
   const [isTimelineSelected, setIsTimelineSelected] = useState(false);
+  const [loading, setLoading] = useState(true); // Add loading state
+  const [isTextEmpty, setIsTextEmpty] = useState(false);
+  const textSettingsRef = useRef(textSettings);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -155,6 +158,7 @@ const ProjectEditor = () => {
 
   const navigate = useNavigate();
   const { projectId } = useParams();
+  const location = useLocation(); // Add this line
   const updateTimeoutRef = useRef(null);
   const filterUpdateTimeoutRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -165,6 +169,10 @@ const ProjectEditor = () => {
   const MAX_TIME_SCALE = 250;
   const baseFontSize = 24;
   let timelineSetPlayhead = null;
+
+  useEffect(() => {
+    textSettingsRef.current = textSettings;
+  }, [textSettings]);
 
   // Add this useEffect to handle clicks outside the timeline
   useEffect(() => {
@@ -982,8 +990,9 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
   const handleTextSegmentSelect = (segment) => {
     setEditingTextSegment(segment);
     if (segment && segment.type === 'text') {
+      const text = segment.text?.trim() || 'Default Text';
       setTextSettings({
-        text: segment.text || 'New Text',
+        text: text,
         fontFamily: segment.fontFamily || 'Arial',
         scale: segment.scale || 1.0,
         fontColor: segment.fontColor || '#FFFFFF',
@@ -993,23 +1002,29 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         backgroundOpacity: segment.backgroundOpacity ?? 1.0,
         backgroundBorderWidth: segment.backgroundBorderWidth ?? 0,
         backgroundBorderColor: segment.backgroundBorderColor || '#000000',
-        backgroundH: segment.backgroundH ?? 0, // Ensure this is included
-        backgroundW: segment.backgroundW ?? 0, // Ensure this is included
-        backgroundPadding: segment.backgroundPadding ?? 0,
+        backgroundH: segment.backgroundH ?? 0,
+        backgroundW: segment.backgroundW ?? 0,
         backgroundBorderRadius: segment.backgroundBorderRadius ?? 0,
-        textBorderColor: segment.textBorderColor || 'transparent', // Added
-        textBorderWidth: segment.textBorderWidth ?? 0, // Added
-        textBorderOpacity: segment.textBorderOpacity ?? 1.0, // Added
+        textBorderColor: segment.textBorderColor || 'transparent',
+        textBorderWidth: segment.textBorderWidth ?? 0,
+        textBorderOpacity: segment.textBorderOpacity ?? 1.0,
       });
+      setIsTextEmpty(!text.trim());
       setIsTextToolOpen(true);
     } else {
       setIsTextToolOpen(false);
+      setIsTextEmpty(false);
     }
   };
 
   const updateTextSettings = (newSettings) => {
+    const trimmedText = newSettings.text?.trim();
+    const isEmpty = !trimmedText;
+
+    setIsTextEmpty(isEmpty);
     setTextSettings(newSettings);
-    if (editingTextSegment) {
+
+    if (editingTextSegment && !isEmpty) {
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         newLayers[editingTextSegment.layer] = newLayers[editingTextSegment.layer].map((item) =>
@@ -1058,36 +1073,42 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         return Math.max(prev, updatedSegment?.startTime + updatedSegment?.duration || prev);
       });
 
-      // Debounced auto-save for text changes
+      // Debounced auto-save for text changes only if text is not empty
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
-        handleSaveTextSegment();
+        handleSaveTextSegment(textSettingsRef.current);
       }, 1000);
     }
   };
 
-  const handleSaveTextSegment = async () => {
+  const handleSaveTextSegment = async (settings = textSettings) => {
     if (!editingTextSegment || !sessionId || !projectId) return;
+    const trimmedText = settings.text?.trim();
+    if (!trimmedText) {
+      setIsTextEmpty(true);
+      return; // Prevent saving empty text
+    }
+
     try {
       const token = localStorage.getItem('token');
       const updatedTextSegment = {
         ...editingTextSegment,
-        text: textSettings.text,
-        fontFamily: textSettings.fontFamily,
-        fontColor: textSettings.fontColor,
-        backgroundColor: textSettings.backgroundColor,
+        text: trimmedText,
+        fontFamily: settings.fontFamily,
+        fontColor: settings.fontColor,
+        backgroundColor: settings.backgroundColor,
         timelineStartTime: editingTextSegment.startTime,
-        timelineEndTime: editingTextSegment.startTime + textSettings.duration,
-        alignment: textSettings.alignment,
-        backgroundOpacity: textSettings.backgroundOpacity,
-        backgroundBorderWidth: textSettings.backgroundBorderWidth,
-        backgroundBorderColor: textSettings.backgroundBorderColor,
-        backgroundH: textSettings.backgroundH,
-        backgroundW: textSettings.backgroundW,
-        backgroundBorderRadius: textSettings.backgroundBorderRadius,
-        textBorderColor: textSettings.textBorderColor,
-        textBorderWidth: textSettings.textBorderWidth,
-        textBorderOpacity: textSettings.textBorderOpacity,
+        timelineEndTime: editingTextSegment.startTime + settings.duration,
+        alignment: settings.alignment,
+        backgroundOpacity: settings.backgroundOpacity,
+        backgroundBorderWidth: settings.backgroundBorderWidth,
+        backgroundBorderColor: settings.backgroundBorderColor,
+        backgroundH: settings.backgroundH,
+        backgroundW: settings.backgroundW,
+        backgroundBorderRadius: settings.backgroundBorderRadius,
+        textBorderColor: settings.textBorderColor,
+        textBorderWidth: settings.textBorderWidth,
+        textBorderOpacity: settings.textBorderOpacity,
         // Include transform properties from tempSegmentValues
         positionX: tempSegmentValues.positionX !== undefined ? tempSegmentValues.positionX : editingTextSegment.positionX,
         positionY: tempSegmentValues.positionY !== undefined ? tempSegmentValues.positionY : editingTextSegment.positionY,
@@ -1308,27 +1329,47 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
   useEffect(() => {
     if (!projectId) {
       navigate('/dashboard');
+      setLoading(false);
       return;
     }
+
     const initializeProject = async () => {
       try {
-        await fetchVideos();
-        await fetchAudios();
-        await fetchPhotos();
-        await fetchTransitions();
-        await fetchElements();
+        setLoading(true);
         const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/', { state: { error: 'Please log in to access the project.' } });
+          return;
+        }
+
+        // Step 1: Verify project ownership
+        const projectResponse = await axios.get(
+          `${API_BASE_URL}/projects/${projectId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const project = projectResponse.data;
+        if (!project || !project.id) {
+          throw new Error('Project not found or access denied');
+        }
+
+        // Step 2: Create session
         const sessionResponse = await axios.post(
           `${API_BASE_URL}/projects/${projectId}/session`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setSessionId(sessionResponse.data);
-        const projectResponse = await axios.get(
-          `${API_BASE_URL}/projects/${projectId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const project = projectResponse.data;
+
+        // Step 3: Fetch other data only after ownership is confirmed
+        await Promise.all([
+          fetchVideos(),
+          fetchAudios(),
+          fetchPhotos(),
+          fetchTransitions(),
+          fetchElements(),
+        ]);
+
+        // Step 4: Set project settings
         if (project.width && project.height) {
           setCanvasDimensions({ width: project.width, height: project.height });
         }
@@ -1337,14 +1378,40 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         }
       } catch (error) {
         console.error('Error initializing project:', error);
-        navigate('/dashboard');
+        console.log('Error response:', error.response?.status, error.response?.data);
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('userProfile');
+          navigate('/', { state: { error: 'Session expired. Please log in again.' } });
+        } else if (error.response?.status === 403 || error.response?.status === 404) {
+          navigate('/dashboard', {
+            state: { error: 'This Project does not belong to you.' },
+          });
+        } else {
+          navigate('/dashboard', {
+            state: { error: 'Failed to load project.' },
+          });
+        }
+      } finally {
+        setLoading(false);
       }
     };
+
     initializeProject();
+
     const handleBeforeUnload = () => {};
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [projectId, navigate]);
+
+  useEffect(() => {
+    if (location.state?.error) {
+      const timer = setTimeout(() => {
+        navigate('/dashboard', { state: {}, replace: true }); // Clear error after 5 seconds
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state?.error, navigate]);
 
   const fetchVideos = async () => {
     try {
@@ -1664,10 +1731,11 @@ const preloadMedia = () => {
               if (layerIndex >= newVideoLayers.length) {
                 while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
               }
+              const text = textSegment.text?.trim() || 'Default Text'; // Set default text if empty
               newVideoLayers[layerIndex].push({
                 id: textSegment.textSegmentId,
                 type: 'text',
-                text: textSegment.text,
+                text: text,
                 startTime: textSegment.timelineStartTime || 0,
                 duration: (textSegment.timelineEndTime - textSegment.timelineStartTime) || 0,
                 layer: layerIndex,
@@ -1726,6 +1794,10 @@ const preloadMedia = () => {
           });
           setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
           preloadMedia();
+          // Save the updated videoLayers to persist "Default Text"
+          if (timelineState.textSegments?.some((s) => !s.text?.trim())) {
+            autoSaveProject(newVideoLayers, newAudioLayers);
+          }
         }
       } catch (error) {
         console.error('Error fetching timeline data for layers:', error);
@@ -4022,6 +4094,25 @@ const filteredElements = elements.filter((element) =>
     }
   };
 
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="branding-container">
+          <h1>
+            <span className="letter">S</span>
+            <span className="letter">C</span>
+            <span className="letter">E</span>
+            <span className="letter">N</span>
+            <span className="letter">I</span>
+            <span className="letter">T</span>
+            <span className="letter">H</span>
+          </h1>
+          <div className="logo-element"></div>
+        </div>
+      </div>
+    );
+  }
+
 return (
   <div className="project-editor">
     <aside className={`media-panel ${isMediaPanelOpen ? 'open' : 'closed'}`}>
@@ -4352,7 +4443,20 @@ return (
               onTimelineClick={() => setIsTimelineSelected(true)} // Add this prop
             />
           ) : (
-            <div className="loading-message">Loading timeline...</div>
+            <div className="loading-container">
+              <div className="branding-container">
+                <h1>
+                  <span className="letter">S</span>
+                  <span className="letter">C</span>
+                  <span className="letter">E</span>
+                  <span className="letter">N</span>
+                  <span className="letter">I</span>
+                  <span className="letter">T</span>
+                  <span className="letter">H</span>
+                </h1>
+                <div className="logo-element"></div>
+              </div>
+            </div>
           )}
         </div>
         <div className="zoom-slider-container">
@@ -4456,10 +4560,10 @@ return (
                     padding: '8px',
                     fontSize: '14px',
                     borderRadius: '4px',
-                    border: '1px solid #ccc',
+                    border: isTextEmpty ? '2px solid red' : '1px solid #ccc',
                     boxSizing: 'border-box',
                   }}
-                  placeholder="Enter text (press Enter for new line)"
+                  placeholder={isTextEmpty ? 'Text cannot be empty' : 'Enter text (press Enter for new line)'}
                 />
               </div>
               <div className="control-group">

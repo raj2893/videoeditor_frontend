@@ -140,9 +140,6 @@ const Dashboard = () => {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-      console.log('Parsed profile: email=%s, firstName=%s, lastName=%s, picture=%s, googleAuth=%s',
-        response.data.email, firstName, lastName, response.data.picture, response.data.googleAuth);
-
       const profile = {
         email: response.data.email || '',
         firstName: firstName,
@@ -438,9 +435,47 @@ const Dashboard = () => {
     setProjectToDelete(null);
   };
 
-  const loadProject = (projectId) => {
-    navigate(`/projecteditor/${projectId}`);
+  const loadProject = async (projectId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/');
+        return;
+      }
+
+      // Fetch project details
+      await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // If the request succeeds, the project belongs to the user
+      navigate(`/projecteditor/${projectId}`);
+    } catch (error) {
+      console.error('Error accessing project:', error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userProfile');
+        navigate('/', { state: { error: 'Session expired. Please log in again.' } });
+      } else if (error.response?.status === 403 || error.response?.status === 404) {
+        navigate('/dashboard', {
+          state: { error: 'This Project does not belong to you.' },
+        });
+      } else {
+        navigate('/dashboard', {
+          state: { error: 'Failed to access project.' },
+        });
+      }
+    }
   };
+
+  useEffect(() => {
+    if (location.state?.error) {
+      const timer = setTimeout(() => {
+        navigate('/dashboard', { state: {}, replace: true }); // Clear error after 5 seconds
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state?.error, navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');

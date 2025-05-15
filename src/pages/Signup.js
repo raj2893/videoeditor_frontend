@@ -244,7 +244,7 @@ const Signup = () => {
             <div className="divider">OR</div>
             <div id="googleSignUpButton" className="google-button"></div>
             <p className="auth-link">
-              Already have an account? <Link to="/">Login</Link>
+              Already have an account? <Link to="/login">Login</Link>
             </p>
           </>
         )}

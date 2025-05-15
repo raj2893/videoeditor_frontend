@@ -1,40 +1,40 @@
 /* Specific icons for each section */
 .section-button[data-section="videos"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/VideoM.jpeg');
+  background-image: url('/public/images/VideoM.jpeg');
 }
 
 .section-button[data-section="photos"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/PhotoM.jpeg');
+  background-image: url('/public/images/PhotoM.jpeg');
 }
 
 .section-button[data-section="audios"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/AudioM.jpeg');
+  background-image: url('/public/images/AudioM.jpeg');
 }
 
 .section-button[data-section="elements"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/ElementsM.jpeg');
+  background-image: url('/public/images/ElementsM.jpeg');
 }
 
 .section-button[data-section="textStyles"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/TextM.jpeg');
+  background-image: url('/public/images/TextM.jpeg');
 }
 
 
 /* Specific icons for each tool section */
 .tool-button[data-section="transform"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/TransformT.jpg');
+  background-image: url('/public/images/TransformT.jpg');
 }
 
 .tool-button[data-section="filters"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/FiltersT.jpg');
+  background-image: url('/public/images/FiltersT.jpg');
 }
 
 .tool-button[data-section="text"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/TextM.jpeg');
+  background-image: url('/public/images/TextM.jpeg');
 }
 
 .tool-button[data-section="transitions"]::before {
-  background-image: url('D:\VideoEditor Frontend\video-editor-frontend/public/images/TransitionT.jpg');
+  background-image: url('/public/images/TransitionT.jpg');
 }
 
 /* Import Montserrat font for consistency with dashboard.css */

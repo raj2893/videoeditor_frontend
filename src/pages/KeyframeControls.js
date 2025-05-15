@@ -53,6 +53,18 @@ const KeyframeControls = ({
   let properties = [];
   switch (selectedSegment.type) {
     case 'video':
+      properties = [
+              { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999, supportsKeyframes: true },
+              { name: 'positionY', label: 'Position Y', unit: 'px', step: 1, min: -9999, max: 9999, supportsKeyframes: true },
+              { name: 'scale', label: 'Scale', unit: '', step: 0.01, min: 0.0, max: 100, supportsKeyframes: true },
+              { name: 'opacity', label: 'Opacity', unit: '', step: 0.01, min: 0, max: 1, supportsKeyframes: false },
+              { name: 'cropL', label: 'Crop Left', unit: '%', step: 0.1, min: 0, max: 100, supportsKeyframes: false, isCrop: true },
+              { name: 'cropR', label: 'Crop Right', unit: '%', step: 0.1, min: 0, max: 100, supportsKeyframes: false, isCrop: true },
+              { name: 'cropT', label: 'Crop Top', unit: '%', step: 0.1, min: 0, max: 100, supportsKeyframes: false, isCrop: true },
+              { name: 'cropB', label: 'Crop Bottom', unit: '%', step: 0.1, min: 0, max: 100, supportsKeyframes: false, isCrop: true },
+              { name: 'speed', label: 'Speed', unit: 'x', step: 0.1, min: 0.1, max: 5.0, supportsKeyframes: false }, // Add speed
+            ];
+            break;
     case 'image':
       properties = [
         { name: 'positionX', label: 'Position X', unit: 'px', step: 1, min: -9999, max: 9999, supportsKeyframes: true },
@@ -63,7 +75,6 @@ const KeyframeControls = ({
         { name: 'cropR', label: 'Crop Right', unit: '%', step: 0.1, min: 0, max: 100, supportsKeyframes: false, isCrop: true },
         { name: 'cropT', label: 'Crop Top', unit: '%', step: 0.1, min: 0, max: 100, supportsKeyframes: false, isCrop: true },
         { name: 'cropB', label: 'Crop Bottom', unit: '%', step: 0.1, min: 0, max: 100, supportsKeyframes: false, isCrop: true },
-        { name: 'speed', label: 'Speed', unit: 'x', step: 0.1, min: 0.1, max: 5.0, supportsKeyframes: false }, // Add speed
       ];
       break;
     case 'text':

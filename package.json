@@ -13,6 +13,7 @@
     "axios": "^1.7.9",
     "framer-motion": "^12.10.4",
     "glfx": "^0.0.4",
+    "html2canvas": "^1.4.1",
     "lodash": "^4.17.21",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",

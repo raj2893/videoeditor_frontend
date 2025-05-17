@@ -23,6 +23,7 @@ const VideoPreview = ({
   onLoadedAudioSegmentsUpdate, // New prop to share loadedAudioSegments
   onSegmentSelect,
   onSegmentPositionUpdate,
+  selectedSegment, // New prop for the selected segment
 }) => {
   const [loadingVideos, setLoadingVideos] = useState(new Set());
   const [preloadComplete, setPreloadComplete] = useState(false);
@@ -84,12 +85,21 @@ const VideoPreview = ({
       } else if (element.type === 'text') {
         const fontSize = baseFontSize * segScale;
         const textLines = element.text.split('\n');
-        const lineHeight = fontSize * 1.2;
+        const lineHeight = fontSize * (element.lineSpacing ?? 1.2); // Use lineSpacing, default to 1.2
         const textHeight = textLines.length * lineHeight;
         const ctx = document.createElement('canvas').getContext('2d');
         ctx.font = `${fontSize}px ${element.fontFamily || 'Arial'}`;
-        const textWidths = textLines.map(line => ctx.measureText(line).width);
-        const maxTextWidth = Math.max(...textWidths);
+        const letterSpacing = (element.letterSpacing || 0) * segScale;
+        const textWidths = textLines.map(line => {
+          let width = 0;
+          for (let char of line) {
+            width += ctx.measureText(char).width;
+          }
+          // Add letterSpacing for all characters except the last one
+          width += letterSpacing * (line.length > 0 ? line.length - 1 : 0);
+          return width;
+        });
+        const maxTextWidth = Math.max(...textWidths, 1); // Ensure non-zero width
         width = (element.backgroundW === 0 ? maxTextWidth : maxTextWidth + element.backgroundW) + (element.textBorderWidth || 0) * 2;
         height = textHeight + (element.backgroundH || 0) + (element.textBorderWidth || 0) * 2;
       } else {
@@ -998,6 +1008,7 @@ const VideoPreview = ({
                         transition: 'transform 0.016s linear, opacity 0.016s linear',
                         transformOrigin: 'center center',
                         overflow: 'hidden',
+                        border: selectedSegment?.id === element.id ? '5px solid red' : 'none', // Use selectedSegment
                       }}
                     >
                       <video
@@ -1076,6 +1087,7 @@ const VideoPreview = ({
                         transition: 'transform 0.016s linear, opacity 0.016s linear',
                         transformOrigin: 'center center',
                         overflow: 'hidden',
+                        border: selectedSegment?.id === element.id ? '5px solid red' : 'none', // Use selectedSegment
                       }}
                     >
                       <img
@@ -1156,33 +1168,42 @@ const VideoPreview = ({
                 }
 
                 const textLines = element.text.split('\n');
-                const lineHeight = fontSize * 1.2;
+                const lineHeight = fontSize * (element.lineSpacing ?? 1.2); // Use lineSpacing, default to 1.2
                 const textHeight = textLines.length * lineHeight;
 
-                // Calculate text width more accurately
+                // Calculate text width with letterSpacing
                 const ctx = document.createElement('canvas').getContext('2d');
                 ctx.font = `${fontSize}px ${element.fontFamily || 'Arial'}`;
-                // Replace textWidths calculation
-                const textWidths = textLines.map(line => ctx.measureText(line).width);
-                const maxTextWidth = Math.max(...textWidths);
+                const letterSpacing = (element.letterSpacing || 0) * scaleFactor;
+                const textWidths = textLines.map(line => {
+                  let width = 0;
+                  for (let char of line) {
+                    width += ctx.measureText(char).width;
+                  }
+                  width += letterSpacing * (line.length > 0 ? line.length - 1 : 0);
+                  return width;
+                });
+                const maxTextWidth = Math.max(...textWidths, 1); // Ensure non-zero width
 
-                // Replace the existing calculations
+                // Calculate effective content width and height
                 const effectiveContentWidth = element.backgroundW === 0
-                  ? maxTextWidth + textBorderWidth * 2 // Include text border width for zero bgWidth
-                  : maxTextWidth + bgWidth + textBorderWidth * 2; // Include text border width
-                const contentHeight = textHeight + bgHeight + textBorderWidth * 2; // Include text border height
+                  ? maxTextWidth + textBorderWidth * 2
+                  : maxTextWidth + bgWidth + textBorderWidth * 2;
+                const contentHeight = (textHeight) + (bgHeight/fontSize) + textBorderWidth * 2;
 
                 const minDimension = Math.min(effectiveContentWidth, contentHeight);
                 const maxRadius = minDimension / 2;
                 const effectiveBorderRadius = Math.min(bgBorderRadius, maxRadius);
 
-                // Replace canvas size calculation
+                // Calculate canvas size
                 const canvasWidth = effectiveContentWidth + 2 * textBorderWidth + 2 * borderWidth;
                 const canvasHeight = contentHeight + 2 * textBorderWidth + 2 * borderWidth;
 
-                // Replace canvas position calculation
-                const leftPos = centerX - (effectiveContentWidth + 2 * textBorderWidth + 2 * borderWidth) / 2 + positionX + transitionPosX;
-                const topPos = centerY - (contentHeight + 2 * textBorderWidth + 2 * borderWidth) / 2 + positionY + transitionPosY;
+                const leftPos = centerX - canvasWidth / 2;
+                const topPos = centerY - canvasHeight / 2;
+
+                // Define alignment
+                const alignment = element.alignment ? element.alignment.toLowerCase() : 'center';
 
                 return (
                   <canvas
@@ -1196,14 +1217,11 @@ const VideoPreview = ({
                         // Clear canvas
                         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                        // Set background with rounded corners if needed
-                        // Inside the canvas ref callback, replace the background drawing logic
-                        // Replace background drawing logic
-                        // Replace background drawing logic (only the border drawing part)
+                        // Draw background
                         if (bgColorStyle !== 'transparent') {
                           ctx.save();
                           ctx.fillStyle = bgColorStyle;
-                          const offset = textBorderWidth + borderWidth; // Match backend's bgBorderWidth + textBorderWidth
+                          const offset = textBorderWidth + borderWidth;
                           if (effectiveBorderRadius > 0) {
                             const x = offset;
                             const y = offset;
@@ -1227,11 +1245,11 @@ const VideoPreview = ({
                             ctx.fillRect(offset, offset, effectiveContentWidth, contentHeight);
                           }
 
-                          // Draw border if needed
+                          // Draw border
                           if (borderWidth > 0 && borderColor !== 'transparent') {
                             ctx.lineWidth = borderWidth;
                             ctx.strokeStyle = borderColor;
-                            const borderOffset = textBorderWidth + borderWidth / 2; // Match backend's bgBorderWidth / 2 + textBorderWidth
+                            const borderOffset = textBorderWidth + borderWidth / 2;
                             if (effectiveBorderRadius > 0) {
                               const x = borderOffset;
                               const y = borderOffset;
@@ -1263,45 +1281,55 @@ const VideoPreview = ({
                         const fontStyle = `${fontSize}px ${element.fontFamily || 'Arial'}`;
                         ctx.font = fontStyle;
 
-                        // Calculate text alignment
-                        // Replace text alignment and vertical center calculations
-                        let textX = textBorderWidth + borderWidth; // Match backend's bgBorderWidth + textBorderWidth
-                        const alignment = element.alignment || 'center';
-
-                        // Calculate text position based on alignment
-                        if (alignment === 'center') {
-                          ctx.textAlign = 'center';
-                          textX += effectiveContentWidth / 2;
-                        } else if (alignment === 'left') {
-                          ctx.textAlign = 'left';
-                        } else if (alignment === 'right') {
-                          ctx.textAlign = 'right';
-                          textX += effectiveContentWidth;
-                        }
-
-                        // Calculate the vertical center of the content area
-                        const contentVerticalCenter = textBorderWidth + borderWidth + contentHeight / 2;
+                        // Calculate vertical position
+                        const contentVerticalCenter = textBorderWidth + borderWidth + Math.max(contentHeight, textHeight) / 2;
                         const totalTextBlockHeight = textLines.length * lineHeight;
                         const startY = contentVerticalCenter - totalTextBlockHeight / 2 + lineHeight / 2;
 
-                        // Draw text border if needed
+                        // Draw text with letterSpacing and alignment
                         if (textBorderWidth > 0 && textBorderColor !== 'transparent') {
-                          ctx.lineWidth = textBorderWidth; // Double for better visibility
+                          ctx.lineWidth = textBorderWidth;
                           ctx.strokeStyle = textBorderColor;
-                          ctx.lineJoin = 'round'; // Smooth corners for text stroke
-
-                          // Draw each line of text with border
+                          ctx.lineJoin = 'round';
                           textLines.forEach((line, index) => {
                             const textY = startY + index * lineHeight;
-                            ctx.strokeText(line, textX, textY);
+                            const lineWidth = textWidths[index];
+                            let x;
+                            if (alignment === 'left') {
+                              x = textBorderWidth + borderWidth;
+                            } else if (alignment === 'center') {
+                              x = textBorderWidth + borderWidth + (effectiveContentWidth - lineWidth) / 2;
+                            } else { // right
+                              x = textBorderWidth + borderWidth + effectiveContentWidth - lineWidth;
+                            }
+                            let currentX = x;
+                            for (let i = 0; i < line.length; i++) {
+                              ctx.strokeText(line[i], currentX, textY);
+                              currentX += ctx.measureText(line[i]).width + letterSpacing;
+                            }
                           });
                         }
 
-                        // Draw the text fill
                         ctx.fillStyle = element.fontColor || '#FFFFFF';
                         textLines.forEach((line, index) => {
                           const textY = startY + index * lineHeight;
-                          ctx.fillText(line, textX, textY);
+                          const lineWidth = textWidths[index];
+                          let x;
+                          if (alignment === 'left') {
+                            x = textBorderWidth + borderWidth;
+                            console.log(`left: ${x}`)
+                          } else if (alignment === 'center') {
+                            x = textBorderWidth + borderWidth + (effectiveContentWidth - lineWidth) / 2;
+                            console.log(`center: ${x}`)
+                          } else { // right
+                            x = textBorderWidth + borderWidth + effectiveContentWidth - lineWidth;
+                            console.log(`right: ${x}`)
+                          }
+                          let currentX = x;
+                          for (let i = 0; i < line.length; i++) {
+                            ctx.fillText(line[i], currentX, textY);
+                            currentX += ctx.measureText(line[i]).width + letterSpacing;
+                          }
                         });
                       }
                     }}
@@ -1317,6 +1345,7 @@ const VideoPreview = ({
                       clipPath,
                       transition: 'transform 0.016s linear, opacity 0.016s linear',
                       transformOrigin: 'center center',
+                      border: selectedSegment?.id === element.id ? '5px solid red' : 'none', // Use selectedSegment
                     }}
                   />
                 );

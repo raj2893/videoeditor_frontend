@@ -46,6 +46,8 @@ const TextSegmentHandler = ({
           textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
           textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
           textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
+          letterSpacing: updatedTextSettings.letterSpacing ?? 0, // Added
+          lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
         },
         {
           params: { sessionId },
@@ -77,6 +79,8 @@ const TextSegmentHandler = ({
         textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
         textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
         textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
+        letterSpacing: updatedTextSettings.letterSpacing ?? 0, // Added
+        lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
         timelineStartTime,
         timelineEndTime,
       };
@@ -145,6 +149,8 @@ const TextSegmentHandler = ({
         textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
         textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
         textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
+        letterSpacing: updatedTextSettings.letterSpacing ?? 0, // Added
+        lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
       };
       // Only include keyframes if explicitly provided (e.g., from Transform panel)
       if (updatedTextSettings.keyframes) {
@@ -200,6 +206,8 @@ const TextSegmentHandler = ({
             textBorderColor: 'transparent', // Added
             textBorderWidth: 0, // Added
             textBorderOpacity: 1.0, // Added
+            letterSpacing: 0, // Added
+            lineSpacing: 1.2, // Added
           };
         }
       }
@@ -250,6 +258,8 @@ const TextSegmentHandler = ({
       textBorderColor: draggingItem.textBorderColor || 'transparent', // Added
       textBorderWidth: draggingItem.textBorderWidth ?? 0, // Added
       textBorderOpacity: draggingItem.textBorderOpacity ?? 1.0, // Added
+      letterSpacing: draggingItem.letterSpacing ?? 0, // Added
+      lineSpacing: draggingItem.lineSpacing ?? 1.2, // Added
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
     setVideoLayers(newVideoLayers);
@@ -292,6 +302,8 @@ const TextSegmentHandler = ({
         textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
         textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
         textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
+        letterSpacing: updatedTextSettings.letterSpacing ?? 0, // Added
+        lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
         timelineStartTime: roundToThreeDecimals(startTime),
         timelineEndTime: roundToThreeDecimals(startTime + duration),
       };
@@ -331,6 +343,8 @@ const TextSegmentHandler = ({
                 textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
                 textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
                 textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
+                letterSpacing: updatedTextSettings.letterSpacing ?? 0, // Added
+                lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
                 duration,
                 timelineEndTime: roundToThreeDecimals(item.startTime + duration),
               }
@@ -378,6 +392,8 @@ const TextSegmentHandler = ({
       textBorderColor: item.textBorderColor || 'transparent', // Added
       textBorderWidth: item.textBorderWidth ?? 0, // Added
       textBorderOpacity: item.textBorderOpacity ?? 1.0, // Added
+      letterSpacing: item.letterSpacing ?? 0, // Added
+      lineSpacing: item.lineSpacing ?? 1.2, // Added
     };
 
     // Create second part (temporary)
@@ -400,6 +416,8 @@ const TextSegmentHandler = ({
       textBorderColor: item.textBorderColor || 'transparent', // Added
       textBorderWidth: item.textBorderWidth ?? 0, // Added
       textBorderOpacity: item.textBorderOpacity ?? 1.0, // Added
+      letterSpacing: item.letterSpacing ?? 0, // Added
+      lineSpacing: item.lineSpacing ?? 1.2, // Added
     };
 
     // Update videoLayers with both parts
@@ -450,6 +468,8 @@ const TextSegmentHandler = ({
         textBorderColor: secondPart.textBorderColor, // Added
         textBorderWidth: secondPart.textBorderWidth, // Added
         textBorderOpacity: secondPart.textBorderOpacity, // Added
+        letterSpacing: secondPart.letterSpacing, // Added
+        lineSpacing: secondPart.lineSpacing, // Added
       });
 
       if (!newSegment) {

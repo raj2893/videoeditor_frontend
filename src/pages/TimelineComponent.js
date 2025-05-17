@@ -548,6 +548,8 @@ const TimelineComponent = ({
                 textBorderColor: textSegment.textBorderColor || 'transparent', // Added
                 textBorderWidth: textSegment.textBorderWidth ?? 0, // Added
                 textBorderOpacity: textSegment.textBorderOpacity ?? 1.0, // Added
+                letterSpacing: textSegment.letterSpacing ?? 0, // Added
+                lineSpacing: textSegment.lineSpacing ?? 1.2, // Added
                 keyframes: textSegment.keyframes || {},
                 opacity: textSegment.opacity || 1,
               });
@@ -1007,6 +1009,8 @@ const TimelineComponent = ({
             textBorderColor: style.textBorderColor || 'transparent', // Added
             textBorderWidth: style.textBorderWidth ?? 0, // Added
             textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
+            letterSpacing: style.letterSpacing ?? 0, // Added
+            lineSpacing: style.lineSpacing ?? 1.2, // Added
           },
           { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
         );
@@ -1034,6 +1038,8 @@ const TimelineComponent = ({
           textBorderColor: style.textBorderColor || 'transparent', // Added
           textBorderWidth: style.textBorderWidth ?? 0, // Added
           textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
+          letterSpacing: style.letterSpacing ?? 0, // Added
+          lineSpacing: style.lineSpacing ?? 1.2, // Added
           keyframes: {},
         };
 
@@ -1313,6 +1319,8 @@ const TimelineComponent = ({
               textBorderColor: item.textBorderColor, // Added
               textBorderWidth: item.textBorderWidth, // Added
               textBorderOpacity: item.textBorderOpacity, // Added
+              letterSpacing: item.letterSpacing, // Added
+              lineSpacing: item.lineSpacing ?? 1.2, // Added
               keyframes: item.keyframes || {},
               opacity: item.opacity,
             });

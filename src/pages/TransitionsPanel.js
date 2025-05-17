@@ -1,4 +1,5 @@
 import React from 'react';
+import '../CSS/TransitionsPanel.css'; // Import the new CSS file
 
 const TransitionsPanel = ({
   availableTransitions,
@@ -52,6 +53,7 @@ const TransitionsPanel = ({
             <span>{transition.label}</span>
           </div>
         ))}
+        <div className="coming-soon-text">More transitions coming soon...</div>
       </div>
       {selectedTransition && (
         <div className="selected-transition-details">

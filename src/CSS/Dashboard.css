@@ -891,6 +891,7 @@ html {
 }
 
 /* Error and success messages */
+/* Enhance error message for restrictions */
 .error-message {
   color: #FF5A5F;
   font-size: 0.85rem;
@@ -901,6 +902,19 @@ html {
   border-left: 3px solid #FF5A5F;
   animation: errorShake 0.5s;
   text-align: left;
+  line-height: 1.5;
+}
+
+.error-message a {
+  color: #3F8EFC;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.error-message a:hover {
+  color: #9446EB;
+  text-decoration: underline;
 }
 
 .success-message-container {

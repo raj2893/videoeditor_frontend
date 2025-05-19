@@ -52,7 +52,11 @@ const VideoSegmentHandler = ({
         endTime: endTimeWithinVideo !== undefined
           ? roundToThreeDecimals(endTimeWithinVideo)
           : roundToThreeDecimals(item.endTimeWithinVideo || newDuration),
-        speed: item.speed ?? 1.0, // Include speed
+        positionX: item.positionX ?? 0, // Add positionX
+        positionY: item.positionY ?? 0, // Add positionY
+        scale: item.scale ?? 1, // Add scale
+        rotation: item.rotation ?? 0, // Add rotation
+        speed: item.speed ?? 1.0,
       };
       await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-segment`,
@@ -141,7 +145,7 @@ const VideoSegmentHandler = ({
             null
           );
 
-          // Update videoLayers with the new segment, rounding time properties
+          // For new video drop
           newVideoLayers[targetLayer].push({
             ...newSegment,
             startTime: roundToThreeDecimals(newSegment.startTime),
@@ -149,8 +153,12 @@ const VideoSegmentHandler = ({
             timelineEndTime: roundToThreeDecimals(newSegment.timelineEndTime),
             startTimeWithinVideo: roundToThreeDecimals(newSegment.startTimeWithinVideo || 0),
             endTimeWithinVideo: roundToThreeDecimals(newSegment.endTimeWithinVideo || newSegment.duration),
-            duration: roundToThreeDecimals((newSegment.endTimeWithinVideo - newSegment.startTimeWithinVideo) / (newSegment.speed ?? 1.0)), // Adjust duration for speed
-            speed: newSegment.speed ?? 1.0, // Include speed
+            duration: roundToThreeDecimals((newSegment.endTimeWithinVideo - newSegment.startTimeWithinVideo) / (newSegment.speed ?? 1.0)),
+            positionX: newSegment.positionX ?? 0, // Add positionX
+            positionY: newSegment.positionY ?? 0, // Add positionY
+            scale: newSegment.scale ?? 1, // Add scale
+            rotation: newSegment.rotation ?? 0, // Add rotation
+            speed: newSegment.speed ?? 1.0,
           });
           setVideoLayers(newVideoLayers);
           saveHistory(newVideoLayers, audioLayers);
@@ -188,6 +196,7 @@ const VideoSegmentHandler = ({
     } else {
       newVideoLayers[dragLayer] = newVideoLayers[dragLayer].filter((v) => v.id !== draggingItem.id);
     }
+    // For existing video drag
     const updatedItem = {
       ...draggingItem,
       startTime: roundToThreeDecimals(adjustedStartTime),
@@ -196,8 +205,12 @@ const VideoSegmentHandler = ({
       timelineEndTime: roundToThreeDecimals(adjustedStartTime + draggingItem.duration),
       startTimeWithinVideo: roundToThreeDecimals(draggingItem.startTimeWithinVideo),
       endTimeWithinVideo: roundToThreeDecimals(draggingItem.endTimeWithinVideo),
-      duration: roundToThreeDecimals((draggingItem.endTimeWithinVideo - draggingItem.startTimeWithinVideo) / (draggingItem.speed ?? 1.0)), // Adjust duration for speed
-      speed: draggingItem.speed ?? 1.0, // Preserve speed
+      duration: roundToThreeDecimals((draggingItem.endTimeWithinVideo - draggingItem.startTimeWithinVideo) / (draggingItem.speed ?? 1.0)),
+      positionX: draggingItem.positionX ?? 0, // Add positionX
+      positionY: draggingItem.positionY ?? 0, // Add positionY
+      scale: draggingItem.scale ?? 1, // Add scale
+      rotation: draggingItem.rotation ?? 0, // Add rotation
+      speed: draggingItem.speed ?? 1.0,
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
 
@@ -246,6 +259,10 @@ const VideoSegmentHandler = ({
         duration: roundToThreeDecimals(firstPartDuration),
         timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration),
         endTimeWithinVideo: roundToThreeDecimals(originalVideoStartTime + firstPartVideoDuration),
+        positionX: item.positionX ?? 0, // Add positionX
+        positionY: item.positionY ?? 0, // Add positionY
+        scale: item.scale ?? 1, // Add scale
+        rotation: item.rotation ?? 0, // Add rotation
         speed: speed,
       };
 
@@ -267,6 +284,10 @@ const VideoSegmentHandler = ({
         timelineEndTime: roundToThreeDecimals(item.startTime + item.duration),
         startTimeWithinVideo: roundToThreeDecimals(originalVideoStartTime + firstPartVideoDuration),
         endTimeWithinVideo: roundToThreeDecimals(item.endTimeWithinVideo || item.duration * speed),
+        positionX: item.positionX ?? 0, // Add positionX
+        positionY: item.positionY ?? 0, // Add positionY
+        scale: item.scale ?? 1, // Add scale
+        rotation: item.rotation ?? 0, // Add rotation
         speed: speed,
       };
 
@@ -346,6 +367,7 @@ const VideoSegmentHandler = ({
           return prev;
         }
 
+        // Update second part in videoLayers with backend data
         updatedLayer[secondPartIndex] = {
           ...secondPart,
           id: videoSegmentId,
@@ -356,6 +378,10 @@ const VideoSegmentHandler = ({
           startTimeWithinVideo: roundToThreeDecimals(secondPart.startTimeWithinVideo),
           endTimeWithinVideo: roundToThreeDecimals(secondPart.endTimeWithinVideo),
           filePath: item.filePath,
+          positionX: secondPart.positionX ?? 0, // Add positionX
+          positionY: secondPart.positionY ?? 0, // Add positionY
+          scale: secondPart.scale ?? 1, // Add scale
+          rotation: secondPart.rotation ?? 0, // Add rotation
           speed: speed,
         };
         newLayers[layerIndex] = updatedLayer;

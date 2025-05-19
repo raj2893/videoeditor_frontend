@@ -32,6 +32,7 @@ const TextSegmentHandler = ({
           timelineEndTime,
           fontFamily: updatedTextSettings.fontFamily,
           scale: updatedTextSettings.scale || 1.0,
+          rotation: updatedTextSettings.rotation || 0, // Add rotation
           fontColor: updatedTextSettings.fontColor,
           backgroundColor: updatedTextSettings.backgroundColor,
           positionX: updatedTextSettings.positionX,
@@ -65,6 +66,7 @@ const TextSegmentHandler = ({
         layer: targetLayer,
         fontFamily: updatedTextSettings.fontFamily,
         scale: updatedTextSettings.scale || 1.0,
+        rotation: updatedTextSettings.rotation || 0, // Add rotation
         fontColor: updatedTextSettings.fontColor,
         backgroundColor: updatedTextSettings.backgroundColor,
         positionX: updatedTextSettings.positionX || 0,
@@ -83,6 +85,7 @@ const TextSegmentHandler = ({
         lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
         timelineStartTime,
         timelineEndTime,
+        keyframes: segment.keyframes || {}, // Add keyframes
       };
 
       setVideoLayers((prev) => {
@@ -135,6 +138,7 @@ const TextSegmentHandler = ({
         text: updatedTextSettings.text,
         fontFamily: updatedTextSettings.fontFamily,
         scale: updatedTextSettings.scale || 1.0,
+        rotation: updatedTextSettings.rotation || 0, // Add rotation
         fontColor: updatedTextSettings.fontColor,
         backgroundColor: updatedTextSettings.backgroundColor,
         positionX: updatedTextSettings.positionX,
@@ -252,14 +256,18 @@ const TextSegmentHandler = ({
       backgroundOpacity: draggingItem.backgroundOpacity ?? 1.0,
       backgroundBorderWidth: draggingItem.backgroundBorderWidth ?? 0,
       backgroundBorderColor: draggingItem.backgroundBorderColor || '#000000',
-      backgroundH: draggingItem.backgroundH ?? 0, // Replace backgroundPadding
-      backgroundW: draggingItem.backgroundW ?? 0, // Replace backgroundPadding
-      backgroundBorderRadius: draggingItem.backgroundBorderRadius ?? 0, // New
-      textBorderColor: draggingItem.textBorderColor || 'transparent', // Added
-      textBorderWidth: draggingItem.textBorderWidth ?? 0, // Added
-      textBorderOpacity: draggingItem.textBorderOpacity ?? 1.0, // Added
-      letterSpacing: draggingItem.letterSpacing ?? 0, // Added
-      lineSpacing: draggingItem.lineSpacing ?? 1.2, // Added
+      backgroundH: draggingItem.backgroundH ?? 0,
+      backgroundW: draggingItem.backgroundW ?? 0,
+      backgroundBorderRadius: draggingItem.backgroundBorderRadius ?? 0,
+      textBorderColor: draggingItem.textBorderColor || 'transparent',
+      textBorderWidth: draggingItem.textBorderWidth ?? 0,
+      textBorderOpacity: draggingItem.textBorderOpacity ?? 1.0,
+      letterSpacing: draggingItem.letterSpacing ?? 0,
+      lineSpacing: draggingItem.lineSpacing ?? 1.2,
+      positionX: draggingItem.positionX || 0, // Add positionX
+      positionY: draggingItem.positionY || 0, // Add positionY
+      scale: draggingItem.scale || 1, // Add scale
+      rotation: draggingItem.rotation || 0, // Add rotation
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
     setVideoLayers(newVideoLayers);
@@ -279,6 +287,7 @@ const TextSegmentHandler = ({
       const tempId = `text-temp-${Date.now()}`;
       const startTime = editingTextSegment.startTime;
       const duration = updatedTextSettings.duration || 5;
+      // For new text segment
       const newTextSegment = {
         id: tempId,
         type: 'text',
@@ -288,6 +297,7 @@ const TextSegmentHandler = ({
         layer: editingTextSegment.layer,
         fontFamily: updatedTextSettings.fontFamily,
         scale: updatedTextSettings.scale || 1.0,
+        rotation: updatedTextSettings.rotation || 0, // Add rotation
         fontColor: updatedTextSettings.fontColor,
         backgroundColor: updatedTextSettings.backgroundColor,
         positionX: updatedTextSettings.positionX,
@@ -296,14 +306,14 @@ const TextSegmentHandler = ({
         backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
         backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
         backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
-        backgroundH: updatedTextSettings.backgroundH ?? 0, // Replace backgroundPadding
-        backgroundW: updatedTextSettings.backgroundW ?? 0, // Replace backgroundPadding
-        backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
-        textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
-        textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
-        textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
-        letterSpacing: updatedTextSettings.letterSpacing ?? 0, // Added
-        lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
+        backgroundH: updatedTextSettings.backgroundH ?? 0,
+        backgroundW: updatedTextSettings.backgroundW ?? 0,
+        backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0,
+        textBorderColor: updatedTextSettings.textBorderColor || 'transparent',
+        textBorderWidth: updatedTextSettings.textBorderWidth ?? 0,
+        textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0,
+        letterSpacing: updatedTextSettings.letterSpacing ?? 0,
+        lineSpacing: updatedTextSettings.lineSpacing ?? 1.2,
         timelineStartTime: roundToThreeDecimals(startTime),
         timelineEndTime: roundToThreeDecimals(startTime + duration),
       };
@@ -321,6 +331,7 @@ const TextSegmentHandler = ({
       }
       await updateTextSegment(editingTextSegment.id, updatedTextSettings);
       const duration = updatedTextSettings.duration || editingTextSegment.duration;
+      // For existing text segment
       const newVideoLayers = videoLayers.map((layer) =>
         layer.map((item) =>
           item.id === editingTextSegment.id && item.type === 'text'
@@ -329,6 +340,7 @@ const TextSegmentHandler = ({
                 text: updatedTextSettings.text,
                 fontFamily: updatedTextSettings.fontFamily,
                 scale: updatedTextSettings.scale || item.scale || 1.0,
+                rotation: updatedTextSettings.rotation || item.rotation || 0, // Add rotation
                 fontColor: updatedTextSettings.fontColor,
                 backgroundColor: updatedTextSettings.backgroundColor,
                 positionX: updatedTextSettings.positionX,
@@ -337,14 +349,14 @@ const TextSegmentHandler = ({
                 backgroundOpacity: updatedTextSettings.backgroundOpacity ?? 1.0,
                 backgroundBorderWidth: updatedTextSettings.backgroundBorderWidth ?? 0,
                 backgroundBorderColor: updatedTextSettings.backgroundBorderColor || '#000000',
-                backgroundH: updatedTextSettings.backgroundH ?? 0, // Replace backgroundPadding
-                backgroundW: updatedTextSettings.backgroundW ?? 0, // Replace backgroundPadding
-                backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0, // New
-                textBorderColor: updatedTextSettings.textBorderColor || 'transparent', // Added
-                textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
-                textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
-                letterSpacing: updatedTextSettings.letterSpacing ?? 0, // Added
-                lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
+                backgroundH: updatedTextSettings.backgroundH ?? 0,
+                backgroundW: updatedTextSettings.backgroundW ?? 0,
+                backgroundBorderRadius: updatedTextSettings.backgroundBorderRadius ?? 0,
+                textBorderColor: updatedTextSettings.textBorderColor || 'transparent',
+                textBorderWidth: updatedTextSettings.textBorderWidth ?? 0,
+                textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0,
+                letterSpacing: updatedTextSettings.letterSpacing ?? 0,
+                lineSpacing: updatedTextSettings.lineSpacing ?? 1.2,
                 duration,
                 timelineEndTime: roundToThreeDecimals(item.startTime + duration),
               }
@@ -389,11 +401,15 @@ const TextSegmentHandler = ({
       backgroundH: item.backgroundH ?? 0,
       backgroundW: item.backgroundW ?? 0,
       backgroundBorderRadius: item.backgroundBorderRadius ?? 0,
-      textBorderColor: item.textBorderColor || 'transparent', // Added
-      textBorderWidth: item.textBorderWidth ?? 0, // Added
-      textBorderOpacity: item.textBorderOpacity ?? 1.0, // Added
-      letterSpacing: item.letterSpacing ?? 0, // Added
-      lineSpacing: item.lineSpacing ?? 1.2, // Added
+      textBorderColor: item.textBorderColor || 'transparent',
+      textBorderWidth: item.textBorderWidth ?? 0,
+      textBorderOpacity: item.textBorderOpacity ?? 1.0,
+      letterSpacing: item.letterSpacing ?? 0,
+      lineSpacing: item.lineSpacing ?? 1.2,
+      positionX: item.positionX || 0, // Add positionX
+      positionY: item.positionY || 0, // Add positionY
+      scale: item.scale || 1, // Add scale
+      rotation: item.rotation || 0, // Add rotation
     };
 
     // Create second part (temporary)
@@ -413,11 +429,14 @@ const TextSegmentHandler = ({
       backgroundH: item.backgroundH ?? 0,
       backgroundW: item.backgroundW ?? 0,
       backgroundBorderRadius: item.backgroundBorderRadius ?? 0,
-      textBorderColor: item.textBorderColor || 'transparent', // Added
-      textBorderWidth: item.textBorderWidth ?? 0, // Added
-      textBorderOpacity: item.textBorderOpacity ?? 1.0, // Added
-      letterSpacing: item.letterSpacing ?? 0, // Added
-      lineSpacing: item.lineSpacing ?? 1.2, // Added
+      textBorderColor: item.textBorderColor || 'transparent',
+      textBorderWidth: item.textBorderWidth ?? 0,
+      textBorderOpacity: item.textBorderOpacity ?? 1.0,
+      letterSpacing: item.letterSpacing ?? 0,
+      lineSpacing: item.lineSpacing ?? 1.2,
+      positionX: item.positionX || 0, // Add positionX
+      positionY: item.positionY || 0, // Add positionY
+      rotation: item.rotation || 0, // Add rotation
     };
 
     // Update videoLayers with both parts
@@ -448,12 +467,13 @@ const TextSegmentHandler = ({
         return newLayers;
       });
 
-      // Add second part to timeline
+      // Update addTextToTimeline call for second part
       const newSegment = await addTextToTimeline(layerIndex, secondPart.startTime, {
         text: secondPart.text,
         duration: secondPartDuration,
         fontFamily: secondPart.fontFamily,
         scale: secondPart.scale,
+        rotation: secondPart.rotation, // Add rotation
         fontColor: secondPart.fontColor,
         backgroundColor: secondPart.backgroundColor,
         positionX: secondPart.positionX,
@@ -465,11 +485,11 @@ const TextSegmentHandler = ({
         backgroundH: secondPart.backgroundH,
         backgroundW: secondPart.backgroundW,
         backgroundBorderRadius: secondPart.backgroundBorderRadius,
-        textBorderColor: secondPart.textBorderColor, // Added
-        textBorderWidth: secondPart.textBorderWidth, // Added
-        textBorderOpacity: secondPart.textBorderOpacity, // Added
-        letterSpacing: secondPart.letterSpacing, // Added
-        lineSpacing: secondPart.lineSpacing, // Added
+        textBorderColor: secondPart.textBorderColor,
+        textBorderWidth: secondPart.textBorderWidth,
+        textBorderOpacity: secondPart.textBorderOpacity,
+        letterSpacing: secondPart.letterSpacing,
+        lineSpacing: secondPart.lineSpacing,
       });
 
       if (!newSegment) {

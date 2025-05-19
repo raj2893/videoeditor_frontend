@@ -6,7 +6,7 @@ import { Tilt } from 'react-tilt';
 import '../CSS/Dashboard.css';
 import { FaTrash, FaSignOutAlt, FaBars } from 'react-icons/fa';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, projectName }) => {
   if (!isOpen) return null;

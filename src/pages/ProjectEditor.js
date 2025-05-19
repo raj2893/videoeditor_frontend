@@ -13,7 +13,7 @@ import TransitionsPanel from './TransitionsPanel';
 import { v4 as uuidv4 } from 'uuid';
 import WaveSurfer from 'wavesurfer.js';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
 
 const ProjectEditor = () => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -1212,6 +1212,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         layer: 0,
         fontFamily: textSettings.fontFamily,
         scale: textSettings.scale || 1.0,
+        rotation: 0, // Add rotation
         fontColor: textSettings.fontColor,
         backgroundColor: textSettings.backgroundColor,
         positionX: 0,
@@ -1287,6 +1288,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         layer: newTextSegment.layer,
         fontFamily: newTextSegment.fontFamily,
         scale: newTextSegment.scale || 1.0,
+        rotation: newTextSegment.rotation || 0, // Add rotation
         fontColor: newTextSegment.fontColor,
         backgroundColor: newTextSegment.backgroundColor,
         positionX: newTextSegment.positionX || 0,
@@ -2372,6 +2374,7 @@ const preloadMedia = () => {
         effectiveWidth: newImageSegment.effectiveWidth,
         effectiveHeight: newImageSegment.effectiveHeight,
         maintainAspectRatio: newImageSegment.maintainAspectRatio,
+        rotation: newImageSegment.rotation || 0, // Add rotation
       };
 
       let updatedVideoLayers = videoLayers;
@@ -2455,6 +2458,7 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
       filters: videoSegment.filters || [],
       audioSegmentId: audioSegmentId || null,
       speed: videoSegment.speed || 1.0, // Add speed to segment
+      rotation: videoSegment.rotation || 0, // Add rotation
     };
 
     let updatedVideoLayers = videoLayers;
@@ -2732,7 +2736,6 @@ const handleSegmentSelect = async (segment) => {
     let initialValues = {};
     switch (segment.type) {
       case 'video':
-      case 'image':
         initialValues = {
           positionX: segment.positionX || 0,
           positionY: segment.positionY || 0,
@@ -2743,6 +2746,20 @@ const handleSegmentSelect = async (segment) => {
           cropT: segment.cropT !== undefined ? segment.cropT : 0,
           cropB: segment.cropB !== undefined ? segment.cropB : 0,
           speed: segment.speed || 1.0, // Add speed with default 1.0
+          rotation: segment.rotation || 0, // Add rotation
+      };
+      break;
+      case 'image':
+        initialValues = {
+          positionX: segment.positionX || 0,
+          positionY: segment.positionY || 0,
+          scale: segment.scale || 1,
+          opacity: segment.opacity || 1,
+          cropL: segment.cropL !== undefined ? segment.cropL : 0,
+          cropR: segment.cropR !== undefined ? segment.cropR : 0,
+          cropT: segment.cropT !== undefined ? segment.cropT : 0,
+          cropB: segment.cropB !== undefined ? segment.cropB : 0,
+          rotation: segment.rotation || 0, // Add rotation
         };
         break;
       case 'text':
@@ -2751,6 +2768,7 @@ const handleSegmentSelect = async (segment) => {
           positionY: segment.positionY || 0,
           scale: segment.scale || 1,
           opacity: segment.opacity || 1,
+          rotation: segment.rotation || 0, // Add rotation
         };
         break;
       case 'audio':
@@ -3302,6 +3320,7 @@ const navigateKeyframes = (property, direction) => {
             cropT: tempValues.cropT !== undefined ? Number(tempValues.cropT) : 0,
             cropB: tempValues.cropB !== undefined ? Number(tempValues.cropB) : 0,
             speed: tempValues.speed !== undefined ? Number(tempValues.speed) : 1.0,
+            rotation: tempValues.rotation !== undefined ? Number(tempValues.rotation) : 0, // Add rotation
           };
 
           console.log('Normalized temp values for video:', normalizedTempValues);
@@ -3311,6 +3330,7 @@ const navigateKeyframes = (property, direction) => {
             positionX: updatedKeyframes.positionX && updatedKeyframes.positionX.length > 0 ? undefined : normalizedTempValues.positionX,
             positionY: updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0 ? undefined : normalizedTempValues.positionY,
             scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : normalizedTempValues.scale,
+            rotation: updatedKeyframes.rotation && updatedKeyframes.rotation.length > 0 ? undefined : normalizedTempValues.rotation, // Add rotation
             opacity: normalizedTempValues.opacity,
             layer: Number(selectedSegment.layer) || 0,
             timelineStartTime: Number(selectedSegment.startTime) || 0,
@@ -3363,6 +3383,7 @@ const navigateKeyframes = (property, direction) => {
                 positionX: updatedSegment.positionX ?? (videoPayload.positionX !== undefined ? videoPayload.positionX : newLayers[layerIndex][segmentIndex].positionX || 0),
                 positionY: updatedSegment.positionY ?? (videoPayload.positionY !== undefined ? videoPayload.positionY : newLayers[layerIndex][segmentIndex].positionY || 0),
                 scale: updatedSegment.scale ?? (videoPayload.scale !== undefined ? videoPayload.scale : newLayers[layerIndex][segmentIndex].scale || 1),
+                rotation: updatedSegment.rotation ?? (videoPayload.rotation !== undefined ? videoPayload.rotation : newLayers[layerIndex][segmentIndex].rotation || 0), // Add rotation
                 opacity: updatedSegment.opacity ?? (videoPayload.opacity !== undefined ? videoPayload.opacity : newLayers[layerIndex][segmentIndex].opacity || 1),
                 speed: updatedSegment.speed ?? (videoPayload.speed !== undefined ? videoPayload.speed : newLayers[layerIndex][segmentIndex].speed || 1.0),
                 startTime: updatedSegment.timelineStartTime ?? videoPayload.timelineStartTime,
@@ -3391,6 +3412,7 @@ const navigateKeyframes = (property, direction) => {
           const normalizedImageValues = {
             positionX: tempValues.positionX !== undefined ? Number(tempValues.positionX) : 0,
             positionY: tempValues.positionY !== undefined ? Number(tempValues.positionY) : 0,
+            rotation: tempValues.rotation !== undefined ? Number(tempValues.rotation) : 0, // Add rotation
             scale: tempValues.scale !== undefined ? Number(tempValues.scale) : 1,
             opacity: tempValues.opacity !== undefined ? Number(tempValues.opacity) : 1,
             cropL: tempValues.cropL !== undefined ? Number(tempValues.cropL) : 0,
@@ -3404,6 +3426,7 @@ const navigateKeyframes = (property, direction) => {
             positionX: updatedKeyframes.positionX && updatedKeyframes.positionX.length > 0 ? undefined : normalizedImageValues.positionX,
             positionY: updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0 ? undefined : normalizedImageValues.positionY,
             scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : normalizedImageValues.scale,
+            rotation: updatedKeyframes.rotation && updatedKeyframes.rotation.length > 0 ? undefined : normalizedImageValues.rotation, // Add rotation
             opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : normalizedImageValues.opacity,
             layer: Number(selectedSegment.layer) || 0,
             timelineStartTime: Number(selectedSegment.startTime) || 0,
@@ -3446,6 +3469,7 @@ const navigateKeyframes = (property, direction) => {
                 cropB: payload.cropB,
                 positionX: payload.positionX !== undefined ? payload.positionX : newLayers[layerIndex][segmentIndex].positionX || 0,
                 positionY: payload.positionY !== undefined ? payload.positionY : newLayers[layerIndex][segmentIndex].positionY || 0,
+                rotation: payload.rotation !== undefined ? payload.rotation : newLayers[layerIndex][segmentIndex].rotation || 0, // Add rotation
                 scale: payload.scale !== undefined ? payload.scale : newLayers[layerIndex][segmentIndex].scale || 1,
                 opacity: payload.opacity !== undefined ? payload.opacity : newLayers[layerIndex][segmentIndex].opacity || 1,
                 startTime: payload.timelineStartTime,
@@ -3470,6 +3494,7 @@ const navigateKeyframes = (property, direction) => {
             timelineStartTime: selectedSegment.startTime,
             timelineEndTime: selectedSegment.startTime + textSettings.duration,
             layer: selectedSegment.layer,
+            rotation: updatedKeyframes.rotation && updatedKeyframes.rotation.length > 0 ? undefined : tempValues.rotation, // Add rotation
             scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : tempValues.scale,
             positionX: updatedKeyframes.positionX && updatedKeyframes.positionX.length > 0 ? undefined : tempValues.positionX,
             positionY: updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0 ? undefined : tempValues.positionY,
@@ -3506,6 +3531,7 @@ const navigateKeyframes = (property, direction) => {
                 fontFamily: textPayload.fontFamily,
                 fontColor: textPayload.fontColor,
                 backgroundColor: textPayload.backgroundColor,
+                rotation: textPayload.rotation !== undefined ? textPayload.rotation : newLayers[layerIndex][segmentIndex].rotation || 0, // Add rotation
                 scale: textPayload.scale !== undefined ? textPayload.scale : newLayers[layerIndex][segmentIndex].scale || 1,
                 positionX: textPayload.positionX !== undefined ? textPayload.positionX : newLayers[layerIndex][segmentIndex].positionX || 0,
                 positionY: textPayload.positionY !== undefined ? textPayload.positionY : newLayers[layerIndex][segmentIndex].positionY || 0,
@@ -4145,10 +4171,8 @@ const filteredElements = elements.filter((element) =>
         areTimesEqual(kf.time, timeInSegment)
       );
       if (existingKeyframe) {
-        // Update existing keyframe
         updateKeyframe('positionX', roundedPositionX);
       } else {
-        // Add new keyframe
         addKeyframe('positionX', roundedPositionX);
       }
     }
@@ -4159,10 +4183,8 @@ const filteredElements = elements.filter((element) =>
         areTimesEqual(kf.time, timeInSegment)
       );
       if (existingKeyframe) {
-        // Update existing keyframe
         updateKeyframe('positionY', roundedPositionY);
       } else {
-        // Add new keyframe
         addKeyframe('positionY', roundedPositionY);
       }
     }

@@ -3,7 +3,7 @@ import '../CSS/VideoPreview.css';
 import fx from 'glfx';
 import PropTypes from 'prop-types';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
 const baseFontSize = 24.0;
 
 const VideoPreview = ({
@@ -57,7 +57,6 @@ const VideoPreview = ({
       return { x, y };
     };
 
-    // Determine if a point is within a segment's bounds
     const isPointInSegment = (x, y, element, scaleFactor) => {
       const posX = getKeyframeValue(
         element.keyframes?.positionX,
@@ -74,6 +73,7 @@ const VideoPreview = ({
         element.localTime,
         element.scale || 1
       );
+      const rotation = element.rotation || 0; // Use rotation directly, no keyframing
 
       let width, height;
       if (element.type === 'video') {
@@ -85,7 +85,7 @@ const VideoPreview = ({
       } else if (element.type === 'text') {
         const fontSize = baseFontSize * segScale;
         const textLines = element.text.split('\n');
-        const lineHeight = fontSize * (element.lineSpacing ?? 1.2); // Use lineSpacing, default to 1.2
+        const lineHeight = fontSize * (element.lineSpacing ?? 1.2);
         const textHeight = textLines.length * lineHeight;
         const ctx = document.createElement('canvas').getContext('2d');
         ctx.font = `${fontSize}px ${element.fontFamily || 'Arial'}`;
@@ -95,11 +95,10 @@ const VideoPreview = ({
           for (let char of line) {
             width += ctx.measureText(char).width;
           }
-          // Add letterSpacing for all characters except the last one
           width += letterSpacing * (line.length > 0 ? line.length - 1 : 0);
           return width;
         });
-        const maxTextWidth = Math.max(...textWidths, 1); // Ensure non-zero width
+        const maxTextWidth = Math.max(...textWidths, 1);
         width = (element.backgroundW === 0 ? maxTextWidth : maxTextWidth + element.backgroundW) + (element.textBorderWidth || 0) * 2;
         height = textHeight + (element.backgroundH || 0) + (element.textBorderWidth || 0) * 2;
       } else {
@@ -109,12 +108,22 @@ const VideoPreview = ({
       // Center the bounds around the segment's position
       const centerX = canvasDimensions.width / 2 + posX;
       const centerY = canvasDimensions.height / 2 + posY;
-      const left = centerX - width / 2;
-      const top = centerY - height / 2;
-      const right = left + width;
-      const bottom = top + height;
 
-      return x >= left && x <= right && y >= top && y <= bottom;
+      // Adjust point coordinates for rotation
+      const radians = (rotation * Math.PI) / 180;
+      const cosTheta = Math.cos(-radians);
+      const sinTheta = Math.sin(-radians);
+      const relX = x - centerX;
+      const relY = y - centerY;
+      const rotatedX = relX * cosTheta - relY * sinTheta;
+      const rotatedY = relX * sinTheta + relY * cosTheta;
+
+      const left = -width / 2;
+      const top = -height / 2;
+      const right = width / 2;
+      const bottom = height / 2;
+
+      return rotatedX >= left && rotatedX <= right && rotatedY >= top && rotatedY <= bottom;
     };
 
     // Find the topmost segment at the click position
@@ -958,6 +967,8 @@ const VideoPreview = ({
               const totalPosX = positionX + transitionPosX;
               const totalPosY = positionY + transitionPosY;
               transform += `translate(${totalPosX}px, ${totalPosY}px) `;
+              // Rotation transform (use element.rotation directly, no keyframing)
+              transform += `rotate(${element.rotation || 0}deg) `;
               // Other transforms (rotate, flip, scale, etc.)
               const rotateFilter = element.filters?.find((f) => f.filterName === 'rotate');
               const flipFilter = element.filters?.find((f) => f.filterName === 'flip');
@@ -1004,13 +1015,20 @@ const VideoPreview = ({
                         zIndex: element.layerIndex,
                         opacity,
                         transform: transform.trim(),
-                        clipPath,
                         transition: 'transform 0.016s linear, opacity 0.016s linear',
                         transformOrigin: 'center center',
                         overflow: 'hidden',
                         border: selectedSegment?.id === element.id ? '5px solid red' : 'none', // Use selectedSegment
                       }}
                     >
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      clipPath,
+                      overflow: 'hidden',
+                    }}
+                  >
                       <video
                         ref={(el) => (videoRefs.current[element.id] = el)}
                         className="preview-video"
@@ -1052,6 +1070,7 @@ const VideoPreview = ({
                         />
                       )}
                     </div>
+                  </div>
                   </React.Fragment>
                 );
               } else if (element.type === 'image') {
@@ -1083,13 +1102,20 @@ const VideoPreview = ({
                         zIndex: element.layerIndex,
                         opacity,
                         transform: transform.trim(),
-                        clipPath,
                         transition: 'transform 0.016s linear, opacity 0.016s linear',
                         transformOrigin: 'center center',
                         overflow: 'hidden',
                         border: selectedSegment?.id === element.id ? '5px solid red' : 'none', // Use selectedSegment
                       }}
                     >
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      clipPath,
+                      overflow: 'hidden',
+                    }}
+                  >
                       <img
                         src={photo.filePath}
                         alt="Preview"
@@ -1116,6 +1142,7 @@ const VideoPreview = ({
                         />
                       )}
                     </div>
+                  </div>
                   </React.Fragment>
                 );
               } else if (element.type === 'text') {
@@ -1189,7 +1216,7 @@ const VideoPreview = ({
                 const effectiveContentWidth = element.backgroundW === 0
                   ? maxTextWidth + textBorderWidth * 2
                   : maxTextWidth + bgWidth + textBorderWidth * 2;
-                const contentHeight = (textHeight) + (bgHeight/fontSize) + textBorderWidth * 2;
+                const contentHeight = textHeight + bgHeight + textBorderWidth * 2;
 
                 const minDimension = Math.min(effectiveContentWidth, contentHeight);
                 const maxRadius = minDimension / 2;

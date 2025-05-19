@@ -43,7 +43,7 @@ const Login = () => {
 
     setIsLoading(true); // Show loading state
     try {
-      const response = await axios.post("http://localhost:8080/auth/login", {
+      const response = await axios.post("https://videoeditor-app.onrender.com/auth/login", {
         email,
         password,
       });
@@ -78,7 +78,7 @@ const Login = () => {
     setErrors({});
     setIsLoading(true);
     try {
-      const response = await axios.post("http://localhost:8080/auth/google", {
+      const response = await axios.post("https://videoeditor-app.onrender.com/auth/google", {
         token: credentialResponse.credential,
       });
       localStorage.setItem("token", response.data.token);

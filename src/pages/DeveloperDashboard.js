@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../CSS/DeveloperDashboard.css';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
 
 const DeveloperDashboard = () => {
   const [elements, setElements] = useState([]);

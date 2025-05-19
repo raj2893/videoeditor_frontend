@@ -76,6 +76,7 @@ const ImageSegmentHandler = ({
           positionX: 0,
           positionY: 0,
           scale: 1,
+          rotation: 0, // Add rotation
           isElement,
         },
         {
@@ -100,6 +101,7 @@ const ImageSegmentHandler = ({
         positionX: segment.positionX || 0,
         positionY: segment.positionY || 0,
         scale: segment.scale || 1,
+        rotation: segment.rotation || 0, // Add rotation
         opacity: segment.opacity || 1.0,
         width: segment.width,
         height: segment.height,
@@ -109,6 +111,7 @@ const ImageSegmentHandler = ({
         isElement: effectiveIsElement,
         timelineStartTime: roundedStartTime,
         timelineEndTime: roundedEndTime,
+        keyframes: segment.keyframes || {}, // Add keyframes
       };
 
       setVideoLayers((prev) => {
@@ -184,12 +187,13 @@ const ImageSegmentHandler = ({
         : item.filePath.includes('elements/');
       const requestBody = {
         segmentId,
-        timelineStartTime: roundToThreeDecimals(newStartTime), // Round
-        timelineEndTime: roundToThreeDecimals(newStartTime + duration), // Round
+        timelineStartTime: roundToThreeDecimals(newStartTime),
+        timelineEndTime: roundToThreeDecimals(newStartTime + duration),
         layer: newLayer,
         positionX: updatedSettings.positionX || item.positionX || 0,
         positionY: updatedSettings.positionY || item.positionY || 0,
         scale: updatedSettings.scale || item.scale || 1,
+        rotation: updatedSettings.rotation || item.rotation || 0, // Add rotation
         opacity: updatedSettings.opacity || item.opacity || 1.0,
         width: updatedSettings.width || item.width,
         height: updatedSettings.height || item.height,
@@ -200,6 +204,7 @@ const ImageSegmentHandler = ({
             ? updatedSettings.maintainAspectRatio
             : item.maintainAspectRatio,
         isElement,
+        keyframes: updatedSettings.keyframes || item.keyframes || {}, // Add keyframes
       };
       await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-image`,
@@ -329,8 +334,12 @@ const ImageSegmentHandler = ({
       ...draggingItem,
       startTime: adjustedStartTime,
       layer: targetLayer,
-      timelineStartTime: roundToThreeDecimals(adjustedStartTime), // Round
-      timelineEndTime: roundToThreeDecimals(adjustedStartTime + draggingItem.duration), // Round
+      timelineStartTime: roundToThreeDecimals(adjustedStartTime),
+      timelineEndTime: roundToThreeDecimals(adjustedStartTime + draggingItem.duration),
+      positionX: draggingItem.positionX || 0, // Add positionX
+      positionY: draggingItem.positionY || 0, // Add positionY
+      scale: draggingItem.scale || 1, // Add scale
+      rotation: draggingItem.rotation || 0, // Add rotation
     };
     newVideoLayers[targetLayer].push(updatedItem);
 
@@ -338,10 +347,12 @@ const ImageSegmentHandler = ({
     saveHistory(videoLayers, audioLayers);
     autoSave(videoLayers, audioLayers);
 
-    await updateImageSegment(draggingItem.id, roundToThreeDecimals(adjustedStartTime), targetLayer, draggingItem.duration, { // Round
+    // Update the updateImageSegment call
+    await updateImageSegment(draggingItem.id, roundToThreeDecimals(adjustedStartTime), targetLayer, draggingItem.duration, {
       positionX: draggingItem.positionX,
       positionY: draggingItem.positionY,
       scale: draggingItem.scale,
+      rotation: draggingItem.rotation, // Add rotation
       opacity: draggingItem.opacity,
       width: draggingItem.width,
       height: draggingItem.height,
@@ -391,6 +402,10 @@ const ImageSegmentHandler = ({
       ...item,
       duration: firstPartDuration,
       timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration),
+      positionX: item.positionX || 0, // Add positionX
+      positionY: item.positionY || 0, // Add positionY
+      scale: item.scale || 1, // Add scale
+      rotation: item.rotation || 0, // Add rotation
       isElement,
     };
     layer[itemIndex] = firstPart;
@@ -403,6 +418,10 @@ const ImageSegmentHandler = ({
       duration: secondPartDuration,
       timelineStartTime: roundToThreeDecimals(item.startTime + splitTime),
       timelineEndTime: roundToThreeDecimals(item.startTime + item.duration),
+      positionX: item.positionX || 0, // Add positionX
+      positionY: item.positionY || 0, // Add positionY
+      scale: item.scale || 1, // Add scale
+      rotation: item.rotation || 0, // Add rotation
       isElement,
     };
     layer.push(secondPart);
@@ -417,6 +436,7 @@ const ImageSegmentHandler = ({
         positionX: item.positionX,
         positionY: item.positionY,
         scale: item.scale,
+        rotation: item.rotation, // Add rotation
         opacity: item.opacity,
         width: item.width,
         height: item.height,

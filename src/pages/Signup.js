@@ -54,7 +54,7 @@ const Signup = () => {
     if (!validate()) return;
 
     try {
-      const response = await axios.post("http://localhost:8080/auth/register", {
+      const response = await axios.post("https://videoeditor-app.onrender.com/auth/register", {
         email,
         password,
         name,
@@ -81,7 +81,7 @@ const Signup = () => {
 
   const resendVerification = async () => {
     try {
-      await axios.post("http://localhost:8080/auth/resend-verification", null, {
+      await axios.post("https://videoeditor-app.onrender.com/auth/resend-verification", null, {
         params: { email },
       });
       setServerError("Verification email resent successfully!");
@@ -96,7 +96,7 @@ const Signup = () => {
 
   const handleGoogleSignup = useCallback(async (credentialResponse) => {
     try {
-      const response = await axios.post("http://localhost:8080/auth/google", {
+      const response = await axios.post("https://videoeditor-app.onrender.com/auth/google", {
         token: credentialResponse.credential,
       });
       localStorage.setItem("token", response.data.token);

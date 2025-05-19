@@ -373,17 +373,17 @@
   border-radius: 6px;
 }
 
-.video-title,
-.photo-title,
-.audio-title,
-.element-title {
+.video-list .video-item .video-title,
+.photo-list .photo-item .photo-title,
+.audio-list .audio-item .audio-title,
+.element-list .element-item .element-title {
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
-  color: #a1a1a1;
+  color: #d1d1d1 !important; /* Use !important temporarily to force the style */
 }
 
 .audio-item,
@@ -820,13 +820,6 @@
   display: none;
 }
 
-.transform-panel,
-.filter-panel,
-.text-tool-panel,
-.transitions-panel {
-  /* Inherit styles from .tool-subpanel */
-}
-
 /* Keep existing subpanel-specific styles */
 .tool-subpanel h3 {
   margin: 0 0 12px;
@@ -1211,71 +1204,6 @@
   left: 10%;
 }
 
-/* Transitions Panel Specific */
-.transitions-panel {
-  padding: 15px; /* Increased for consistency with KeyframeControls.css */
-  background-color: #1e1e1e;
-  border-radius: 8px;
-  border: 1px solid #2a2a2a;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
-  box-sizing: border-box;
-}
-
-.transitions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 300px;
-  overflow-y: auto;
-  /* Hide scrollbar for Firefox */
-  scrollbar-width: none;
-  /* Ensure smooth scrolling on touch devices */
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Hide scrollbar for WebKit browsers */
-.transitions-list::-webkit-scrollbar {
-  display: none;
-}
-
-.transition-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px; /* Increased padding for consistency */
-  background-color: #1e1e1e;
-  border: 1px solid #2a2a2a; /* Matches KeyframeControls.css */
-  border-radius: 6px;
-  cursor: grab;
-  transition: all 0.3s ease;
-}
-
-.transition-item:hover {
-  background-color: #2a2a2a;
-  transform: scale(1.02);
-}
-
-.transition-item.dragging {
-  opacity: 0.5;
-}
-
-.transition-icon {
-  width: 24px; /* Slightly larger for visibility */
-  height: 24px;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  flex-shrink: 0;
-}
-
-.transition-item span {
-  font-size: 12px;
-  font-weight: 500;
-  color: #d1d1d1;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
 /* Dialog Buttons */
 .dialog-buttons {
   display: flex;
@@ -1466,8 +1394,7 @@
 /* Optional: Adjust padding for specific panels if needed */
 .transform-panel,
 .filter-panel,
-.text-tool-panel,
-.transitions-panel {
+.text-tool-panel {
   padding: 12px;
 }
 
@@ -1668,4 +1595,127 @@ textarea {
 }
 textarea[style*="border: 2px solid red"] {
   border: 2px solid red !important;
+}
+
+/* Existing lock-icon styles (retained for consistency) */
+.lock-icon {
+  font-size: 14px;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+/* Styles for element items for Basic users */
+.element-item.basic-user {
+  opacity: 0.7; /* Slightly dim to indicate restricted interaction */
+  cursor: default; /* Indicate no action */
+  position: relative; /* For tooltip positioning */
+}
+
+/* Custom tooltip for Basic users */
+.element-item.basic-user:hover::after {
+  content: 'Elements are accessible to premium users only.';
+  position: absolute;
+  bottom: 100%; /* Position above element */
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2a2a2a; /* Match app's dark theme */
+  color: #fff; /* White text */
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Tooltip arrow */
+.element-item.basic-user:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 6px); /* Below tooltip */
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #2a2a2a; /* Match tooltip background */
+  z-index: 1000;
+}
+
+/* Hide tooltip when not hovering */
+.element-item.basic-user::after,
+.element-item.basic-user::before {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Ensure element-item is clickable for non-Basic users */
+.element-item:not(.basic-user) {
+  cursor: pointer;
+}
+
+/* AI Subtitles section button */
+.section-button[data-section="aiSubtitles"] {
+  opacity: 0.7;
+  cursor: default;
+  pointer-events: auto;
+  position: relative;
+}
+
+.section-button[data-section="aiSubtitles"]::before {
+  content: '⌛';
+  font-size: 24px;
+  color: #a1a1a1;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  background: none;
+  border-radius: 0;
+  transition: none;
+}
+
+.section-button[data-section="aiSubtitles"]:hover {
+  background-color: transparent;
+  border-color: #2a2a2a;
+  color: #d1d1d1;
+  transform: none;
+}
+
+.section-button[data-section="aiSubtitles"]:hover::before {
+  filter: none;
+}
+
+/* Change text on hover */
+.section-button[data-section="aiSubtitles"] span {
+  display: inline-block;
+  transition: opacity 0.3s ease;
+}
+
+.section-button[data-section="aiSubtitles"]:hover span {
+  opacity: 0;
+}
+
+.section-button[data-section="aiSubtitles"]::after {
+  content: 'Coming soon...';
+  position: absolute;
+  top: 55px; /* Below icon, where text is */
+  left: 50%;
+  transform: translateX(-50%);
+  color: #d1d1d1;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.section-button[data-section="aiSubtitles"]:hover::after {
+  opacity: 1;
+}
+
+.section-button[data-section="aiSubtitles"][disabled] {
+  pointer-events: auto;
 }

@@ -6,7 +6,7 @@ import { Tilt } from 'react-tilt';
 import '../CSS/Dashboard.css';
 import { FaTrash, FaSignOutAlt, FaBars } from 'react-icons/fa';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, projectName }) => {
   if (!isOpen) return null;
@@ -58,6 +58,7 @@ const Dashboard = () => {
     lastName: '',
     picture: null,
     googleAuth: false,
+    role: '', // Add role field
   });
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,6 +68,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     console.log('Dashboard mounted, location state:', location.state);
@@ -82,6 +84,7 @@ const Dashboard = () => {
           lastName: profile.name ? profile.name.split(' ').slice(1).join(' ') : '',
           picture: profile.picture || null,
           googleAuth: profile.googleAuth || false,
+          role: profile.role || 'BASIC', // Initialize role from localStorage
         });
       }
       await fetchUserProfile();
@@ -146,6 +149,7 @@ const Dashboard = () => {
         lastName: lastName,
         picture: response.data.picture || null,
         googleAuth: response.data.googleAuth || false,
+        role: response.data.role || 'BASIC', // Include role, default to BASIC if missing
       };
       setUserProfile(profile);
       localStorage.setItem('userProfile', JSON.stringify({
@@ -153,6 +157,7 @@ const Dashboard = () => {
         name: fullName,
         picture: profile.picture,
         googleAuth: profile.googleAuth,
+        role: profile.role, // Store role in localStorage
       }));
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -172,6 +177,7 @@ const Dashboard = () => {
           lastName: '',
           picture: null,
           googleAuth: false,
+          role: '', // Reset role on error
         });
       }
     }
@@ -234,7 +240,7 @@ const Dashboard = () => {
         console.log('401 Unauthorized, redirecting to login');
         localStorage.removeItem('token');
         localStorage.removeItem('userProfile');
-        navigate('/', { state: { error: 'Session expired. Please log in again.' } });
+        navigate('/login', { state: { error: 'Session expired. Please log in again.' } });
       }
     }
   };
@@ -332,13 +338,31 @@ const Dashboard = () => {
 
   const createNewProject = async () => {
     if (!newProjectName) {
-      alert('Please enter a project name.');
+      setErrorMessage('Please enter a project name.');
+      setTimeout(() => setErrorMessage(''), 5000);
       return;
     }
 
     if (fps <= 0 || fps > 120) {
-      alert('FPS must be between 1 and 120.');
+      setErrorMessage('FPS must be between 1 and 120.');
+      setTimeout(() => setErrorMessage(''), 5000);
       return;
+    }
+
+    // Restriction for Basic users
+    if (userProfile.role === 'BASIC') {
+      // Check FPS limit
+      if (fps > 30) {
+        setErrorMessage('Basic users cannot create projects with more than 30 FPS. Upgrade to Creator or Studio for higher FPS.');
+        setTimeout(() => setErrorMessage(''), 5000);
+        return;
+      }
+      // Check project count limit
+      if (projects.length >= 3) {
+        setErrorMessage('Basic users can only create up to 3 projects. Upgrade to Creator or Studio for unlimited projects.');
+        setTimeout(() => setErrorMessage(''), 5000);
+        return;
+      }
     }
 
     try {
@@ -374,9 +398,11 @@ const Dashboard = () => {
         localStorage.removeItem('userProfile');
         navigate('/', { state: { error: 'Session expired. Please log in again.' } });
       } else if (error.response?.status === 400) {
-        alert('Invalid project parameters: ' + error.response.data);
+        setErrorMessage('Invalid project parameters: ' + error.response.data);
+        setTimeout(() => setErrorMessage(''), 5000);
       } else {
-        alert('Failed to create project');
+        setErrorMessage('Failed to create project');
+        setTimeout(() => setErrorMessage(''), 5000);
       }
     }
   };
@@ -788,6 +814,17 @@ const Dashboard = () => {
               transition={{ duration: 0.3 }}
             >
               {successMessage}
+            </motion.p>
+          )}
+          {errorMessage && (
+            <motion.p
+              className="error-message"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              {errorMessage}
             </motion.p>
           )}
           {location.state?.error && (

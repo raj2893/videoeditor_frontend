@@ -67,7 +67,7 @@ const TimelineComponent = ({
   const [isResizing, setIsResizing] = useState(false); // Track resize state
 
   const SNAP_THRESHOLD = 0.5;
-  const API_BASE_URL = 'http://localhost:8080';
+  const API_BASE_URL = 'https://videoeditor-app.onrender.com';
   const MIN_TIME_SCALE = 0.1;
   const MAX_TIME_SCALE = 200;
   const MAGNETIC_THRESHOLD = 0.2; // Time in seconds for magnetic snap to playhead
@@ -463,6 +463,7 @@ const TimelineComponent = ({
                     positionX: segment.positionX ?? 0,
                     positionY: segment.positionY ?? 0,
                     scale: segment.scale ?? 1,
+                    rotation: segment.rotation ?? 0, // Add rotation
                     startTimeWithinVideo: segment.startTime,
                     endTimeWithinVideo: segment.endTime,
                     thumbnail,
@@ -502,6 +503,7 @@ const TimelineComponent = ({
                 positionX: imageSegment.positionX || 0,
                 positionY: imageSegment.positionY || 0,
                 scale: imageSegment.scale || 1,
+                rotation: imageSegment.rotation || 0, // Add rotation
                 opacity: imageSegment.opacity || 1.0,
                 width: imageSegment.width,
                 height: imageSegment.height,
@@ -534,6 +536,7 @@ const TimelineComponent = ({
                 layer: layerIndex,
                 fontFamily: textSegment.fontFamily || 'Arial',
                 scale: textSegment.scale || 1.0,
+                rotation: textSegment.rotation || 0, // Add rotation
                 fontColor: textSegment.fontColor || '#FFFFFF',
                 backgroundColor: textSegment.backgroundColor || 'transparent',
                 positionX: textSegment.positionX || 0,
@@ -548,6 +551,8 @@ const TimelineComponent = ({
                 textBorderColor: textSegment.textBorderColor || 'transparent', // Added
                 textBorderWidth: textSegment.textBorderWidth ?? 0, // Added
                 textBorderOpacity: textSegment.textBorderOpacity ?? 1.0, // Added
+                letterSpacing: textSegment.letterSpacing ?? 0, // Added
+                lineSpacing: textSegment.lineSpacing ?? 1.2, // Added
                 keyframes: textSegment.keyframes || {},
                 opacity: textSegment.opacity || 1,
               });
@@ -1007,6 +1012,8 @@ const TimelineComponent = ({
             textBorderColor: style.textBorderColor || 'transparent', // Added
             textBorderWidth: style.textBorderWidth ?? 0, // Added
             textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
+            letterSpacing: style.letterSpacing ?? 0, // Added
+            lineSpacing: style.lineSpacing ?? 1.2, // Added
           },
           { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
         );
@@ -1020,6 +1027,7 @@ const TimelineComponent = ({
           layer: layerIndex,
           fontFamily: style.fontFamily || 'Arial',
           scale: style.scale || 1.0,
+          rotation: style.rotation || 0, // Add rotation
           fontColor: style.fontColor || '#FFFFFF',
           backgroundColor: style.backgroundColor || 'transparent',
           positionX: style.positionX || 0,
@@ -1034,6 +1042,8 @@ const TimelineComponent = ({
           textBorderColor: style.textBorderColor || 'transparent', // Added
           textBorderWidth: style.textBorderWidth ?? 0, // Added
           textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
+          letterSpacing: style.letterSpacing ?? 0, // Added
+          lineSpacing: style.lineSpacing ?? 1.2, // Added
           keyframes: {},
         };
 
@@ -1299,6 +1309,7 @@ const TimelineComponent = ({
               timelineEndTime: item.startTime + item.duration,
               fontFamily: item.fontFamily,
               scale: item.scale,
+              rotation: item.rotation, // Add rotation
               fontColor: item.fontColor,
               backgroundColor: item.backgroundColor,
               positionX: item.positionX,
@@ -1313,6 +1324,8 @@ const TimelineComponent = ({
               textBorderColor: item.textBorderColor, // Added
               textBorderWidth: item.textBorderWidth, // Added
               textBorderOpacity: item.textBorderOpacity, // Added
+              letterSpacing: item.letterSpacing, // Added
+              lineSpacing: item.lineSpacing ?? 1.2, // Added
               keyframes: item.keyframes || {},
               opacity: item.opacity,
             });
@@ -1329,6 +1342,7 @@ const TimelineComponent = ({
               positionX: item.positionX,
               positionY: item.positionY,
               scale: item.scale,
+              rotation: item.rotation, // Add rotation
               opacity: item.opacity,
               keyframes: item.keyframes || {},
               cropL: item.cropL ?? 0, // Add crop values
@@ -1348,6 +1362,7 @@ const TimelineComponent = ({
               positionX: item.positionX,
               positionY: item.positionY,
               scale: item.scale,
+              rotation: item.rotation, // Add rotation
               opacity: item.opacity,
               width: item.width,
               height: item.height,

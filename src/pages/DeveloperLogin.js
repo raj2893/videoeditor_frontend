@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../CSS/DeveloperLogin.css';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
 
 const DeveloperLogin = () => {
   const [email, setEmail] = useState('');

@@ -28,7 +28,7 @@ const VerifyEmail = () => {
       try {
         console.log('Sending verification request for token:', verificationToken);
         const response = await axios.get(
-          `http://localhost:8080/auth/verify-email?token=${verificationToken}`,
+          `https://videoeditor-app.onrender.com/auth/verify-email?token=${verificationToken}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -79,7 +79,7 @@ const VerifyEmail = () => {
     }
 
     try {
-      await axios.post('http://localhost:8080/auth/resend-verification', null, {
+      await axios.post('https://videoeditor-app.onrender.com/auth/resend-verification', null, {
         params: { email },
       });
       setStatus({ message: 'Verification email resent successfully! Check your inbox.', type: 'success' });

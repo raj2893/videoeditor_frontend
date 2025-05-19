@@ -13,72 +13,7 @@ import TransitionsPanel from './TransitionsPanel';
 import { v4 as uuidv4 } from 'uuid';
 import WaveSurfer from 'wavesurfer.js';
 
-const API_BASE_URL = 'http://localhost:8080';
-  const defaultTextStyles = [
-    {
-      text: "Text Style 1",
-      fontFamily: "Arial",
-      scale: 2.0,
-      fontColor: "#f1ffbd",
-      backgroundColor: "#36380f",
-      positionX: 0,
-      positionY: 0,
-      opacity: 1.0,
-      alignment: "center",
-      backgroundOpacity: 1.0,
-      backgroundBorderWidth: 0,
-      backgroundBorderColor: "#f1ffbd",
-      backgroundH: 20, // Add this
-      backgroundW: 100, // Add this
-      backgroundBorderRadius: 9,
-      duration: 5,
-      textBorderColor: 'transparent', // Added
-      textBorderWidth: 0, // Added
-      textBorderOpacity: 1.0, // Added
-    },
-    {
-      text: "Text Style 2",
-      fontFamily: "Times New Roman",
-      scale: 2.0,
-      fontColor: "#c2f0ff",
-      backgroundColor: "#ffffff",
-      positionX: 0,
-      positionY: 0,
-      opacity: 1.0,
-      alignment: "center",
-      backgroundOpacity: 0.21,
-      backgroundBorderWidth: 0,
-      backgroundBorderColor: "#000000",
-      backgroundH: 20, // Add this
-      backgroundW: 100, // Add this
-      backgroundBorderRadius: 10,
-      duration: 5,
-      textBorderColor: 'transparent', // Added
-      textBorderWidth: 0, // Added
-      textBorderOpacity: 1.0, // Added
-    },
-    {
-      text: "Text Style 3",
-      fontFamily: "Arial",
-      scale: 2.0,
-      fontColor: "#f0fff3",
-      backgroundColor: "#657c6a",
-      positionX: 0,
-      positionY: 0,
-      opacity: 1.0,
-      alignment: "center",
-      backgroundOpacity: 1.0,
-      backgroundBorderWidth: 0,
-      backgroundBorderColor: "#000000",
-      backgroundH: 20, // Add this
-      backgroundW: 100, // Add this
-      backgroundBorderRadius: 10,
-      duration: 5,
-      textBorderColor: 'transparent', // Added
-      textBorderWidth: 0, // Added
-      textBorderOpacity: 1.0, // Added
-    },
-  ];
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
 
 const ProjectEditor = () => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -122,6 +57,8 @@ const ProjectEditor = () => {
     textBorderColor: 'transparent', // Added for text border
     textBorderWidth: 0, // Added for text border
     textBorderOpacity: 1.0, // Added for text border
+    letterSpacing: 0, // Added
+    lineSpacing: 1.2, // Added
   });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [filterParams, setFilterParams] = useState({});
@@ -149,6 +86,9 @@ const ProjectEditor = () => {
   const [isTimelineSelected, setIsTimelineSelected] = useState(false);
   const [loading, setLoading] = useState(true); // Add loading state
   const [isTextEmpty, setIsTextEmpty] = useState(false);
+  const [userRole, setUserRole] = useState('BASIC'); // Default to BASIC
+  const [videoUploadError, setVideoUploadError] = useState('');
+  const [defaultTextStyles, setDefaultTextStyles] = useState([]);
   const textSettingsRef = useRef(textSettings);
 
   const canUndo = historyIndex > 0;
@@ -187,6 +127,72 @@ const ProjectEditor = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    const fetchTextStyles = async () => {
+      try {
+        const response = await fetch('/data/textStyles.json'); // Adjust path if needed
+        if (!response.ok) {
+          throw new Error('Failed to fetch text styles');
+        }
+        const styles = await response.json();
+        setDefaultTextStyles(styles);
+      } catch (error) {
+        console.error('Error fetching text styles:', error);
+        // Fallback to empty array or hardcoded styles if needed
+        setDefaultTextStyles([]);
+      }
+    };
+
+    fetchTextStyles();
+  }, []);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.log('No token found, assuming BASIC role');
+          setUserRole('BASIC');
+          return;
+        }
+
+        // Check localStorage first
+        const storedProfile = localStorage.getItem('userProfile');
+        if (storedProfile) {
+          const profile = JSON.parse(storedProfile);
+          if (profile.role) {
+            setUserRole(profile.role);
+            return;
+          }
+        }
+
+        // Fetch from API
+        const response = await axios.get(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const role = response.data.role || 'BASIC';
+        setUserRole(role);
+
+        // Update localStorage
+        const updatedProfile = {
+          ...JSON.parse(storedProfile || '{}'),
+          role,
+        };
+        localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+        setUserRole('BASIC'); // Fallback to BASIC on error
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('userProfile');
+          navigate('/', { state: { error: 'Session expired. Please log in again.' } });
+        }
+      }
+    };
+
+    fetchUserRole();
+  }, [navigate]);
 
   // Playback animation
   useEffect(() => {
@@ -503,6 +509,8 @@ const ProjectEditor = () => {
               textBorderColor: item.textBorderColor, // Added
               textBorderWidth: item.textBorderWidth, // Added
               textBorderOpacity: item.textBorderOpacity, // Added
+              letterSpacing: item.letterSpacing,
+              lineSpacing: item.lineSpacing, // Added
               keyframes: item.keyframes || {},
             });
           }
@@ -1008,6 +1016,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         textBorderColor: segment.textBorderColor || 'transparent',
         textBorderWidth: segment.textBorderWidth ?? 0,
         textBorderOpacity: segment.textBorderOpacity ?? 1.0,
+        letterSpacing: segment.letterSpacing ?? 0, // Added
+        lineSpacing: segment.lineSpacing ?? 1.2, // Added
       });
       setIsTextEmpty(!text.trim());
       setIsTextToolOpen(true);
@@ -1048,6 +1058,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
                 textBorderColor: newSettings.textBorderColor,
                 textBorderWidth: newSettings.textBorderWidth,
                 textBorderOpacity: newSettings.textBorderOpacity,
+                letterSpacing: newSettings.letterSpacing, // Added
+                lineSpacing: newSettings.lineSpacing,
                 // Preserve transform properties from tempSegmentValues or existing segment
                 positionX: tempSegmentValues.positionX !== undefined ? tempSegmentValues.positionX : item.positionX,
                 positionY: tempSegmentValues.positionY !== undefined ? tempSegmentValues.positionY : item.positionY,
@@ -1109,6 +1121,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         textBorderColor: settings.textBorderColor,
         textBorderWidth: settings.textBorderWidth,
         textBorderOpacity: settings.textBorderOpacity,
+        letterSpacing: settings.letterSpacing, // Added
+        lineSpacing: settings.lineSpacing, // Added
         // Include transform properties from tempSegmentValues
         positionX: tempSegmentValues.positionX !== undefined ? tempSegmentValues.positionX : editingTextSegment.positionX,
         positionY: tempSegmentValues.positionY !== undefined ? tempSegmentValues.positionY : editingTextSegment.positionY,
@@ -1141,6 +1155,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
           textBorderColor: updatedTextSegment.textBorderColor,
           textBorderWidth: updatedTextSegment.textBorderWidth,
           textBorderOpacity: updatedTextSegment.textBorderOpacity,
+          letterSpacing: updatedTextSegment.letterSpacing, // Added
+          lineSpacing: updatedTextSegment.lineSpacing, // Added
           keyframes: updatedTextSegment.keyframes,
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
@@ -1196,6 +1212,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         layer: 0,
         fontFamily: textSettings.fontFamily,
         scale: textSettings.scale || 1.0,
+        rotation: 0, // Add rotation
         fontColor: textSettings.fontColor,
         backgroundColor: textSettings.backgroundColor,
         positionX: 0,
@@ -1210,6 +1227,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         textBorderColor: textSettings.textBorderColor, // Added
         textBorderWidth: textSettings.textBorderWidth, // Added
         textBorderOpacity: textSettings.textBorderOpacity, // Added
+        letterSpacing: textSettings.letterSpacing, // Added
+        lineSpacing: textSettings.lineSpacing, // Added
         keyframes: {},
       };
 
@@ -1246,6 +1265,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
           textBorderColor: textSettings.textBorderColor, // Added
           textBorderWidth: textSettings.textBorderWidth, // Added
           textBorderOpacity: textSettings.textBorderOpacity, // Added
+          letterSpacing: textSettings.letterSpacing, // Added
+          lineSpacing: textSettings.lineSpacing, // Added
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -1267,6 +1288,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         layer: newTextSegment.layer,
         fontFamily: newTextSegment.fontFamily,
         scale: newTextSegment.scale || 1.0,
+        rotation: newTextSegment.rotation || 0, // Add rotation
         fontColor: newTextSegment.fontColor,
         backgroundColor: newTextSegment.backgroundColor,
         positionX: newTextSegment.positionX || 0,
@@ -1281,6 +1303,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         textBorderColor: newTextSegment.textBorderColor || 'transparent', // Added
         textBorderWidth: newTextSegment.textBorderWidth ?? 0, // Added
         textBorderOpacity: newTextSegment.textBorderOpacity ?? 1.0, // Added
+        letterSpacing: newTextSegment.letterSpacing ?? 0, // Added
+        lineSpacing: newTextSegment.lineSpacing ?? 1.2, // Added
         keyframes: newTextSegment.keyframes || {},
       };
 
@@ -1313,6 +1337,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         textBorderColor: updatedSegment.textBorderColor, // Added
         textBorderWidth: updatedSegment.textBorderWidth, // Added
         textBorderOpacity: updatedSegment.textBorderOpacity, // Added
+        letterSpacing: updatedSegment.letterSpacing, // Added
+        lineSpacing: updatedSegment.lineSpacing, // Added
       });
       setIsTextToolOpen(true);
       preloadMedia();
@@ -1755,6 +1781,9 @@ const preloadMedia = () => {
                 textBorderColor: textSegment.textBorderColor || 'transparent',
                 textBorderWidth: textSegment.textBorderWidth ?? 0,
                 textBorderOpacity: textSegment.textBorderOpacity ?? 1.0,
+                letterSpacing: textSegment.letterSpacing ?? 0,
+                lineSpacing: textSegment.lineSpacing ?? 1.2, // Added
+
                 keyframes: textSegment.keyframes || {},
               });
             }
@@ -1821,11 +1850,29 @@ const preloadMedia = () => {
 
   const handleVideoUpload = async (event) => {
     const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    // Check user role and video limit for Basic users
+    if (userRole === 'BASIC') {
+      if (videos.length >= 5) {
+        setVideoUploadError('Basic users are limited to uploading a maximum of 5 videos. Upgrade to a premium plan to upload more.');
+        setTimeout(() => setVideoUploadError(''), 5000); // Clear error after 5 seconds
+        return;
+      }
+      // Ensure the upload won't exceed the limit
+      if (videos.length + files.length > 5) {
+        setVideoUploadError(`Basic users can only upload up to 5 videos. You can upload ${5 - videos.length} more video(s).`);
+        setTimeout(() => setVideoUploadError(''), 5000); // Clear error after 5 seconds
+        return;
+      }
+    }
+
     const formData = new FormData();
     files.forEach((file) => {
       formData.append('files', file);
       formData.append('titles', file.name);
     });
+
     try {
       setUploading(true);
       const token = localStorage.getItem('token');
@@ -1836,6 +1883,8 @@ const preloadMedia = () => {
       if (newVideos) await fetchVideos();
     } catch (error) {
       console.error('Error uploading video:', error);
+      setVideoUploadError('Failed to upload video(s). Please try again.');
+      setTimeout(() => setVideoUploadError(''), 5000); // Clear error after 5 seconds
     } finally {
       setUploading(false);
     }
@@ -2079,6 +2128,8 @@ const preloadMedia = () => {
         textBorderColor: style.textBorderColor || 'transparent', // Added
         textBorderWidth: style.textBorderWidth ?? 0, // Added
         textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
+        letterSpacing: style.letterSpacing ?? 0, // Added
+        lineSpacing: style.lineSpacing ?? 1.2, // Added
         keyframes: {},
       };
 
@@ -2115,6 +2166,8 @@ const preloadMedia = () => {
           textBorderColor: style.textBorderColor || 'transparent', // Added
           textBorderWidth: style.textBorderWidth ?? 0, // Added
           textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
+          letterSpacing: style.letterSpacing ?? 0, // Added
+          lineSpacing: style.lineSpacing ?? 1.2, // Added
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -2150,6 +2203,8 @@ const preloadMedia = () => {
         textBorderColor: newTextSegment.textBorderColor || 'transparent', // Added
         textBorderWidth: newTextSegment.textBorderWidth ?? 0, // Added
         textBorderOpacity: newTextSegment.textBorderOpacity ?? 1.0, // Added
+        letterSpacing: newTextSegment.letterSpacing ?? 0, // Added
+        lineSpacing: newTextSegment.lineSpacing ?? 1.2, // Added
         keyframes: newTextSegment.keyframes || {},
       };
 
@@ -2182,6 +2237,8 @@ const preloadMedia = () => {
         textBorderColor: updatedSegment.textBorderColor, // Added
         textBorderWidth: updatedSegment.textBorderWidth, // Added
         textBorderOpacity: updatedSegment.textBorderOpacity, // Added
+        letterSpacing: updatedSegment.letterSpacing, // Added
+        lineSpacing: updatedSegment.lineSpacing, // Added
       });
       setIsTextToolOpen(true);
       preloadMedia();
@@ -2317,6 +2374,7 @@ const preloadMedia = () => {
         effectiveWidth: newImageSegment.effectiveWidth,
         effectiveHeight: newImageSegment.effectiveHeight,
         maintainAspectRatio: newImageSegment.maintainAspectRatio,
+        rotation: newImageSegment.rotation || 0, // Add rotation
       };
 
       let updatedVideoLayers = videoLayers;
@@ -2400,6 +2458,7 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
       filters: videoSegment.filters || [],
       audioSegmentId: audioSegmentId || null,
       speed: videoSegment.speed || 1.0, // Add speed to segment
+      rotation: videoSegment.rotation || 0, // Add rotation
     };
 
     let updatedVideoLayers = videoLayers;
@@ -2677,7 +2736,6 @@ const handleSegmentSelect = async (segment) => {
     let initialValues = {};
     switch (segment.type) {
       case 'video':
-      case 'image':
         initialValues = {
           positionX: segment.positionX || 0,
           positionY: segment.positionY || 0,
@@ -2688,6 +2746,20 @@ const handleSegmentSelect = async (segment) => {
           cropT: segment.cropT !== undefined ? segment.cropT : 0,
           cropB: segment.cropB !== undefined ? segment.cropB : 0,
           speed: segment.speed || 1.0, // Add speed with default 1.0
+          rotation: segment.rotation || 0, // Add rotation
+      };
+      break;
+      case 'image':
+        initialValues = {
+          positionX: segment.positionX || 0,
+          positionY: segment.positionY || 0,
+          scale: segment.scale || 1,
+          opacity: segment.opacity || 1,
+          cropL: segment.cropL !== undefined ? segment.cropL : 0,
+          cropR: segment.cropR !== undefined ? segment.cropR : 0,
+          cropT: segment.cropT !== undefined ? segment.cropT : 0,
+          cropB: segment.cropB !== undefined ? segment.cropB : 0,
+          rotation: segment.rotation || 0, // Add rotation
         };
         break;
       case 'text':
@@ -2696,6 +2768,7 @@ const handleSegmentSelect = async (segment) => {
           positionY: segment.positionY || 0,
           scale: segment.scale || 1,
           opacity: segment.opacity || 1,
+          rotation: segment.rotation || 0, // Add rotation
         };
         break;
       case 'audio':
@@ -3011,6 +3084,41 @@ const addKeyframe = async (property, value) => {
 
 const removeKeyframe = async (property, time) => {
   if (!selectedSegment) return;
+
+  // Store the current keyframes for potential rollback
+  const previousKeyframes = { ...keyframes };
+
+  // Optimistically update the keyframes state
+  const updatedKeyframes = {
+    ...keyframes,
+    [property]: (keyframes[property] || []).filter((kf) => !areTimesEqual(kf.time, time)),
+  };
+  setKeyframes(updatedKeyframes);
+
+  // Update layers with the optimistic keyframes
+  let updatedVideoLayers = videoLayers;
+  let updatedAudioLayers = audioLayers;
+  if (selectedSegment.type === 'audio') {
+    setAudioLayers((prevLayers) => {
+      const newLayers = [...prevLayers];
+      const layerIndex = Math.abs(selectedSegment.layer) - 1;
+      newLayers[layerIndex] = newLayers[layerIndex].map((item) =>
+        item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+      );
+      updatedAudioLayers = newLayers;
+      return newLayers;
+    });
+  } else {
+    setVideoLayers((prevLayers) => {
+      const newLayers = [...prevLayers];
+      newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
+        item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+      );
+      updatedVideoLayers = newLayers;
+      return newLayers;
+    });
+  }
+
   try {
     const token = localStorage.getItem('token');
     await axios.delete(`${API_BASE_URL}/projects/${projectId}/remove-keyframe`, {
@@ -3023,43 +3131,39 @@ const removeKeyframe = async (property, time) => {
       },
       headers: { Authorization: `Bearer ${token}` },
     });
-    const updatedKeyframes = {
-      ...keyframes,
-      [property]: (keyframes[property] || []).filter((kf) => !areTimesEqual(kf.time, time)),
-    };
-    setKeyframes(updatedKeyframes);
 
-    let updatedVideoLayers = videoLayers;
-    let updatedAudioLayers = audioLayers;
+    // Schedule auto-save
+    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    updateTimeoutRef.current = setTimeout(() => {
+      autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+    }, 1000);
+
+    // Optionally fetch keyframes to ensure sync, but only if necessary
+    // await fetchKeyframes(selectedSegment.id, selectedSegment.type);
+  } catch (error) {
+    console.error('Error removing keyframe:', error);
+    // Revert to previous keyframes on error
+    setKeyframes(previousKeyframes);
+    // Revert layers
     if (selectedSegment.type === 'audio') {
       setAudioLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         const layerIndex = Math.abs(selectedSegment.layer) - 1;
         newLayers[layerIndex] = newLayers[layerIndex].map((item) =>
-          item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+          item.id === selectedSegment.id ? { ...item, keyframes: previousKeyframes } : item
         );
-        updatedAudioLayers = newLayers;
         return newLayers;
       });
     } else {
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
-          item.id === selectedSegment.id ? { ...item, keyframes: updatedKeyframes } : item
+          item.id === selectedSegment.id ? { ...item, keyframes: previousKeyframes } : item
         );
-        updatedVideoLayers = newLayers;
         return newLayers;
       });
     }
-
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(updatedVideoLayers, updatedAudioLayers);
-    }, 1000);
-
-    await fetchKeyframes(selectedSegment.id, selectedSegment.type);
-  } catch (error) {
-    console.error('Error removing keyframe:', error);
+    alert('Failed to remove keyframe. Please try again.');
   }
 };
 
@@ -3216,6 +3320,7 @@ const navigateKeyframes = (property, direction) => {
             cropT: tempValues.cropT !== undefined ? Number(tempValues.cropT) : 0,
             cropB: tempValues.cropB !== undefined ? Number(tempValues.cropB) : 0,
             speed: tempValues.speed !== undefined ? Number(tempValues.speed) : 1.0,
+            rotation: tempValues.rotation !== undefined ? Number(tempValues.rotation) : 0, // Add rotation
           };
 
           console.log('Normalized temp values for video:', normalizedTempValues);
@@ -3225,6 +3330,7 @@ const navigateKeyframes = (property, direction) => {
             positionX: updatedKeyframes.positionX && updatedKeyframes.positionX.length > 0 ? undefined : normalizedTempValues.positionX,
             positionY: updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0 ? undefined : normalizedTempValues.positionY,
             scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : normalizedTempValues.scale,
+            rotation: updatedKeyframes.rotation && updatedKeyframes.rotation.length > 0 ? undefined : normalizedTempValues.rotation, // Add rotation
             opacity: normalizedTempValues.opacity,
             layer: Number(selectedSegment.layer) || 0,
             timelineStartTime: Number(selectedSegment.startTime) || 0,
@@ -3277,6 +3383,7 @@ const navigateKeyframes = (property, direction) => {
                 positionX: updatedSegment.positionX ?? (videoPayload.positionX !== undefined ? videoPayload.positionX : newLayers[layerIndex][segmentIndex].positionX || 0),
                 positionY: updatedSegment.positionY ?? (videoPayload.positionY !== undefined ? videoPayload.positionY : newLayers[layerIndex][segmentIndex].positionY || 0),
                 scale: updatedSegment.scale ?? (videoPayload.scale !== undefined ? videoPayload.scale : newLayers[layerIndex][segmentIndex].scale || 1),
+                rotation: updatedSegment.rotation ?? (videoPayload.rotation !== undefined ? videoPayload.rotation : newLayers[layerIndex][segmentIndex].rotation || 0), // Add rotation
                 opacity: updatedSegment.opacity ?? (videoPayload.opacity !== undefined ? videoPayload.opacity : newLayers[layerIndex][segmentIndex].opacity || 1),
                 speed: updatedSegment.speed ?? (videoPayload.speed !== undefined ? videoPayload.speed : newLayers[layerIndex][segmentIndex].speed || 1.0),
                 startTime: updatedSegment.timelineStartTime ?? videoPayload.timelineStartTime,
@@ -3305,6 +3412,7 @@ const navigateKeyframes = (property, direction) => {
           const normalizedImageValues = {
             positionX: tempValues.positionX !== undefined ? Number(tempValues.positionX) : 0,
             positionY: tempValues.positionY !== undefined ? Number(tempValues.positionY) : 0,
+            rotation: tempValues.rotation !== undefined ? Number(tempValues.rotation) : 0, // Add rotation
             scale: tempValues.scale !== undefined ? Number(tempValues.scale) : 1,
             opacity: tempValues.opacity !== undefined ? Number(tempValues.opacity) : 1,
             cropL: tempValues.cropL !== undefined ? Number(tempValues.cropL) : 0,
@@ -3318,6 +3426,7 @@ const navigateKeyframes = (property, direction) => {
             positionX: updatedKeyframes.positionX && updatedKeyframes.positionX.length > 0 ? undefined : normalizedImageValues.positionX,
             positionY: updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0 ? undefined : normalizedImageValues.positionY,
             scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : normalizedImageValues.scale,
+            rotation: updatedKeyframes.rotation && updatedKeyframes.rotation.length > 0 ? undefined : normalizedImageValues.rotation, // Add rotation
             opacity: updatedKeyframes.opacity && updatedKeyframes.opacity.length > 0 ? undefined : normalizedImageValues.opacity,
             layer: Number(selectedSegment.layer) || 0,
             timelineStartTime: Number(selectedSegment.startTime) || 0,
@@ -3360,6 +3469,7 @@ const navigateKeyframes = (property, direction) => {
                 cropB: payload.cropB,
                 positionX: payload.positionX !== undefined ? payload.positionX : newLayers[layerIndex][segmentIndex].positionX || 0,
                 positionY: payload.positionY !== undefined ? payload.positionY : newLayers[layerIndex][segmentIndex].positionY || 0,
+                rotation: payload.rotation !== undefined ? payload.rotation : newLayers[layerIndex][segmentIndex].rotation || 0, // Add rotation
                 scale: payload.scale !== undefined ? payload.scale : newLayers[layerIndex][segmentIndex].scale || 1,
                 opacity: payload.opacity !== undefined ? payload.opacity : newLayers[layerIndex][segmentIndex].opacity || 1,
                 startTime: payload.timelineStartTime,
@@ -3384,6 +3494,7 @@ const navigateKeyframes = (property, direction) => {
             timelineStartTime: selectedSegment.startTime,
             timelineEndTime: selectedSegment.startTime + textSettings.duration,
             layer: selectedSegment.layer,
+            rotation: updatedKeyframes.rotation && updatedKeyframes.rotation.length > 0 ? undefined : tempValues.rotation, // Add rotation
             scale: updatedKeyframes.scale && updatedKeyframes.scale.length > 0 ? undefined : tempValues.scale,
             positionX: updatedKeyframes.positionX && updatedKeyframes.positionX.length > 0 ? undefined : tempValues.positionX,
             positionY: updatedKeyframes.positionY && updatedKeyframes.positionY.length > 0 ? undefined : tempValues.positionY,
@@ -3420,6 +3531,7 @@ const navigateKeyframes = (property, direction) => {
                 fontFamily: textPayload.fontFamily,
                 fontColor: textPayload.fontColor,
                 backgroundColor: textPayload.backgroundColor,
+                rotation: textPayload.rotation !== undefined ? textPayload.rotation : newLayers[layerIndex][segmentIndex].rotation || 0, // Add rotation
                 scale: textPayload.scale !== undefined ? textPayload.scale : newLayers[layerIndex][segmentIndex].scale || 1,
                 positionX: textPayload.positionX !== undefined ? textPayload.positionX : newLayers[layerIndex][segmentIndex].positionX || 0,
                 positionY: textPayload.positionY !== undefined ? textPayload.positionY : newLayers[layerIndex][segmentIndex].positionY || 0,
@@ -4059,10 +4171,8 @@ const filteredElements = elements.filter((element) =>
         areTimesEqual(kf.time, timeInSegment)
       );
       if (existingKeyframe) {
-        // Update existing keyframe
         updateKeyframe('positionX', roundedPositionX);
       } else {
-        // Add new keyframe
         addKeyframe('positionX', roundedPositionX);
       }
     }
@@ -4073,10 +4183,8 @@ const filteredElements = elements.filter((element) =>
         areTimesEqual(kf.time, timeInSegment)
       );
       if (existingKeyframe) {
-        // Update existing keyframe
         updateKeyframe('positionY', roundedPositionY);
       } else {
-        // Add new keyframe
         addKeyframe('positionY', roundedPositionY);
       }
     }
@@ -4272,8 +4380,12 @@ return (
             )}
           </div>
           <div className="media-section">
-            <button className="section-button" data-section="elements" onClick={() => toggleSection('elements')}>
-              Elements
+            <button
+              className="section-button"
+              data-section="elements"
+              onClick={() => toggleSection('elements')}
+            >
+              Elements {userRole === 'BASIC' && <span className="lock-icon">🔒</span>}
             </button>
             {expandedSection === 'elements' && (
               <div className="section-content">
@@ -4302,12 +4414,17 @@ return (
                     {filteredElements.map((element) => (
                       <div
                         key={element.id}
-                        className="element-item"
-                        draggable={true}
-                        onDragStart={(e) => handleMediaDragStart(e, element, 'element')}
-                        onClick={() => handleElementClick(element)}
+                        className={`element-item ${userRole === 'BASIC' ? 'basic-user' : ''}`}
+                        draggable={userRole !== 'BASIC'} // Disable dragging for Basic users
+                        onDragStart={userRole !== 'BASIC' ? (e) => handleMediaDragStart(e, element, 'element') : undefined}
+                        onClick={userRole !== 'BASIC' ? () => handleElementClick(element) : undefined}
+                        title={userRole === 'BASIC' ? 'Elements are accessible to premium users only.' : ''}
                       >
-                        <img src={element.thumbnail || element.filePath} alt={element.displayName} className="element-thumbnail" />
+                        <img
+                          src={element.thumbnail || element.filePath}
+                          alt={element.displayName}
+                          className="element-thumbnail"
+                        />
                         <div className="element-title">{element.displayName}</div>
                       </div>
                     ))}
@@ -4356,6 +4473,16 @@ return (
               </div>
             )}
           </div>
+          <div className="media-section">
+            <button
+              className="section-button coming-soon"
+              data-section="aiSubtitles"
+              disabled
+              aria-disabled="true"
+            >
+              <span>AI Subtitles</span>
+            </button>
+          </div>
         </div>
       )}
     </aside>
@@ -4380,6 +4507,8 @@ return (
             onLoadedAudioSegmentsUpdate={handleLoadedAudioSegmentsUpdate}
             onSegmentSelect={handleSegmentSelect}
             onSegmentPositionUpdate={handleSegmentPositionUpdate}
+            selectedSegment={selectedSegment}
+            updateSegmentProperty={updateSegmentProperty} // Add this prop
           />
         </div>
         <div className={`resize-preview-section ${isDraggingHandle ? 'dragging' : ''}`} onMouseDown={handleMouseDown}></div>
@@ -4576,6 +4705,8 @@ return (
                   <option value="Helvetica">Helvetica</option>
                   <option value="Times New Roman">Times New Roman</option>
                   <option value="Courier New">Courier New</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Impact">Impact</option>
                 </select>
               </div>
               <div className="control-group">
@@ -4645,7 +4776,7 @@ return (
                 <input
                   type="number"
                   value={textSettings.backgroundH}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundH: parseInt(e.target.value)})}
+                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundH: parseInt(e.target.value) })}
                   min="0"
                   step="1"
                   style={{ width: '60px' }}
@@ -4656,7 +4787,7 @@ return (
                 <input
                   type="number"
                   value={textSettings.backgroundW}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundW: parseInt(e.target.value)})}
+                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundW: parseInt(e.target.value) })}
                   min="0"
                   step="1"
                   style={{ width: '60px' }}
@@ -4718,6 +4849,38 @@ return (
                     style={{ width: '60px', marginLeft: '10px' }}
                   />
                 </div>
+              </div>
+              <div className="control-group">
+                <label>Letter Spacing (px)</label>
+                <input
+                  type="number"
+                  value={textSettings.letterSpacing}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 0;
+                    if (value >= 0) {
+                      updateTextSettings({ ...textSettings, letterSpacing: value });
+                    }
+                  }}
+                  min="0"
+                  step="0.1"
+                  style={{ width: '60px' }}
+                />
+              </div>
+              <div className="control-group">
+                <label>Line Spacing</label>
+                <input
+                  type="number"
+                  value={textSettings.lineSpacing}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 0;
+                    if (value >= 0) {
+                      updateTextSettings({ ...textSettings, lineSpacing: value });
+                    }
+                  }}
+                  min="0"
+                  step="0.1"
+                  style={{ width: '60px' }}
+                />
               </div>
               <div className="control-group">
                 <label>Alignment</label>

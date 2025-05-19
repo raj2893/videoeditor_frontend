@@ -5,45 +5,45 @@
 
 /* Container for the keyframe section */
 .keyframe-section {
-  padding: 15px 20px; /* Consistent with tools-panel */
-  background: #1a1a1a; /* Matches tools-panel background */
-  border-radius: 8px; /* Matches ProjectEditor.css border-radius */
-  font-family: 'Montserrat', sans-serif; /* Consistent typography */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
-  overflow-y: auto; /* Vertical scroll only */
-  overflow-x: hidden; /* Prevent horizontal scroll */
-  box-sizing: border-box; /* Ensure padding is included in width */
+  padding: 15px 20px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  font-family: 'Montserrat', sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* Property row styling */
 .property-row {
   margin-bottom: 15px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #2a2a2a; /* Matches ProjectEditor.css border color */
+  border-bottom: 1px solid #2a2a2a;
 }
 
 /* Property header styling */
 .property-header {
   display: flex;
   align-items: center;
-  gap: 10px; /* Slightly increased for better spacing */
+  gap: 10px;
   margin-bottom: 8px;
 }
 
 .property-header label {
-  font-size: 13px; /* Matches ProjectEditor.css font-size for labels */
-  color: #a1a1a1; /* Matches ProjectEditor.css text color */
-  font-weight: 600; /* Consistent with tool-subpanel h3 */
-  text-transform: uppercase; /* Consistent with ProjectEditor.css */
-  letter-spacing: 1px; /* Matches ProjectEditor.css */
+  font-size: 13px;
+  color: #a1a1a1;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   flex-grow: 1;
 }
 
 /* Keyframe toggle button */
 .keyframe-toggle {
   background: transparent;
-  border: 1px solid #2a2a2a; /* Matches ProjectEditor.css borders */
-  font-size: 14px; /* Slightly smaller for balance */
+  border: 1px solid #2a2a2a;
+  font-size: 14px;
   cursor: pointer;
   padding: 4px;
   width: 24px;
@@ -51,102 +51,105 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #d1d1d1; /* Matches ProjectEditor.css text color */
-  border-radius: 6px; /* Matches ProjectEditor.css border-radius */
-  transition: all 0.3s ease; /* Matches ProjectEditor.css transitions */
-  box-shadow: none; /* No glow, consistent with ProjectEditor.css */
-  flex-shrink: 0; /* Prevent shrinking */
+  color: #d1d1d1;
+  border-radius: 6px;
+  /* Limit transition to transform only for hover scaling */
+  transition: transform 0.3s ease;
+  box-shadow: none;
+  flex-shrink: 0;
 }
 
 .keyframe-toggle:hover {
   background: #2a2a2a;
-  border-color: #4A919E; /* Muted teal from ProjectEditor.css */
+  border-color: #4A919E;
   color: #4A919E;
-  transform: scale(1.02); /* Subtle scale for interactivity */
+  transform: scale(1.02);
 }
 
 .keyframe-toggle.active {
-  color: #4A919E; /* Muted teal for active state */
+  color: #4A919E;
   background: #2a2a2a;
   border-color: #4A919E;
+  /* No transition to ensure instant change */
+  transition: none;
 }
 
 /* Property controls container */
 .property-controls {
   display: flex;
   align-items: center;
-  gap: 8px; /* Reduced gap to save space */
+  gap: 8px;
   margin-top: 8px;
-  flex-wrap: nowrap; /* Force elements to stay on the same line */
+  flex-wrap: nowrap;
 }
 
 /* Value scrubber for dragging */
 .value-scrubber {
   cursor: ew-resize;
-  padding: 6px 10px; /* Slightly reduced padding to save space */
-  border: 1px solid #2a2a2a; /* Matches ProjectEditor.css borders */
-  border-radius: 6px; /* Matches ProjectEditor.css */
-  background: #1e1e1e; /* Matches control-group input background */
+  padding: 6px 10px;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  background: #1e1e1e;
   user-select: none;
-  min-width: 60px; /* Reduced from 70px to fit better */
+  min-width: 60px;
   text-align: center;
-  font-size: 12px; /* Matches ProjectEditor.css input font-size */
-  color: #d1d1d1; /* Matches ProjectEditor.css text color */
-  transition: all 0.3s ease; /* Matches ProjectEditor.css transitions */
-  flex-shrink: 0; /* Prevent shrinking */
+  font-size: 12px;
+  color: #d1d1d1;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
 }
 
 .value-scrubber:hover {
   background: #2a2a2a;
-  border-color: #4A919E; /* Muted teal for hover */
+  border-color: #4A919E;
   color: #4A919E;
-  transform: scale(1.02); /* Subtle scale for interactivity */
+  transform: scale(1.02);
 }
 
 /* Keyframe navigation buttons */
 .keyframe-nav {
   display: flex;
-  gap: 6px; /* Reduced gap to save space */
+  gap: 6px;
 }
 
 .keyframe-nav button {
   background: transparent;
-  border: 1px solid #2a2a2a; /* Matches ProjectEditor.css borders */
-  padding: 4px 8px; /* Reduced padding for smaller buttons */
-  border-radius: 6px; /* Matches ProjectEditor.css */
+  border: 1px solid #2a2a2a;
+  padding: 4px 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 11px; /* Slightly smaller for compactness */
-  color: #d1d1d1; /* Matches ProjectEditor.css text color */
-  transition: all 0.3s ease; /* Matches ProjectEditor.css transitions */
-  box-shadow: none; /* No glow */
-  flex-shrink: 0; /* Prevent shrinking */
-  line-height: 1; /* Ensure consistent height */
+  font-size: 11px;
+  color: #d1d1d1;
+  transition: all 0.3s ease;
+  box-shadow: none;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .keyframe-nav button:hover:not(:disabled) {
   background: #2a2a2a;
-  border-color: #4A919E; /* Muted teal for hover */
+  border-color: #4A919E;
   color: #4A919E;
-  transform: scale(1.02); /* Subtle scale */
+  transform: scale(1.02);
 }
 
 .keyframe-nav button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  border-color: #666; /* Matches ProjectEditor.css disabled state */
+  border-color: #666;
 }
 
 /* Mini timeline for keyframes */
 .mini-timeline {
-  width: 100%; /* Use full available width */
-  max-width: 160px; /* Further reduced to ensure fit */
-  height: 24px; /* Slightly taller for better visibility */
-  background: #1e1e1e; /* Matches control-group input background */
-  border: 1px solid #2a2a2a; /* Matches ProjectEditor.css borders */
-  border-radius: 4px; /* Matches ProjectEditor.css */
+  width: 100%;
+  max-width: 160px;
+  height: 24px;
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
   position: relative;
   margin-top: 8px;
-  box-sizing: border-box; /* Ensure border is included in width */
+  box-sizing: border-box;
 }
 
 /* Playhead in the mini timeline */
@@ -154,29 +157,30 @@
   position: absolute;
   width: 2px;
   height: 100%;
-  background: #4A919E; /* Muted teal */
+  background: #4A919E;
   top: 0;
-  /* Remove transform to prevent offset at edges */
-  /* Ensure playhead stays within bounds */
   box-sizing: border-box;
 }
 
 /* Keyframe markers in the timeline */
 .keyframe-marker {
   position: absolute;
-  width: 10px; /* Slightly larger for visibility */
+  width: 10px;
   height: 10px;
-  background: #4A919E; /* Muted teal for consistency */
-  border: 1px solid #d1d1d1; /* Matches ProjectEditor.css text color */
+  background: #4A919E;
+  border: 1px solid #d1d1d1;
   transform: translate(-50%, -50%) rotate(45deg);
   cursor: pointer;
   top: 50%;
-  transition: all 0.3s ease; /* Matches ProjectEditor.css */
+  /* No transition to ensure instant removal */
+  transition: none;
 }
 
 .keyframe-marker:hover {
-  background: #5E8AB4; /* Lighter teal for hover */
-  transform: translate(-50%, -50%) rotate(45deg) scale(1.1); /* Subtle scale */
+  background: #5E8AB4;
+  transform: translate(-50%, -50%) rotate(45deg) scale(1.1);
+  /* Transition only for hover effects */
+  transition: background 0.3s ease, transform 0.3s ease;
 }
 
 /* Crop-specific control styles */
@@ -185,13 +189,13 @@
 }
 
 .property-row.crop-control .property-header label {
-  font-weight: 600; /* Matches ProjectEditor.css */
+  font-weight: 600;
 }
 
 .property-row.crop-control .property-controls input[type="range"] {
-  width: 90px; /* Further reduced to fit better */
-  height: 4px; /* Matches ProjectEditor.css sliders */
-  background: #2a2a2a; /* Matches ProjectEditor.css slider background */
+  width: 90px;
+  height: 4px;
+  background: #2a2a2a;
   border-radius: 4px;
   -webkit-appearance: none;
   transition: all 0.3s ease;
@@ -201,7 +205,7 @@
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: #4A919E; /* Muted teal */
+  background: #4A919E;
   border-radius: 50%;
   cursor: pointer;
 }
@@ -209,15 +213,15 @@
 .property-row.crop-control .property-controls input[type="range"]::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  background: #4A919E; /* Muted teal */
+  background: #4A919E;
   border-radius: 50%;
   cursor: pointer;
 }
 
 .property-row.crop-control .property-controls input[type="number"] {
-  width: 45px; /* Further reduced to fit better */
+  width: 45px;
   padding: 6px;
-  background: #1e1e1e; /* Matches control-group input */
+  background: #1e1e1e;
   color: #d1d1d1;
   border: 1px solid #2a2a2a;
   border-radius: 6px;
@@ -228,16 +232,16 @@
 .custom-error-message {
   display: flex;
   align-items: center;
-  background: #2a2a2a; /* Darker background for subtlety */
-  color: #ff5a5f; /* Matches ProjectEditor.css delete-button color */
+  background: #2a2a2a;
+  color: #ff5a5f;
   padding: 10px 15px;
-  border-radius: 6px; /* Matches ProjectEditor.css */
+  border-radius: 6px;
   margin-bottom: 15px;
-  font-size: 13px; /* Matches ProjectEditor.css */
+  font-size: 13px;
   font-weight: 500;
   animation: slideIn 0.3s ease-out, fadeOut 3s 0.3s forwards;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Subtle shadow */
-  box-sizing: border-box; /* Ensure padding is included in width */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
 }
 
 .custom-error-message span {
@@ -271,32 +275,32 @@
   }
 
   .mini-timeline {
-    max-width: 130px; /* Further reduced for smaller screens */
+    max-width: 130px;
   }
 
   .value-scrubber {
-    min-width: 50px; /* Reduced for smaller screens */
+    min-width: 50px;
     font-size: 11px;
   }
 
   .property-controls {
-    gap: 6px; /* Further reduced gap */
+    gap: 6px;
   }
 
   .keyframe-nav {
-    gap: 4px; /* Further reduced gap */
+    gap: 4px;
   }
 
   .keyframe-nav button {
-    padding: 3px 6px; /* Even smaller buttons */
-    font-size: 10px; /* Smaller font for compactness */
+    padding: 3px 6px;
+    font-size: 10px;
   }
 
   .property-row.crop-control .property-controls input[type="range"] {
-    width: 70px; /* Further reduced for small screens */
+    width: 70px;
   }
 
   .property-row.crop-control .property-controls input[type="number"] {
-    width: 35px; /* Further reduced for small screens */
+    width: 35px;
   }
 }

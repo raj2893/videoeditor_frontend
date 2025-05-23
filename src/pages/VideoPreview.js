@@ -4,6 +4,7 @@ import fx from 'glfx';
 import PropTypes from 'prop-types';
 
 const API_BASE_URL = 'https://videoeditor-app.onrender.com';
+//const API_BASE_URL = "http://localhost:8080";
 const baseFontSize = 24.0;
 
 const VideoPreview = ({
@@ -590,6 +591,10 @@ const VideoPreview = ({
       hue: (value) => `hue-rotate(${parseInt(value)}deg)`,
       grayscale: (value) => (parseFloat(value) > 0 ? `grayscale(1)` : ''),
       invert: (value) => (parseFloat(value) > 0 ? `invert(1)` : ''),
+      blur: (value) => {
+        const blurRadius = parseFloat(value) * 10; // Map 0-1 to 0-10px
+        return blurRadius > 0 ? `blur(${blurRadius}px)` : '';
+      },
       rotate: () => {
         console.log('Rotate filter applied via transform, not CSS filter.');
         return '';

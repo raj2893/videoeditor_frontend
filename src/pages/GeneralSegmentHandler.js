@@ -298,21 +298,30 @@ const GeneralSegmentHandler = ({
 
       let sourceDuration = durationCache.current.get(item.filePath || item.fileName);
       if (sourceDuration === undefined) {
-        if (item.type === 'video') {
-          fetchVideoDuration(item.filePath).then((duration) => {
-            if (duration !== null) {
-              durationCache.current.set(item.filePath, duration);
-            }
-          });
-          sourceDuration = (item.endTimeWithinVideo - item.startTimeWithinVideo) / speed; // Estimate based on current segment
-        } else if (item.type === 'audio') {
-          fetchAudioDuration(item.fileName).then((duration) => {
-            if (duration !== null) {
-              durationCache.current.set(item.fileName, duration);
-            }
-          });
-          sourceDuration = item.duration;
-        }
+          if (item.type === 'video') {
+              fetchVideoDuration(item.filePath).then((duration) => {
+                  if (duration !== null) {
+                      durationCache.current.set(item.filePath, duration);
+                      console.log(`Cached video duration for ${item.filePath}: ${duration}`);
+                  }
+              });
+              sourceDuration = (item.endTimeWithinVideo - item.startTimeWithinVideo) / speed;
+          } else if (item.type === 'audio') {
+              fetchAudioDuration(item.fileName).then((duration) => {
+                  if (duration !== null) {
+                      const roundedDuration = roundToThreeDecimals(duration);
+                      durationCache.current.set(item.fileName, roundedDuration);
+                      console.log(`Cached audio duration for ${item.fileName}: ${duration} -> ${roundedDuration}`);
+                  } else {
+                      console.warn(`Failed to fetch duration for ${item.fileName}`);
+                  }
+              });
+              sourceDuration = roundToThreeDecimals(Math.min(
+                  item.endTimeWithinAudio - item.startTimeWithinAudio,
+                  item.maxDuration || 3600
+              ));
+              console.log(`Using fallback duration for ${item.fileName}: ${sourceDuration}`);
+          }
       }
 
       let closestSnapPoint = null;
@@ -375,52 +384,63 @@ const GeneralSegmentHandler = ({
           newEndWithin = originalEndWithin;
         }
       } else if (resizeEdge === 'right') {
-        const newEndTime = Math.max(newTime, originalStartTime + 0.1);
-        let clampedEndTime = newEndTime;
-        if (minRightBound !== Infinity) {
-          clampedEndTime = Math.min(newEndTime, minRightBound);
-        }
-
-        snapPoints.forEach((point) => {
-          const distance = Math.abs(point.time - clampedEndTime);
-          const currentThreshold = point.type === 'timelineStart' || point.type === 'playhead' ? SNAP_THRESHOLD * 2 : SNAP_THRESHOLD;
-          if (distance < currentThreshold && distance < minDistance) {
-            minDistance = distance;
-            closestSnapPoint = { time: point.time, layerIdx: point.layerIdx, type: point.type, edge: 'end' };
+          const newEndTime = Math.max(newTime, originalStartTime + 0.1);
+          let clampedEndTime = newEndTime;
+          if (minRightBound !== Infinity) {
+              clampedEndTime = Math.min(newEndTime, minRightBound);
           }
-        });
 
-        if (closestSnapPoint) {
-          clampedEndTime = Math.min(minRightBound, closestSnapPoint.time);
-          isSnapping = true;
-          setSnapIndicators([{
-            time: clampedEndTime,
-            layerIdx: resizingItem.layer,
-            edge: 'end',
-            type: closestSnapPoint.type,
-          }]);
-        } else {
-          setSnapIndicators([]);
-        }
+          snapPoints.forEach((point) => {
+              const distance = Math.abs(point.time - clampedEndTime);
+              const currentThreshold = point.type === 'timelineStart' || point.type === 'playhead' ? SNAP_THRESHOLD * 2 : SNAP_THRESHOLD;
+              if (distance < currentThreshold && distance < minDistance) {
+                  minDistance = distance;
+                  closestSnapPoint = { time: point.time, layerIdx: point.layerIdx, type: point.type, edge: 'end' };
+              }
+          });
 
-        newDuration = clampedEndTime - originalStartTime;
-        if (item.type === 'video') {
-          newStartWithin = originalStartWithin;
-          newEndWithin = originalStartWithin + (newDuration * speed); // Scale duration by speed
-          if (newEndWithin > sourceDuration) {
-            newEndWithin = sourceDuration;
-            newDuration = (newEndWithin - originalStartWithin) / speed;
-            clampedEndTime = originalStartTime + newDuration;
+          if (closestSnapPoint) {
+              clampedEndTime = Math.min(minRightBound, closestSnapPoint.time);
+              isSnapping = true;
+              setSnapIndicators([{
+                  time: clampedEndTime,
+                  layerIdx: resizingItem.layer,
+                  edge: 'end',
+                  type: closestSnapPoint.type,
+              }]);
+          } else {
+              setSnapIndicators([]);
           }
-        } else if (item.type === 'audio') {
-          newStartWithin = originalStartWithin;
-          newEndWithin = originalStartWithin + newDuration;
-          if (newEndWithin > sourceDuration) {
-            newEndWithin = sourceDuration;
-            newDuration = newEndWithin - originalStartWithin;
-            clampedEndTime = originalStartTime + newDuration;
+
+          newDuration = clampedEndTime - originalStartTime;
+          if (item.type === 'video') {
+              newStartWithin = originalStartWithin;
+              newEndWithin = originalStartWithin + (newDuration * speed);
+              if (sourceDuration && newEndWithin > sourceDuration) {
+                  newEndWithin = sourceDuration;
+                  newDuration = (newEndWithin - originalStartWithin) / speed;
+                  clampedEndTime = originalStartTime + newDuration;
+              }
+          } else if (item.type === 'audio') {
+              newStartWithin = originalStartWithin;
+              newEndWithin = originalStartWithin + newDuration;
+              console.log(`Audio resize: fileName=${item.fileName}, newEndWithin=${newEndWithin}, sourceDuration=${sourceDuration}`);
+              // Strictly clamp to source duration, aligning with backend's two-decimal precision
+              if (sourceDuration && newEndWithin > sourceDuration) {
+                  const backendSafeDuration = Math.floor(sourceDuration * 100) / 100; // Truncate to two decimals
+                  newEndWithin = roundToThreeDecimals(backendSafeDuration); // Round to three decimals for frontend
+                  newDuration = newEndWithin - originalStartWithin;
+                  clampedEndTime = originalStartTime + newDuration;
+                  console.log(`Clamped audio duration: newEndWithin=${newEndWithin}, newDuration=${newDuration}, sourceDuration=${sourceDuration}, backendSafeDuration=${backendSafeDuration}`);
+              }
+              // Prevent negative or zero duration
+              if (newDuration <= 0.1) {
+                  newDuration = 0.1;
+                  newEndWithin = originalStartWithin + newDuration;
+                  clampedEndTime = originalStartTime + newDuration;
+                  console.log(`Enforced minimum duration: newDuration=${newDuration}, newEndWithin=${newEndWithin}`);
+              }
           }
-        }
       }
 
       // Update DOM directly
@@ -524,14 +544,51 @@ const GeneralSegmentHandler = ({
         };
         await updateImageSegment(item.id, item.startTime, item.layer, item.duration, updatedSettings);
       } else if (item.type === 'audio') {
-        await updateAudioSegment(
-          item.id,
-          item.startTime,
-          item.layer,
-          item.duration,
-          item.startTimeWithinAudio,
-          item.endTimeWithinAudio
-        );
+          const sourceDuration = durationCache.current.get(item.fileName) || roundToThreeDecimals(item.endTimeWithinAudio - item.startTimeWithinAudio);
+          let newEndWithin = resizingItem.tempEndWithin;
+          let newDuration = resizingItem.tempDuration;
+          let newStartWithin = resizingItem.tempStartWithin;
+
+          console.log(`handleResizeEnd: fileName=${item.fileName}, sourceDuration=${sourceDuration}, tempEndWithin=${newEndWithin}, tempDuration=${newDuration}`);
+
+          // Clamp to source duration, aligning with backend's two-decimal precision
+          if (sourceDuration && newEndWithin > sourceDuration) {
+              const backendSafeDuration = Math.floor(sourceDuration * 100) / 100; // Truncate to two decimals
+              newEndWithin = roundToThreeDecimals(backendSafeDuration); // Round to three decimals for frontend
+              newDuration = newEndWithin - newStartWithin;
+              console.log(`Clamped in handleResizeEnd: newEndWithin=${newEndWithin}, newDuration=${newDuration}, sourceDuration=${sourceDuration}, backendSafeDuration=${backendSafeDuration}`);
+              if (newDuration < 0.1) {
+                  newDuration = 0.1;
+                  newEndWithin = newStartWithin + newDuration;
+                  console.log(`Enforced minimum duration in handleResizeEnd: newEndWithin=${newEndWithin}, newDuration=${newDuration}`);
+              }
+          }
+
+          item.startTime = resizingItem.tempStartTime;
+          item.duration = newDuration;
+          item.timelineStartTime = resizingItem.tempStartTime;
+          item.timelineEndTime = resizingItem.tempStartTime + newDuration;
+          item.startTimeWithinAudio = newStartWithin;
+          item.endTimeWithinAudio = newEndWithin;
+
+          // Validate before backend update
+          if (item.endTimeWithinAudio <= item.startTimeWithinAudio) {
+              console.warn('Invalid audio segment times, reverting:', {
+                  startTimeWithinAudio: item.startTimeWithinAudio,
+                  endTimeWithinAudio: item.endTimeWithinAudio,
+              });
+              return;
+          }
+
+          console.log(`Sending to updateAudioSegment: id=${item.id}, endTimeWithinAudio=${item.endTimeWithinAudio}, duration=${item.duration}`);
+          await updateAudioSegment(
+              item.id,
+              item.startTime,
+              item.layer,
+              item.duration,
+              item.startTimeWithinAudio,
+              item.endTimeWithinAudio
+          );
       }
 
       // Restore waveform visibility and trigger update

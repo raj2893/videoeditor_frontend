@@ -613,7 +613,7 @@
 .timeline-section {
   overflow: hidden;
   min-height: 150px;
-  max-height: calc(50% - 46px);
+  max-height: calc(75% - 46px);
   flex-shrink: 1;
   background-color: #1a1a1a;
   border: 2px solid #2a2a2a; /* Increased border width for visibility and consistency */

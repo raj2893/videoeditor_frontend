@@ -138,6 +138,7 @@ const VideoSegmentHandler = ({
           }
 
           // Call addVideoToTimeline with rounded startTime
+          // For new video drop
           const newSegment = await addVideoToTimeline(
             video.filePath,
             targetLayer,
@@ -145,7 +146,6 @@ const VideoSegmentHandler = ({
             null
           );
 
-          // For new video drop
           newVideoLayers[targetLayer].push({
             ...newSegment,
             startTime: roundToThreeDecimals(newSegment.startTime),
@@ -154,15 +154,23 @@ const VideoSegmentHandler = ({
             startTimeWithinVideo: roundToThreeDecimals(newSegment.startTimeWithinVideo || 0),
             endTimeWithinVideo: roundToThreeDecimals(newSegment.endTimeWithinVideo || newSegment.duration),
             duration: roundToThreeDecimals((newSegment.endTimeWithinVideo - newSegment.startTimeWithinVideo) / (newSegment.speed ?? 1.0)),
-            positionX: newSegment.positionX ?? 0, // Add positionX
-            positionY: newSegment.positionY ?? 0, // Add positionY
-            scale: newSegment.scale ?? 1, // Add scale
-            rotation: newSegment.rotation ?? 0, // Add rotation
+            positionX: newSegment.positionX ?? 0,
+            positionY: newSegment.positionY ?? 0,
+            scale: newSegment.scale ?? 1,
+            rotation: newSegment.rotation ?? 0,
             speed: newSegment.speed ?? 1.0,
           });
-          setVideoLayers(newVideoLayers);
-          saveHistory(newVideoLayers, audioLayers);
-          autoSave(newVideoLayers, audioLayers);
+
+          // Update total duration
+          let maxDuration = 0;
+          newVideoLayers.forEach((layer) => {
+            layer.forEach((segment) => {
+              const effectiveDuration = segment.duration;
+              const endTime = segment.startTime + effectiveDuration;
+              if (endTime > maxDuration) maxDuration = endTime;
+            });
+          });
+          setTotalDuration(maxDuration > 0 ? maxDuration : 0);
         }
       }
       return;

@@ -1169,6 +1169,39 @@ html {
   }
 }
 
+.not-logged-in {
+  text-align: left;
+  color: #FF5A5F;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 20px 0;
+  padding: 10px;
+  background: rgba(255, 90, 95, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #FF5A5F;
+}
+
+.login-button {
+  padding: 8px 16px;
+  background: linear-gradient(90deg, #3F8EFC, #B76CFD);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 12px rgba(63, 142, 252, 0.2);
+}
+
+.login-button:hover {
+  background: linear-gradient(90deg, #9446EB, #3F8EFC);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(148, 70, 235, 0.4);
+}
+
 @media (max-width: 768px) {
   :root {
     --nav-s: -61px;

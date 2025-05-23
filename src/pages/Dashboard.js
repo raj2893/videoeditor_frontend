@@ -6,7 +6,8 @@ import { Tilt } from 'react-tilt';
 import '../CSS/Dashboard.css';
 import { FaTrash, FaSignOutAlt, FaBars } from 'react-icons/fa';
 
-const API_BASE_URL = 'https://videoeditor-app.onrender.com';
+//const API_BASE_URL = 'https://videoeditor-app.onrender.com';
+const API_BASE_URL = "http://localhost:8080";
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, projectName }) => {
   if (!isOpen) return null;
@@ -73,24 +74,40 @@ const Dashboard = () => {
   useEffect(() => {
     console.log('Dashboard mounted, location state:', location.state);
     const loadData = async () => {
-      setIsLoading(true);
-      // Initialize profile from localStorage
-      const storedProfile = localStorage.getItem('userProfile');
-      if (storedProfile) {
-        const profile = JSON.parse(storedProfile);
+      const token = localStorage.getItem('token');
+      if (token) {
+        setIsLoading(true);
+        // Initialize profile from localStorage
+        const storedProfile = localStorage.getItem('userProfile');
+        if (storedProfile) {
+          const profile = JSON.parse(storedProfile);
+          setUserProfile({
+            email: profile.email || '',
+            firstName: profile.name ? profile.name.split(' ')[0] : '',
+            lastName: profile.name ? profile.name.split(' ').slice(1).join(' ') : '',
+            picture: profile.picture || null,
+            googleAuth: profile.googleAuth || false,
+            role: profile.role || 'BASIC',
+          });
+        }
+        await fetchUserProfile();
+        await fetchProjects();
+        setIsDataLoaded(true);
+        setIsLoading(false);
+      } else {
+        // For logged-out users, set default state without fetching
         setUserProfile({
-          email: profile.email || '',
-          firstName: profile.name ? profile.name.split(' ')[0] : '',
-          lastName: profile.name ? profile.name.split(' ').slice(1).join(' ') : '',
-          picture: profile.picture || null,
-          googleAuth: profile.googleAuth || false,
-          role: profile.role || 'BASIC', // Initialize role from localStorage
+          email: '',
+          firstName: '',
+          lastName: '',
+          picture: null,
+          googleAuth: false,
+          role: '',
         });
+        setProjects([]);
+        setIsDataLoaded(true);
+        setIsLoading(false);
       }
-      await fetchUserProfile();
-      await fetchProjects();
-      setIsDataLoaded(true);
-      setIsLoading(false);
     };
     loadData();
 
@@ -130,7 +147,7 @@ const Dashboard = () => {
       console.log('Fetching user profile with token:', token);
       if (!token) {
         console.log('No token found, redirecting to login');
-        navigate('/');
+        navigate('/login');
         return;
       }
       const response = await axios.get(`${API_BASE_URL}/auth/me`, {
@@ -169,7 +186,7 @@ const Dashboard = () => {
         console.log('401 Unauthorized, redirecting to login');
         localStorage.removeItem('token');
         localStorage.removeItem('userProfile');
-        navigate('/', { state: { error: 'Session expired. Please log in again.' } });
+        navigate('/login', { state: { error: 'Session expired. Please log in again.' } });
       } else {
         setUserProfile({
           email: '',
@@ -189,7 +206,7 @@ const Dashboard = () => {
       console.log('Fetching projects with token:', token);
       if (!token) {
         console.error('No token found, redirecting to login');
-        navigate('/');
+        navigate('/login');
         return;
       }
 
@@ -337,6 +354,12 @@ const Dashboard = () => {
   };
 
   const createNewProject = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login', { state: { from: 'dashboard', projectData: { name: newProjectName, width, height, fps } } });
+      return;
+    }
+
     if (!newProjectName) {
       setErrorMessage('Please enter a project name.');
       setTimeout(() => setErrorMessage(''), 5000);
@@ -351,13 +374,11 @@ const Dashboard = () => {
 
     // Restriction for Basic users
     if (userProfile.role === 'BASIC') {
-      // Check FPS limit
       if (fps > 30) {
         setErrorMessage('Basic users cannot create projects with more than 30 FPS. Upgrade to Creator or Studio for higher FPS.');
         setTimeout(() => setErrorMessage(''), 5000);
         return;
       }
-      // Check project count limit
       if (projects.length >= 3) {
         setErrorMessage('Basic users can only create up to 3 projects. Upgrade to Creator or Studio for unlimited projects.');
         setTimeout(() => setErrorMessage(''), 5000);
@@ -366,13 +387,6 @@ const Dashboard = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found, redirecting to login');
-        navigate('/');
-        return;
-      }
-
       const response = await axios.post(
         `${API_BASE_URL}/projects`,
         {
@@ -396,7 +410,7 @@ const Dashboard = () => {
         console.log('401 Unauthorized, redirecting to login');
         localStorage.removeItem('token');
         localStorage.removeItem('userProfile');
-        navigate('/', { state: { error: 'Session expired. Please log in again.' } });
+        navigate('/login', { state: { error: 'Session expired. Please log in again.' } });
       } else if (error.response?.status === 400) {
         setErrorMessage('Invalid project parameters: ' + error.response.data);
         setTimeout(() => setErrorMessage(''), 5000);
@@ -408,6 +422,12 @@ const Dashboard = () => {
   };
 
   const deleteProject = async (projectId) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login', { state: { from: 'dashboard', projectId } });
+      return;
+    }
+
     const project = projects.find((p) => p.id === projectId);
     if (!project) return;
 
@@ -422,7 +442,7 @@ const Dashboard = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No token found, redirecting to login');
-        navigate('/');
+        navigate('/login');
         return;
       }
 
@@ -445,7 +465,7 @@ const Dashboard = () => {
         console.log('401 Unauthorized, redirecting to login');
         localStorage.removeItem('token');
         localStorage.removeItem('userProfile');
-        navigate('/', { state: { error: 'Session expired. Please log in again.' } });
+        navigate('/login', { state: { error: 'Session expired. Please log in again.' } });
       } else if (error.response?.status === 403) {
         alert('Unauthorized to delete this project');
       } else if (error.response?.status === 404) {
@@ -462,26 +482,23 @@ const Dashboard = () => {
   };
 
   const loadProject = async (projectId) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/');
-        return;
-      }
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login', { state: { from: 'dashboard', projectId } });
+      return;
+    }
 
-      // Fetch project details
+    try {
       await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      // If the request succeeds, the project belongs to the user
       navigate(`/projecteditor/${projectId}`);
     } catch (error) {
       console.error('Error accessing project:', error);
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('userProfile');
-        navigate('/', { state: { error: 'Session expired. Please log in again.' } });
+        navigate('/login', { state: { error: 'Session expired. Please log in again.' } });
       } else if (error.response?.status === 403 || error.response?.status === 404) {
         navigate('/dashboard', {
           state: { error: 'This Project does not belong to you.' },
@@ -507,7 +524,7 @@ const Dashboard = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userProfile');
     setIsProfileDropdownOpen(false);
-    navigate('/');
+    navigate('/dashboard');
   };
 
   const toggleDropdown = () => {
@@ -638,72 +655,83 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="profile-section">
-            <div className="profile-icon" onClick={toggleProfileDropdown}>
-              {userProfile.picture ? (
-                <>
-                  <img
-                    src={userProfile.picture}
-                    alt="Profile"
-                    className="profile-picture"
-                    onError={handleImageError}
-                    crossOrigin="anonymous"
-                  />
-                  <div className="default-profile-icon" style={{ display: 'none' }}>
-                    {userProfile.firstName && userProfile.firstName.length > 0
-                      ? userProfile.firstName.charAt(0).toUpperCase()
-                      : 'U'}
-                  </div>
-                </>
-              ) : (
-                <div className="default-profile-icon">
-                  {userProfile.firstName && userProfile.firstName.length > 0
-                    ? userProfile.firstName.charAt(0).toUpperCase()
-                    : 'U'}
-                </div>
-              )}
-            </div>
-            {isProfileDropdownOpen && (
-              <div className="profile-dropdown">
-                <div className="profile-header">
-                  <div className="profile-avatar">
-                    {userProfile.picture ? (
-                      <>
-                        <img
-                          src={userProfile.picture}
-                          alt="Profile"
-                          className="dropdown-profile-picture"
-                          onError={handleImageError}
-                          crossOrigin="anonymous"
-                        />
-                        <div className="dropdown-default-avatar" style={{ display: 'none' }}>
-                          {userProfile.firstName && userProfile.firstName.length > 0
-                            ? userProfile.firstName.charAt(0).toUpperCase()
-                            : 'U'}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="dropdown-default-avatar">
+            {userProfile.email ? (
+              <>
+                <div className="profile-icon" onClick={toggleProfileDropdown}>
+                  {userProfile.picture ? (
+                    <>
+                      <img
+                        src={userProfile.picture}
+                        alt="Profile"
+                        className="profile-picture"
+                        onError={handleImageError}
+                        crossOrigin="anonymous"
+                      />
+                      <div className="default-profile-icon" style={{ display: 'none' }}>
                         {userProfile.firstName && userProfile.firstName.length > 0
                           ? userProfile.firstName.charAt(0).toUpperCase()
                           : 'U'}
                       </div>
-                    )}
-                  </div>
-                  <div className="profile-info">
-                    <div className="profile-name">
-                      {(userProfile.firstName || userProfile.lastName)
-                        ? `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim()
-                        : 'Unknown User'}
+                    </>
+                  ) : (
+                    <div className="default-profile-icon">
+                      {userProfile.firstName && userProfile.firstName.length > 0
+                        ? userProfile.firstName.charAt(0).toUpperCase()
+                        : 'U'}
                     </div>
-                    <div className="profile-email">{userProfile.email}</div>
-                    {userProfile.googleAuth && <div className="profile-google-badge">Google</div>}
+                  )}
+                </div>
+                {isProfileDropdownOpen && (
+                  <div className="profile-dropdown">
+                    <div className="profile-header">
+                      <div className="profile-avatar">
+                        {userProfile.picture ? (
+                          <>
+                            <img
+                              src={userProfile.picture}
+                              alt="Profile"
+                              className="dropdown-profile-picture"
+                              onError={handleImageError}
+                              crossOrigin="anonymous"
+                            />
+                            <div className="dropdown-default-avatar" style={{ display: 'none' }}>
+                              {userProfile.firstName && userProfile.firstName.length > 0
+                                ? userProfile.firstName.charAt(0).toUpperCase()
+                                : 'U'}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="dropdown-default-avatar">
+                            {userProfile.firstName && userProfile.firstName.length > 0
+                              ? userProfile.firstName.charAt(0).toUpperCase()
+                              : 'U'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="profile-info">
+                        <div className="profile-name">
+                          {(userProfile.firstName || userProfile.lastName)
+                            ? `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim()
+                            : 'Unknown User'}
+                        </div>
+                        <div className="profile-email">{userProfile.email}</div>
+                        {userProfile.googleAuth && <div className="profile-google-badge">Google</div>}
+                      </div>
+                    </div>
+                    <div className="profile-divider"></div>
+                    <div className="profile-dropdown-item logout-item" onClick={handleLogout}>
+                      <FaSignOutAlt className="dropdown-icon" /> Logout
+                    </div>
                   </div>
-                </div>
-                <div className="profile-divider"></div>
-                <div className="profile-dropdown-item logout-item" onClick={handleLogout}>
-                  <FaSignOutAlt className="dropdown-icon" /> Logout
-                </div>
-              </div>
+                )}
+              </>
+            ) : (
+              <button
+                className="login-button"
+                onClick={() => navigate('/login')}
+              >
+                Login
+              </button>
             )}
           </div>
         </div>
@@ -839,50 +867,54 @@ const Dashboard = () => {
             </motion.p>
           )}
         </AnimatePresence>
-        <div className="project-grid">
-          {projects.length === 0 ? (
-            <p className="no-projects">No projects yet. Create one to get started!</p>
-          ) : (
-            projects.map((project) => (
-              <Tilt key={project.id} options={{ max: 25, scale: 1.05, speed: 400 }}>
-                <motion.div
-                  className="project-card"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                  whileHover={{ y: -10 }}
-                >
-                  <div className="thumbnail-container" onClick={() => loadProject(project.id)}>
-                    {project.thumbnail ? (
-                      <motion.img
-                        src={project.thumbnail}
-                        alt={`${project.name} thumbnail`}
-                        className="project-thumbnail"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    ) : (
-                      <div className="thumbnail-placeholder">No Preview Available</div>
-                    )}
-                    <motion.div
-                      className="delete-icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteProject(project.id);
-                      }}
-                      title="Delete Project"
-                      whileHover={{ scale: 1.2 }}
-                    >
-                      <FaTrash />
-                    </motion.div>
-                  </div>
-                  <h3 className="project-title">{project.name}</h3>
-                </motion.div>
-              </Tilt>
-            ))
-          )}
-        </div>
+        {userProfile.email ? (
+          <div className="project-grid">
+            {projects.length === 0 ? (
+              <p className="no-projects">No projects yet. Create one to get started!</p>
+            ) : (
+              projects.map((project) => (
+                <Tilt key={project.id} options={{ max: 25, scale: 1.05, speed: 400 }}>
+                  <motion.div
+                    className="project-card"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    whileHover={{ y: -10 }}
+                  >
+                    <div className="thumbnail-container" onClick={() => loadProject(project.id)}>
+                      {project.thumbnail ? (
+                        <motion.img
+                          src={project.thumbnail}
+                          alt={`${project.name} thumbnail`}
+                          className="project-thumbnail"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.3 }}
+                        />
+                      ) : (
+                        <div className="thumbnail-placeholder">No Preview Available</div>
+                      )}
+                      <motion.div
+                        className="delete-icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteProject(project.id);
+                        }}
+                        title="Delete Project"
+                        whileHover={{ scale: 1.2 }}
+                      >
+                        <FaTrash />
+                      </motion.div>
+                    </div>
+                    <h3 className="project-title">{project.name}</h3>
+                  </motion.div>
+                </Tilt>
+              ))
+            )}
+          </div>
+        ) : (
+          <p className="not-logged-in">You are not logged-in!</p>
+        )}
       </section>
 
       <section className="about-us-section" id="about-us-section">

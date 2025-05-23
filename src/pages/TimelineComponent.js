@@ -68,6 +68,7 @@ const TimelineComponent = ({
 
   const SNAP_THRESHOLD = 0.5;
   const API_BASE_URL = 'https://videoeditor-app.onrender.com';
+//  const API_BASE_URL = "http://localhost:8080";
   const MIN_TIME_SCALE = 0.1;
   const MAX_TIME_SCALE = 200;
   const MAGNETIC_THRESHOLD = 0.2; // Time in seconds for magnetic snap to playhead
@@ -80,12 +81,12 @@ const TimelineComponent = ({
   const initializeWaveform = useCallback(async (segment) => {
     if (!segment.waveformJsonPath || segment.type !== 'audio') {
       console.warn(`Skipping waveform initialization for segment ${segment.id}: ${!segment.waveformJsonPath ? 'Missing waveformJsonPath' : 'Not an audio segment'}`);
-      return undefined; // Explicitly return undefined
+      return undefined;
     }
     const segmentId = segment.id;
     if (waveSurferInstances.current.has(segmentId)) {
       console.log(`Waveform for segment ${segmentId} already initialized`);
-      return undefined; // Skip if already initialized
+      return undefined;
     }
 
     try {
@@ -116,9 +117,43 @@ const TimelineComponent = ({
         return undefined;
       }
 
+      // Calculate pixel width of the segment
+      const segmentDuration = endTime - startTime;
+      const pixelWidth = segmentDuration * timeScale;
+
+      // Skip rendering if waveform is too small (less than 10 pixels)
+      if (pixelWidth < 10) {
+        console.log(`Skipping waveform rendering for segment ${segmentId}: pixelWidth=${pixelWidth} is too small`);
+        return undefined;
+      }
+
+      // Dynamically adjust barWidth and barGap based on timeScale and duration
+      const baseBarWidth = 2;
+      const baseBarGap = 1;
+      const scaleFactor = Math.max(0.1, Math.min(1, timeScale / 100)); // Adjust based on timeScale
+      const barWidth = Math.max(1, baseBarWidth * scaleFactor);
+      const barGap = Math.max(0.5, baseBarGap * scaleFactor);
+
       const startIndex = Math.floor((startTime / fullDuration) * peaks.length);
-      const endIndex = Math.ceil((endTime / fullDuration) * peaks.length);
+      let endIndex = Math.ceil((endTime / fullDuration) * peaks.length);
+
+      // Ensure endIndex does not exceed peaks.length
+      endIndex = Math.min(endIndex, peaks.length);
+
+      // Ensure at least one peak is included if startIndex equals endIndex
+      if (startIndex === endIndex && endIndex < peaks.length) {
+        endIndex = startIndex + 1;
+      } else if (startIndex >= endIndex) {
+        console.warn(`Invalid index range for segment ${segmentId}: startIndex=${startIndex}, endIndex=${endIndex}`);
+        return undefined;
+      }
+
       const slicedPeaks = peaks.slice(startIndex, endIndex);
+
+      if (slicedPeaks.length === 0) {
+        console.warn(`No peaks available for segment ${segmentId} after slicing: startIndex=${startIndex}, endIndex=${endIndex}`);
+        return undefined;
+      }
 
       const wavesurfer = WaveSurfer.create({
         container: `#${containerId}`,
@@ -127,14 +162,14 @@ const TimelineComponent = ({
         height: 30,
         normalize: false,
         cursorWidth: 0,
-        barWidth: 2,
-        barGap: 1,
+        barWidth,
+        barGap,
       });
 
       wavesurfer.load(segment.url, slicedPeaks, sampleRate);
       waveSurferInstances.current.set(segmentId, wavesurfer);
 
-      console.log(`Waveform initialized for segment ${segmentId}`);
+      console.log(`Waveform initialized for segment ${segmentId} with barWidth=${barWidth}, barGap=${barGap}, pixelWidth=${pixelWidth}`);
 
       return () => {
         console.log(`Cleaning up waveform for segment ${segmentId}`);
@@ -145,7 +180,7 @@ const TimelineComponent = ({
       console.error(`Error initializing waveform for segment ${segmentId}:`, error);
       return undefined;
     }
-  }, []);
+  }, [timeScale]); // Add timeScale as a dependency
 
   // Update waveform for a specific segment (called after resize)
   const updateWaveform = useCallback((segment) => {
@@ -167,13 +202,55 @@ const TimelineComponent = ({
     const startTime = segment.startTimeWithinAudio || 0;
     const endTime = segment.endTimeWithinAudio || segment.duration;
 
+    // Calculate pixel width of the segment
+    const segmentDuration = endTime - startTime;
+    const pixelWidth = segmentDuration * timeScale;
+
+    // Destroy waveform if too small
+    if (pixelWidth < 10) {
+      console.log(`Destroying waveform for segment ${segmentId}: pixelWidth=${pixelWidth} is too small`);
+      wavesurfer.destroy();
+      waveSurferInstances.current.delete(segmentId);
+      return;
+    }
+
+    // Dynamically adjust barWidth and barGap
+    const baseBarWidth = 2;
+    const baseBarGap = 1;
+    const scaleFactor = Math.max(0.1, Math.min(1, timeScale / 100));
+    const barWidth = Math.max(1, baseBarWidth * scaleFactor);
+    const barGap = Math.max(0.5, baseBarGap * scaleFactor);
+
     const startIndex = Math.floor((startTime / fullDuration) * peaks.length);
-    const endIndex = Math.ceil((endTime / fullDuration) * peaks.length);
+    let endIndex = Math.ceil((endTime / fullDuration) * peaks.length);
+
+    // Ensure endIndex does not exceed peaks.length
+    endIndex = Math.min(endIndex, peaks.length);
+
+    // Ensure at least one peak is included if startIndex equals endIndex
+    if (startIndex === endIndex && endIndex < peaks.length) {
+      endIndex = startIndex + 1;
+    } else if (startIndex >= endIndex) {
+      console.warn(`Invalid index range for segment ${segmentId}: startIndex=${startIndex}, endIndex=${endIndex}`);
+      wavesurfer.destroy();
+      waveSurferInstances.current.delete(segmentId);
+      return;
+    }
+
     const slicedPeaks = peaks.slice(startIndex, endIndex);
 
+    if (slicedPeaks.length === 0) {
+      console.warn(`No peaks available for segment ${segmentId} after slicing: startIndex=${startIndex}, endIndex=${endIndex}`);
+      wavesurfer.destroy();
+      waveSurferInstances.current.delete(segmentId);
+      return;
+    }
+
+    // Update WaveSurfer options
+    wavesurfer.setOptions({ barWidth, barGap });
     wavesurfer.load(segment.url, slicedPeaks, sampleRate);
-    console.log(`Waveform updated for segment ${segmentId}`);
-  }, []);
+    console.log(`Waveform updated for segment ${segmentId} with barWidth=${barWidth}, barGap=${barGap}, pixelWidth=${pixelWidth}`);
+  }, [timeScale]); // Add timeScale as a dependency
 
   // Initialize waveforms only on mount or when new segments are added
   useEffect(() => {

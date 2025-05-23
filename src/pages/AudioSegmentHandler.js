@@ -256,7 +256,7 @@ const AudioSegmentHandler = ({
               audio.fileName
             )}`,
             displayName: audio.displayName || audio.fileName.split('/').pop(),
-            waveformImage: audio.waveformImage || '/images/audio.jpeg',
+            waveformJsonPath: audio.waveformJsonPath || null, // Ensure waveformJsonPath is set
             startTime: roundToThreeDecimals(adjustedStartTime),
             duration: roundToThreeDecimals(audio.duration),
             timelineStartTime: roundToThreeDecimals(adjustedStartTime),
@@ -330,12 +330,14 @@ const AudioSegmentHandler = ({
               finalSegmentId = `${finalSegmentId}-${uuidv4()}`;
             }
 
+            // Update waveformJsonPath based on backend response
+            const waveformJsonPath = newAudioSegment.waveformJsonPath
+              ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(
+                  newAudioSegment.waveformJsonPath.split('/').pop()
+                )}`
+              : audio.waveformJsonPath || null;
+
             setAudioLayers((prevLayers) => {
-              const waveformImage = newAudioSegment.waveformPath
-                ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(
-                    newAudioSegment.waveformPath.split('/').pop()
-                  )}`
-                : '/images/audio.jpeg';
               const updatedLayers = prevLayers.map((layer, index) => {
                 if (index === targetLayerIndex) {
                   return layer.map((item) =>
@@ -359,7 +361,7 @@ const AudioSegmentHandler = ({
                           ),
                           volume: newAudioSegment.volume || 1.0,
                           keyframes: newAudioSegment.keyframes || {},
-                          waveformImage,
+                          waveformJsonPath: waveformJsonPath,
                           isExtracted: newAudioSegment.isExtracted || false,
                         }
                       : item

@@ -16,11 +16,6 @@ const TransitionsPanel = ({
           { value: 'in', label: 'Zoom In' },
           { value: 'out', label: 'Zoom Out' },
         ];
-      case 'Rotate':
-        return [
-          { value: 'clockwise', label: 'Clockwise' },
-          { value: 'counterclockwise', label: 'Counterclockwise' },
-        ];
       case 'Slide':
         return [
           { value: 'right', label: 'Right' },

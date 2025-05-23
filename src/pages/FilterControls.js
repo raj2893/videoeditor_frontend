@@ -191,33 +191,33 @@ const FilterControls = ({
                 />
               </div>
             </div>
-          </div>
-
-          {/* Transformation */}
-          <div className="filter-group">
-            <h4>Transformation</h4>
             <div className="control-group">
-              <label>Rotate (-180 to 180°)</label>
+              <label>Blur (0 to 1)</label>
               <div className="slider-container">
                 <input
                   type="range"
-                  min="-180"
-                  max="180"
-                  step="1"
-                  value={filterParams.rotate !== undefined ? filterParams.rotate : 0}
-                  onChange={(e) => updateFilterSetting('rotate', parseInt(e.target.value))}
+                  min="0"
+                  max="10"
+                  step="0.01"
+                  value={filterParams.blur !== undefined ? filterParams.blur : 0}
+                  onChange={(e) => updateFilterSetting('blur', parseFloat(e.target.value))}
                 />
                 <input
                   type="number"
-                  value={filterParams.rotate !== undefined ? filterParams.rotate : 0}
-                  onChange={(e) => updateFilterSetting('rotate', parseInt(e.target.value))}
-                  step="1"
-                  min="-180"
-                  max="180"
+                  value={filterParams.blur !== undefined ? filterParams.blur : 0}
+                  onChange={(e) => updateFilterSetting('blur', parseFloat(e.target.value))}
+                  step="0.01"
+                  min="0"
+                  max="1"
                   style={{ width: '60px', marginLeft: '10px' }}
                 />
               </div>
             </div>
+          </div>
+
+          {/* Transformation */}
+          <div className="filter-group">
+            <h4>Transformation</h4>              
             <div className="control-group">
               <label style={{ marginBottom: '10px' }}>Flip</label>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>

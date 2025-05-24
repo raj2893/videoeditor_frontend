@@ -1284,94 +1284,6 @@
   left: 10%;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .project-editor {
-    flex-direction: column;
-  }
-
-  .media-panel {
-    width: 100%;
-    max-height: 35vh;
-  }
-
-  .media-panel.closed {
-    max-height: 40px;
-  }
-
-  .tools-panel {
-    width: 100%;
-    max-height: 35vh;
-  }
-
-  .tools-panel.closed {
-    max-height: 40px;
-  }
-
-  .main-content {
-    flex: 1;
-  }
-
-  .preview-section {
-    min-height: 150px;
-    background-color: #1a1a1a; /* Lighter background than #0d0d0d */
-  }
-
-  .controls-panel {
-    flex-wrap: wrap;
-    height: auto;
-  }
-
-  .timeline-section {
-    min-height: 100px;
-    max-height: 25vh;
-  }
-}
-
-@media (max-width: 480px) {
-  .media-panel,
-  .tools-panel {
-    max-height: 30vh;
-  }
-
-  .preview-section {
-    min-height: 120px;
-    background-color: #1a1a1a; /* Lighter background than #0d0d0d */
-  }
-
-  .timeline-section {
-    min-height: 80px;
-    max-height: 20vh;
-  }
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .toggle-button {
-    padding: 8px 0; /* Add top and bottom padding for mobile */
-    justify-content: center; /* Ensure horizontal centering */
-  }
-
-  .media-panel.closed .toggle-button,
-  .tools-panel.closed .toggle-button {
-    padding: 8px 0; /* Consistent padding in closed state */
-    justify-content: center; /* Ensure horizontal centering */
-  }
-}
-
-@media (max-width: 480px) {
-  .toggle-button {
-    padding: 6px 0; /* Slightly reduced padding for smaller screens */
-    justify-content: center; /* Ensure horizontal centering */
-  }
-
-  .media-panel.closed .toggle-button,
-  .tools-panel.closed .toggle-button {
-    padding: 6px 0; /* Consistent padding in closed state */
-    justify-content: center; /* Ensure horizontal centering */
-  }
-}
-
 .tool-subpanel {
   margin-top: 0; /* Remove top margin since it's now inside tools-section */
   padding: 12px;
@@ -1537,59 +1449,6 @@
   100% { left: calc(50% + var(--nav-s)); }
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  :root {
-    --nav-s: -61px;
-    --nav-c: -41px;
-    --nav-e: -20px;
-    --nav-n: 0px;
-    --nav-i: 20px;
-    --nav-t: 41px;
-    --nav-h: 56px;
-  }
-
-  .branding-container h1 {
-    font-size: 20px;
-  }
-
-  .branding-container .logo-element {
-    width: 20px;
-    height: 20px;
-  }
-
-  .branding-container .logo-element::before {
-    width: 6px;
-    height: 6px;
-  }
-}
-
-@media (max-width: 480px) {
-  :root {
-    --nav-s: -55px;
-    --nav-c: -36.5px;
-    --nav-e: -18px;
-    --nav-n: 0px;
-    --nav-i: 18px;
-    --nav-t: 36.5px;
-    --nav-h: 50px;
-  }
-
-  .branding-container h1 {
-    font-size: 18px;
-  }
-
-  .branding-container .logo-element {
-    width: 18px;
-    height: 18px;
-  }
-
-  .branding-container .logo-element::before {
-    width: 5px;
-    height: 5px;
-  }
-}
-
 textarea {
   outline: none;
 }
@@ -1718,4 +1577,148 @@ textarea[style*="border: 2px solid red"] {
 
 .section-button[data-section="aiSubtitles"][disabled] {
   pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  /* Project Editor Layout */
+  .project-editor {
+    flex-direction: column;
+  }
+
+  /* Media Panel */
+  .media-panel {
+    width: 100%;
+    max-height: 35vh;
+  }
+
+  .media-panel.closed {
+    max-height: 40px;
+  }
+
+  /* Tools Panel */
+  .tools-panel {
+    width: 100%;
+    max-height: 35vh;
+  }
+
+  .tools-panel.closed {
+    max-height: 40px;
+  }
+
+  /* Main Content */
+  .main-content {
+    flex: 1;
+  }
+
+  /* Preview Section */
+  .preview-section {
+    min-height: 150px;
+    background-color: #1a1a1a; /* Lighter background than #0d0d0d */
+  }
+
+  /* Controls Panel */
+  .controls-panel {
+    flex-wrap: wrap;
+    height: auto;
+  }
+
+  /* Timeline Section */
+  .timeline-section {
+    min-height: 100px;
+    max-height: 25vh;
+  }
+
+  /* Toggle Button */
+  .toggle-button {
+    padding: 8px 0; /* Add top and bottom padding for mobile */
+    justify-content: center; /* Ensure horizontal centering */
+  }
+
+  .media-panel.closed .toggle-button,
+  .tools-panel.closed .toggle-button {
+    padding: 8px 0; /* Consistent padding in closed state */
+    justify-content: center; /* Ensure horizontal centering */
+  }
+
+  /* Branding Container */
+  :root {
+    --nav-s: -61px;
+    --nav-c: -41px;
+    --nav-e: -20px;
+    --nav-n: 0px;
+    --nav-i: 20px;
+    --nav-t: 41px;
+    --nav-h: 56px;
+  }
+
+  .branding-container h1 {
+    font-size: 20px;
+  }
+
+  .branding-container .logo-element {
+    width: 20px;
+    height: 20px;
+  }
+
+  .branding-container .logo-element::before {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Media and Tools Panels */
+  .media-panel,
+  .tools-panel {
+    max-height: 30vh;
+  }
+
+  /* Preview Section */
+  .preview-section {
+    min-height: 120px;
+    background-color: #1a1a1a; /* Lighter background than #0d0d0d */
+  }
+
+  /* Timeline Section */
+  .timeline-section {
+    min-height: 80px;
+    max-height: 20vh;
+  }
+
+  /* Toggle Button */
+  .toggle-button {
+    padding: 6px 0; /* Slightly reduced padding for smaller screens */
+    justify-content: center; /* Ensure horizontal centering */
+  }
+
+  .media-panel.closed .toggle-button,
+  .tools-panel.closed .toggle-button {
+    padding: 6px 0; /* Consistent padding in closed state */
+    justify-content: center; /* Ensure horizontal centering */
+  }
+
+  /* Branding Container */
+  :root {
+    --nav-s: -55px;
+    --nav-c: -36.5px;
+    --nav-e: -18px;
+    --nav-n: 0px;
+    --nav-i: 18px;
+    --nav-t: 36.5px;
+    --nav-h: 50px;
+  }
+
+  .branding-container h1 {
+    font-size: 18px;
+  }
+
+  .branding-container .logo-element {
+    width: 18px;
+    height: 18px;
+  }
+
+  .branding-container .logo-element::before {
+    width: 5px;
+    height: 5px;
+  }
 }

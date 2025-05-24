@@ -927,3 +927,444 @@
   width: 3px; /* Slightly thicker for visibility */
   z-index: 1000;
 }
+
+@media (max-width: 768px) {
+  /* Timeline Container */
+  .timeline-container {
+    width: 100%; /* Full width on mobile */
+    margin: 0; /* Remove margins for edge-to-edge layout */
+  }
+
+  /* Timeline Controls */
+  .timeline-controls {
+    padding: 8px; /* Reduced padding */
+    flex-wrap: wrap; /* Allow wrapping for smaller screens */
+  }
+
+  .timeline-controls button {
+    margin-right: 6px; /* Reduced margin */
+    padding: 4px 8px; /* Smaller padding */
+    font-size: 11px; /* Smaller font size */
+    border-radius: 6px; /* Slightly smaller border radius */
+  }
+
+  .time-display {
+    margin: 0 10px; /* Reduced margin */
+    font-size: 11px; /* Smaller font size */
+  }
+
+  /* Add Text Button */
+  .add-text-control button {
+    padding: 4px 10px; /* Reduced padding */
+    font-size: 11px; /* Smaller font size */
+    gap: 4px; /* Reduced gap */
+    border-radius: 6px; /* Smaller border radius */
+  }
+
+  .add-text-control button:before {
+    width: 14px; /* Smaller icon */
+    height: 14px; /* Smaller icon */
+    line-height: 14px; /* Adjust line height */
+    font-size: 10px; /* Smaller font for "T" */
+  }
+
+  /* Split Control Button */
+  .split-control button {
+    margin-left: 6px; /* Reduced margin */
+    padding: 4px; /* Smaller padding */
+    font-size: 14px; /* Smaller icon size */
+    border-radius: 6px; /* Smaller border radius */
+  }
+
+  /* Timeline Scroll Container */
+  .timeline-scroll-container {
+    min-height: 120px; /* Reduced minimum height */
+  }
+
+  /* Timeline Ruler */
+  .timeline-ruler {
+    height: 25px; /* Reduced height */
+  }
+
+  .marker-label {
+    font-size: 9px; /* Smaller font size */
+  }
+
+  .marker-line {
+    height: 12px; /* Reduced marker line height */
+  }
+
+  /* Timeline Layer */
+  .timeline-layer {
+    height: 35px; /* Reduced layer height */
+  }
+
+  .layer-label {
+    font-size: 11px; /* Smaller font size */
+    top: 4px; /* Adjust position */
+    left: 4px; /* Adjust position */
+  }
+
+  /* Timeline Item */
+  .timeline-item {
+    height: 26px; /* Reduced height */
+    top: 4px; /* Adjust position */
+    border-radius: 3px; /* Smaller border radius */
+  }
+
+  .text-segment-preview,
+  .audio-segment-preview,
+  .image-segment-preview {
+    font-size: 11px; /* Smaller font size */
+    padding: 2px; /* Reduced padding */
+  }
+
+  .text-segment-icon,
+  .audio-segment-icon {
+    font-size: 10px; /* Smaller icon size */
+    margin-right: 3px; /* Reduced margin */
+    padding: 0 1px; /* Reduced padding */
+  }
+
+  .video-title {
+    font-size: 11px; /* Smaller font size */
+    padding: 3px; /* Reduced padding */
+  }
+
+  .resize-handle {
+    width: 6px; /* Smaller resize handle */
+  }
+
+  .resize-handle.resize-left {
+    left: -3px; /* Adjust position */
+  }
+
+  .resize-handle.resize-right {
+    right: -3px; /* Adjust position */
+  }
+
+  /* Audio Section Label */
+  .audio-section-label {
+    height: 18px; /* Reduced height */
+    line-height: 18px; /* Adjust line height */
+    font-size: 11px; /* Smaller font size */
+    padding-left: 8px; /* Reduced padding */
+  }
+
+  /* New Layer Drop Area */
+  .new-layer-drop-area {
+    min-height: 18px; /* Reduced height */
+  }
+
+  /* Transition Overlay */
+  .transition-overlay {
+    height: 18px; /* Reduced height */
+  }
+
+  .transition-label {
+    font-size: 9px; /* Smaller font size */
+  }
+
+  .resize-handle.transition-resize-left,
+  .resize-handle.transition-resize-right {
+    width: 4px; /* Smaller resize handle */
+  }
+
+  /* Text Segment Dialog */
+  .text-segment-dialog {
+    width: 280px; /* Reduced width */
+  }
+
+  .dialog-header {
+    padding: 8px 12px; /* Reduced padding */
+  }
+
+  .dialog-header h3 {
+    font-size: 14px; /* Smaller font size */
+  }
+
+  .close-button {
+    font-size: 18px; /* Smaller icon size */
+  }
+
+  .dialog-content {
+    padding: 12px; /* Reduced padding */
+  }
+
+  .form-group {
+    margin-bottom: 10px; /* Reduced margin */
+  }
+
+  .form-row {
+    gap: 10px; /* Reduced gap */
+    margin-bottom: 10px; /* Reduced margin */
+  }
+
+  .form-group label {
+    font-size: 11px; /* Smaller font size */
+    margin-bottom: 3px; /* Reduced margin */
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="number"],
+  .form-group textarea,
+  .form-group select {
+    padding: 5px 6px; /* Reduced padding */
+    font-size: 11px; /* Smaller font size */
+    border-radius: 3px; /* Smaller border radius */
+  }
+
+  .form-group input[type="range"] {
+    width: 75%; /* Slightly smaller width */
+  }
+
+  .form-group input[type="range"]::-webkit-slider-thumb,
+  .form-group input[type="range"]::-moz-range-thumb {
+    width: 10px; /* Smaller thumb */
+    height: 10px; /* Smaller thumb */
+  }
+
+  .form-group input[type="color"] {
+    width: 28px; /* Smaller color picker */
+    height: 28px; /* Smaller color picker */
+  }
+
+  .form-group span {
+    width: 32px; /* Smaller width */
+    font-size: 11px; /* Smaller font size */
+  }
+
+  .dialog-buttons {
+    margin-top: 12px; /* Reduced margin */
+    gap: 6px; /* Reduced gap */
+  }
+
+  .cancel-button,
+  .save-button {
+    padding: 5px 12px; /* Reduced padding */
+    font-size: 11px; /* Smaller font size */
+    border-radius: 6px; /* Smaller border radius */
+  }
+}
+
+@media (max-width: 480px) {
+  /* Timeline Container */
+  .timeline-container {
+    width: 100%; /* Full width */
+    margin: 0; /* No margins */
+  }
+
+  /* Timeline Controls */
+  .timeline-controls {
+    padding: 6px; /* Further reduced padding */
+    flex-direction: column; /* Stack controls vertically */
+    align-items: flex-start; /* Align to start */
+  }
+
+  .timeline-controls button {
+    margin-right: 0; /* Remove right margin */
+    margin-bottom: 6px; /* Add bottom margin for stacking */
+    padding: 3px 6px; /* Smaller padding */
+    font-size: 10px; /* Smaller font size */
+    border-radius: 5px; /* Smaller border radius */
+  }
+
+  .time-display {
+    margin: 5px 0; /* Adjusted margin */
+    font-size: 10px; /* Smaller font size */
+  }
+
+  /* Add Text Button */
+  .add-text-control button {
+    padding: 3px 8px; /* Smaller padding */
+    font-size: 10px; /* Smaller font size */
+    gap: 3px; /* Smaller gap */
+    border-radius: 5px; /* Smaller border radius */
+  }
+
+  .add-text-control button:before {
+    width: 12px; /* Smaller icon */
+    height: 12px; /* Smaller icon */
+    line-height: 12px; /* Adjust line height */
+    font-size: 9px; /* Smaller font for "T" */
+  }
+
+  /* Split Control Button */
+  .split-control button {
+    margin-left: 0; /* Remove left margin */
+    margin-bottom: 6px; /* Add bottom margin */
+    padding: 3px; /* Smaller padding */
+    font-size: 12px; /* Smaller icon size */
+    border-radius: 5px; /* Smaller border radius */
+  }
+
+  /* Timeline Scroll Container */
+  .timeline-scroll-container {
+    min-height: 100px; /* Further reduced minimum height */
+  }
+
+  /* Timeline Ruler */
+  .timeline-ruler {
+    height: 20px; /* Further reduced height */
+  }
+
+  .marker-label {
+    font-size: 8px; /* Smaller font size */
+  }
+
+  .marker-line {
+    height: 10px; /* Further reduced marker line height */
+  }
+
+  /* Timeline Layer */
+  .timeline-layer {
+    height: 30px; /* Further reduced layer height */
+  }
+
+  .layer-label {
+    font-size: 10px; /* Smaller font size */
+    top: 3px; /* Adjust position */
+    left: 3px; /* Adjust position */
+  }
+
+  /* Timeline Item */
+  .timeline-item {
+    height: 24px; /* Further reduced height */
+    top: 3px; /* Adjust position */
+    border-radius: 2px; /* Smaller border radius */
+  }
+
+  .text-segment-preview,
+  .audio-segment-preview,
+  .image-segment-preview {
+    font-size: 10px; /* Smaller font size */
+    padding: 1px; /* Reduced padding */
+  }
+
+  .text-segment-icon,
+  .audio-segment-icon {
+    font-size: 9px; /* Smaller icon size */
+    margin-right: 2px; /* Reduced margin */
+    padding: 0 1px; /* Reduced padding */
+  }
+
+  .video-title {
+    font-size: 10px; /* Smaller font size */
+    padding: 2px; /* Reduced padding */
+  }
+
+  .resize-handle {
+    width: 5px; /* Smaller resize handle */
+  }
+
+  .resize-handle.resize-left {
+    left: -2.5px; /* Adjust position */
+  }
+
+  .resize-handle.resize-right {
+    right: -2.5px; /* Adjust position */
+  }
+
+  /* Audio Section Label */
+  .audio-section-label {
+    height: 16px; /* Further reduced height */
+    line-height: 16px; /* Adjust line height */
+    font-size: 10px; /* Smaller font size */
+    padding-left: 6px; /* Reduced padding */
+  }
+
+  /* New Layer Drop Area */
+  .new-layer-drop-area {
+    min-height: 16px; /* Further reduced height */
+  }
+
+  /* Transition Overlay */
+  .transition-overlay {
+    height: 16px; /* Further reduced height */
+  }
+
+  .transition-label {
+    font-size: 8px; /* Smaller font size */
+  }
+
+  .resize-handle.transition-resize-left,
+  .resize-handle.transition-resize-right {
+    width: 3px; /* Smaller resize handle */
+  }
+
+  /* Text Segment Dialog */
+  .text-segment-dialog {
+    width: 240px; /* Further reduced width */
+  }
+
+  .dialog-header {
+    padding: 6px 10px; /* Further reduced padding */
+  }
+
+  .dialog-header h3 {
+    font-size: 13px; /* Smaller font size */
+  }
+
+  .close-button {
+    font-size: 16px; /* Smaller icon size */
+  }
+
+  .dialog-content {
+    padding: 10px; /* Further reduced padding */
+  }
+
+  .form-group {
+    margin-bottom: 8px; /* Further reduced margin */
+  }
+
+  .form-row {
+    gap: 8px; /* Further reduced gap */
+    margin-bottom: 8px; /* Further reduced margin */
+  }
+
+  .form-group label {
+    font-size: 10px; /* Smaller font size */
+    margin-bottom: 2px; /* Reduced margin */
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="number"],
+  .form-group textarea,
+  .form-group select {
+    padding: 4px 5px; /* Further reduced padding */
+    font-size: 10px; /* Smaller font size */
+    border-radius: 2px; /* Smaller border radius */
+  }
+
+  .form-group input[type="range"] {
+    width: 70%; /* Further reduced width */
+  }
+
+  .form-group input[type="range"]::-webkit-slider-thumb,
+  .form-group input[type="range"]::-moz-range-thumb {
+    width: 8px; /* Smaller thumb */
+    height: 8px; /* Smaller thumb */
+  }
+
+  .form-group input[type="color"] {
+    width: 24px; /* Smaller color picker */
+    height: 24px; /* Smaller color picker */
+  }
+
+  .form-group span {
+    width: 28px; /* Smaller width */
+    font-size: 10px; /* Smaller font size */
+  }
+
+  .dialog-buttons {
+    margin-top: 10px; /* Further reduced margin */
+    gap: 5px; /* Further reduced gap */
+  }
+
+  .cancel-button,
+  .save-button {
+    padding: 4px 10px; /* Further reduced padding */
+    font-size: 10px; /* Smaller font size */
+    border-radius: 5px; /* Smaller border radius */
+  }
+}

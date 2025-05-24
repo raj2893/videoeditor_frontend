@@ -3,6 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../CSS/Auth.css";
 
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
+// const API_BASE_URL = "http://localhost:8080";
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +46,7 @@ const Login = () => {
 
     setIsLoading(true); // Show loading state
     try {
-      const response = await axios.post("https://videoeditor-app.onrender.com/auth/login", {
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email,
         password,
       });
@@ -78,7 +81,7 @@ const Login = () => {
     setErrors({});
     setIsLoading(true);
     try {
-      const response = await axios.post("https://videoeditor-app.onrender.com/auth/google", {
+      const response = await axios.post(`${API_BASE_URL}/auth/google`, {
         token: credentialResponse.credential,
       });
       localStorage.setItem("token", response.data.token);

@@ -7,6 +7,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ProjectEditor from "./pages/ProjectEditor";
 import DeveloperLogin from "./pages/DeveloperLogin";
 import DeveloperDashboard from "./pages/DeveloperDashboard";
+import ExportPage from "./pages/ExportPage";
 
 function TitleAndFaviconManager() {
   const location = useLocation();
@@ -39,6 +40,8 @@ function TitleAndFaviconManager() {
         default:
           if (location.pathname.startsWith('/projecteditor/')) {
             document.title = 'Scenith | Project Editor';
+          } else if (location.pathname.startsWith('/export/')){
+            document.title = 'Scenith | Export';
           } else {
             document.title = 'Scenith';
           }
@@ -64,6 +67,7 @@ function App() {
         <Route path="/projecteditor/:projectId" element={<ProjectEditor />} />
         <Route path="/developer-login" element={<DeveloperLogin />} />
         <Route path="/developer-dashboard" element={<DeveloperDashboard />} />
+        <Route path="/export/:projectId" element={<ExportPage />} />
       </Routes>
     </Router>
   );

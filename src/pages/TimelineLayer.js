@@ -53,11 +53,11 @@ const TimelineLayer = ({
             top: '5px',
           };
           const isSelected = item.id === selectedSegmentId;
-
+        
           const itemTransitions = transitions.filter(
             (t) => t.segmentId === item.id && t.layer === layerIndex
           );
-
+        
           return (
             <div
               key={item.id}
@@ -130,8 +130,8 @@ const TimelineLayer = ({
               {(item.type === 'video' || item.type === 'image') && (
                 <div className="video-title">
                   {item.type === 'video'
-                    ? item.title || item.displayPath || item.filePath || item.filename || 'Unnamed Video'
-                    : item.fileName || 'Unnamed Image'}
+                    ? item.displayName || item.fileName || 'Unnamed Video'
+                    : item.displayName || item.fileName || 'Unnamed Image'}
                 </div>
               )}
               {isSelected && (

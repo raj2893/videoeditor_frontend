@@ -3,6 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import '../CSS/VerifyEmail.css';
 
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
+// const API_BASE_URL = "http://localhost:8080";
+
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -28,7 +31,7 @@ const VerifyEmail = () => {
       try {
         console.log('Sending verification request for token:', verificationToken);
         const response = await axios.get(
-          `https://videoeditor-app.onrender.com/auth/verify-email?token=${verificationToken}`,
+          `${API_BASE_URL}/auth/verify-email?token=${verificationToken}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -79,7 +82,7 @@ const VerifyEmail = () => {
     }
 
     try {
-      await axios.post('https://videoeditor-app.onrender.com/auth/resend-verification', null, {
+      await axios.post(`${API_BASE_URL}/auth/resend-verification`, null, {
         params: { email },
       });
       setStatus({ message: 'Verification email resent successfully! Check your inbox.', type: 'success' });

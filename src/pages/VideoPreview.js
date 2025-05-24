@@ -4,7 +4,7 @@ import fx from 'glfx';
 import PropTypes from 'prop-types';
 
 const API_BASE_URL = 'https://videoeditor-app.onrender.com';
-//const API_BASE_URL = "http://localhost:8080";
+// const API_BASE_URL = "http://localhost:8080";
 const baseFontSize = 24.0;
 
 const VideoPreview = ({
@@ -25,6 +25,7 @@ const VideoPreview = ({
   onSegmentSelect,
   onSegmentPositionUpdate,
   selectedSegment, // New prop for the selected segment
+  projectId, // Add projectId
 }) => {
   const [loadingVideos, setLoadingVideos] = useState(new Set());
   const [preloadComplete, setPreloadComplete] = useState(false);
@@ -252,98 +253,107 @@ const VideoPreview = ({
 
   // Initialize audio elements with Web Audio API
   useEffect(() => {
-    console.log('Audio initialization useEffect triggered with audioLayers:', audioLayers);
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.error('No token found in localStorage for audio initialization');
-      return;
+  console.log('Audio initialization useEffect triggered with audioLayers:', audioLayers);
+
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+  const promises = audioLayers.flat().map((segment) => {
+    console.log(`Processing audio segment ${segment.id}:`, segment);
+    if (!segment.url) {
+      console.warn(`No URL for audio segment ${segment.id}:`, segment);
+      return Promise.resolve();
     }
 
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioRefs.current[segment.id]) {
+      console.log(`Audio element for ${segment.id} already exists`);
+      setLoadedAudioSegments((prev) => new Set(prev).add(segment.id));
+      return Promise.resolve();
+    }
 
-    const promises = audioLayers.flat().map((segment) => {
-      console.log(`Processing audio segment ${segment.id}:`, segment);
-      if (!segment.url) {
-        console.warn(`No URL for audio segment ${segment.id}:`, segment);
-        return Promise.resolve();
-      }
+    console.log(`Creating audio element for segment ${segment.id}: ${segment.url}`);
+    const audio = new Audio();
+    audio.crossOrigin = 'anonymous';
+    audio.preload = 'auto';
+    audio.playbackRate = 1.0;
+    audio.volume = 1.0;
 
-      if (audioRefs.current[segment.id]) {
-        console.log(`Audio element for ${segment.id} already exists`);
-        setLoadedAudioSegments((prev) => new Set(prev).add(segment.id));
-        return Promise.resolve();
-      }
+    const source = audioContext.createMediaElementSource(audio);
+    const gainNode = audioContext.createGain();
+    source.connect(gainNode);
+    gainNode.connect(audioContext.destination);
 
-      console.log(`Creating audio element for segment ${segment.id}: ${segment.url}`);
-      const audio = new Audio();
-      audio.crossOrigin = 'anonymous';
-      audio.preload = 'auto';
-      audio.playbackRate = 1.0;
-      audio.volume = 1.0; // Set to maximum to allow gain node to control volume
+    audioContextRefs.current[segment.id] = { audioContext, source, gainNode };
 
-      // Set up Web Audio API
-      const source = audioContext.createMediaElementSource(audio);
-      const gainNode = audioContext.createGain();
-      source.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+    // Construct URL
+    const audioUrl = segment.url.startsWith('http')
+      ? segment.url
+      : `${API_BASE_URL}/projects/${segment.projectId || 136}/audio/${encodeURIComponent(segment.audioPath.split('/').pop())}`;
+    audio.src = audioUrl;
 
-      audioContextRefs.current[segment.id] = { audioContext, source, gainNode };
+    return new Promise((resolve) => {
+      let hasErrored = false;
+      let hasLoaded = false;
 
-      return fetch(segment.url, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((response) => {
-          console.log(`Fetch response for audio ${segment.id}:`, response.status, response.statusText);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch audio ${segment.url}: ${response.status} ${response.statusText}`);
-          }
-          return response.blob();
-        })
-        .then((blob) => {
-          const blobUrl = URL.createObjectURL(blob);
-          audio.src = blobUrl;
+      audio.addEventListener('loadeddata', () => {
+        console.log(`Audio ${segment.id} loadeddata event fired, readyState: ${audio.readyState}`);
+        hasLoaded = true;
+        if (!hasErrored) {
           audioRefs.current[segment.id] = audio;
           setLoadedAudioSegments((prev) => new Set(prev).add(segment.id));
-          console.log(`Audio ${segment.id} loaded with blob URL: ${blobUrl}`);
-          audio.addEventListener('loadeddata', () => {
-            console.log(`Audio ${segment.id} loadeddata event fired`);
-          });
-          audio.addEventListener('error', (e) => {
-            console.error(`Error loading audio ${segment.url}:`, e);
-          });
-        })
-        .catch((error) => {
-          console.error(`Error fetching audio ${segment.url}:`, error);
-        });
-    });
-
-    Promise.all(promises).then(() => {
-      console.log('Updated audioRefs:', Object.keys(audioRefs.current));
-    });
-
-    return () => {
-      console.log('Cleaning up audio elements and Web Audio API');
-      Object.entries(audioRefs.current).forEach(([id, audio]) => {
-        audio.pause();
-        if (audio.src) {
-          URL.revokeObjectURL(audio.src);
-          audio.src = '';
         }
-        delete audioRefs.current[id];
-        setLoadedAudioSegments((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(id);
-          return newSet;
-        });
+        resolve();
       });
-      Object.entries(audioContextRefs.current).forEach(([id, { source, gainNode }]) => {
-        source.disconnect();
-        gainNode.disconnect();
-        delete audioContextRefs.current[id];
+
+      audio.addEventListener('error', (e) => {
+        hasErrored = true;
+        console.error(`Error loading audio ${audioUrl}:`, e, { readyState: audio.readyState, hasLoaded });
+        if (!hasLoaded) {
+          fetch(audioUrl)
+            .then((response) => {
+              if (!response.ok) {
+                return response.text().then((text) => {
+                  throw new Error(`Fetch failed: ${response.status} ${response.statusText} - ${text}`);
+                });
+              }
+              console.log(`Manual fetch succeeded for ${audioUrl}`);
+              return response.blob();
+            })
+            .catch((fetchError) => {
+              console.error(`Manual fetch error for ${audioUrl}:`, fetchError);
+            });
+        }
+        resolve();
       });
-      audioContext.close().catch((e) => console.error('Error closing AudioContext:', e));
-    };
-  }, [audioLayers]);
+    });
+  });
+
+  Promise.all(promises).then(() => {
+    console.log('Updated audioRefs:', Object.keys(audioRefs.current));
+  });
+
+  return () => {
+    console.log('Cleaning up audio elements and Web Audio API');
+    Object.entries(audioRefs.current).forEach(([id, audio]) => {
+      audio.pause();
+      if (audio.src) {
+        URL.revokeObjectURL(audio.src);
+        audio.src = '';
+      }
+      delete audioRefs.current[id];
+      setLoadedAudioSegments((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    });
+    Object.entries(audioContextRefs.current).forEach(([id, { source, gainNode }]) => {
+      source.disconnect();
+      gainNode.disconnect();
+      delete audioContextRefs.current[id];
+    });
+    audioContext.close().catch((e) => console.error('Error closing AudioContext:', e));
+  };
+}, [audioLayers]);
 
   // Share loadedAudioSegments with parent
   useEffect(() => {
@@ -659,11 +669,9 @@ const VideoPreview = ({
     const preloadVideos = () => {
       const allVideoItems = videoLayers.flat().filter((item) => item.type === 'video');
       const preloadPromises = allVideoItems.map((item) => {
-        const normalizedFilePath = item.filePath.startsWith('videos/')
-          ? item.filePath.substring(7)
-          : item.filePath;
-        const videoUrl = `${API_BASE_URL}/videos/${encodeURIComponent(normalizedFilePath)}`;
-
+        const filename = item.filePath.split('/').pop();
+        const videoUrl = `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(filename)}`;
+  
         if (!preloadRefs.current[item.id]) {
           const video = document.createElement('video');
           video.preload = 'auto';
@@ -673,7 +681,7 @@ const VideoPreview = ({
           video.style.display = 'none';
           document.body.appendChild(video);
           preloadRefs.current[item.id] = video;
-
+  
           return new Promise((resolve) => {
             video.onloadedmetadata = () => {
               setVideoDimensions((prev) => ({
@@ -696,23 +704,23 @@ const VideoPreview = ({
               resolve();
             };
             video.onerror = () => {
-              console.error(`Failed to preload video ${item.filePath}`);
+              console.error(`Failed to preload video ${videoUrl}`);
               resolve();
             };
           });
         }
         return Promise.resolve();
       });
-
+  
       setLoadingVideos(new Set(allVideoItems.map((item) => item.id)));
       Promise.all(preloadPromises).then(() => {
         setPreloadComplete(true);
         console.log('All videos preloaded');
       });
     };
-
+  
     preloadVideos();
-
+  
     return () => {
       Object.values(preloadRefs.current).forEach((video) => {
         video.pause();
@@ -728,7 +736,7 @@ const VideoPreview = ({
       preloadRefs.current = {};
       glTextureRefs.current = {};
     };
-  }, [videoLayerIds]);
+  }, [videoLayerIds, projectId]);
 
   useEffect(() => {
     const preloadImages = () => {
@@ -761,22 +769,20 @@ const VideoPreview = ({
   useEffect(() => {
     const visibleElements = getVisibleElements();
     const setVideoTimeFunctions = new Map();
-
+  
     visibleElements.forEach((element) => {
       if (element.type === 'video') {
         const videoRef = videoRefs.current[element.id];
         if (videoRef) {
-          const normalizedFilePath = element.filePath.startsWith('videos/')
-            ? element.filePath.substring(7)
-            : element.filePath;
-          const videoUrl = `${API_BASE_URL}/videos/${encodeURIComponent(normalizedFilePath)}`;
-
+          const filename = element.filePath.split('/').pop();
+          const videoUrl = `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(filename)}`;
+  
           if (!videoRef.src) {
             videoRef.src = videoUrl;
             videoRef.crossOrigin = 'anonymous';
             videoRef.load();
           }
-
+  
           // Set playback rate based on speed
           const speed = element.speed || 1.0;
           if (speed < 0.1 || speed > 5.0) {
@@ -785,10 +791,9 @@ const VideoPreview = ({
           } else {
             videoRef.playbackRate = speed;
           }
-
+  
           const setVideoTime = () => {
             const startTimeWithinVideo = element.startTimeWithinVideo || 0;
-            // Adjust localTime by speed to get the correct position in the video
             const adjustedLocalTime = element.localTime * speed;
             const targetTime = startTimeWithinVideo + adjustedLocalTime;
             if (Math.abs(videoRef.currentTime - targetTime) > 0.05) {
@@ -797,13 +802,13 @@ const VideoPreview = ({
             }
           };
           setVideoTimeFunctions.set(element.id, setVideoTime);
-
+  
           if (videoRef.readyState >= 2) {
             setVideoTime();
           } else {
             videoRef.addEventListener('loadeddata', setVideoTime, { once: true });
           }
-
+  
           if (isPlaying && preloadComplete) {
             videoRef.play().catch((error) => console.error('Playback error:', error));
           } else {
@@ -812,14 +817,14 @@ const VideoPreview = ({
         }
       }
     });
-
+  
     const visibleIds = visibleElements.map((el) => el.id);
     Object.entries(videoRefs.current).forEach(([id, videoRef]) => {
       if (!visibleIds.includes(id) && videoRef) {
         videoRef.pause();
       }
     });
-
+  
     return () => {
       setVideoTimeFunctions.forEach((setVideoTime, id) => {
         const videoRef = videoRefs.current[id];
@@ -828,7 +833,7 @@ const VideoPreview = ({
         }
       });
     };
-  }, [currentTime, isPlaying, videoLayers, preloadComplete]);
+  }, [currentTime, isPlaying, videoLayers, preloadComplete, projectId]);
 
   useEffect(() => {
     if (previewContainerRef.current) {

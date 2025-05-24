@@ -3,6 +3,9 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import "../CSS/Auth.css";
 
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
+// const API_BASE_URL = "http://localhost:8080";
+
 const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,7 +57,7 @@ const Signup = () => {
     if (!validate()) return;
 
     try {
-      const response = await axios.post("https://videoeditor-app.onrender.com/auth/register", {
+      const response = await axios.post(`${API_BASE_URL}/auth/register`, {
         email,
         password,
         name,
@@ -81,7 +84,7 @@ const Signup = () => {
 
   const resendVerification = async () => {
     try {
-      await axios.post("https://videoeditor-app.onrender.com/auth/resend-verification", null, {
+      await axios.post(`${API_BASE_URL}/auth/resend-verification`, null, {
         params: { email },
       });
       setServerError("Verification email resent successfully!");
@@ -96,7 +99,7 @@ const Signup = () => {
 
   const handleGoogleSignup = useCallback(async (credentialResponse) => {
     try {
-      const response = await axios.post("https://videoeditor-app.onrender.com/auth/google", {
+      const response = await axios.post(`${API_BASE_URL}/auth/google`, {
         token: credentialResponse.credential,
       });
       localStorage.setItem("token", response.data.token);

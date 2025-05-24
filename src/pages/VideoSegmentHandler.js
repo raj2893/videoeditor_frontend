@@ -52,11 +52,12 @@ const VideoSegmentHandler = ({
         endTime: endTimeWithinVideo !== undefined
           ? roundToThreeDecimals(endTimeWithinVideo)
           : roundToThreeDecimals(item.endTimeWithinVideo || newDuration),
-        positionX: item.positionX ?? 0, // Add positionX
-        positionY: item.positionY ?? 0, // Add positionY
-        scale: item.scale ?? 1, // Add scale
-        rotation: item.rotation ?? 0, // Add rotation
+        positionX: item.positionX ?? 0,
+        positionY: item.positionY ?? 0,
+        scale: item.scale ?? 1,
+        rotation: item.rotation ?? 0,
         speed: item.speed ?? 1.0,
+        displayName: item.displayName || item.filePath.split('/').pop(),
       };
       await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-segment`,
@@ -140,7 +141,7 @@ const VideoSegmentHandler = ({
           // Call addVideoToTimeline with rounded startTime
           // For new video drop
           const newSegment = await addVideoToTimeline(
-            video.filePath,
+            video.fileName,
             targetLayer,
             roundToThreeDecimals(adjustedStartTime),
             null
@@ -154,6 +155,7 @@ const VideoSegmentHandler = ({
             startTimeWithinVideo: roundToThreeDecimals(newSegment.startTimeWithinVideo || 0),
             endTimeWithinVideo: roundToThreeDecimals(newSegment.endTimeWithinVideo || newSegment.duration),
             duration: roundToThreeDecimals((newSegment.endTimeWithinVideo - newSegment.startTimeWithinVideo) / (newSegment.speed ?? 1.0)),
+            filePath: `videos/projects/${projectId}/${video.fileName}`, // Ensure correct filePath format
             positionX: newSegment.positionX ?? 0,
             positionY: newSegment.positionY ?? 0,
             scale: newSegment.scale ?? 1,
@@ -337,6 +339,11 @@ const VideoSegmentHandler = ({
           startTime: roundToThreeDecimals(originalVideoStartTime),
           endTime: roundToThreeDecimals(originalVideoStartTime + firstPartVideoDuration),
           speed: speed,
+          positionX: item.positionX ?? 0,
+          positionY: item.positionY ?? 0,
+          scale: item.scale ?? 1,
+          rotation: item.rotation ?? 0,
+          displayName: item.displayName || item.filePath.split('/').pop(),
         },
         {
           params: { sessionId },
@@ -345,11 +352,11 @@ const VideoSegmentHandler = ({
       );
       console.log(`Successfully updated first part: ${item.id}`);
 
-      // Add second part to timeline via backend
+      const filename = item.filePath.split('/').pop();
       const addResponse = await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-to-timeline`,
         {
-          videoPath: item.filePath,
+          videoPath: filename,
           layer: layerIndex,
           timelineStartTime: roundToThreeDecimals(secondPart.startTime),
           timelineEndTime: roundToThreeDecimals(secondPart.timelineEndTime),
@@ -357,6 +364,10 @@ const VideoSegmentHandler = ({
           endTime: roundToThreeDecimals(secondPart.endTimeWithinVideo),
           createAudioSegment: false,
           speed: speed,
+          positionX: secondPart.positionX ?? 0,
+          positionY: secondPart.positionY ?? 0,
+          scale: secondPart.scale ?? 1,
+          rotation: secondPart.rotation ?? 0,
         },
         {
           params: { sessionId },
@@ -374,8 +385,6 @@ const VideoSegmentHandler = ({
           console.error(`Temporary second part ${secondPartId} not found`);
           return prev;
         }
-
-        // Update second part in videoLayers with backend data
         updatedLayer[secondPartIndex] = {
           ...secondPart,
           id: videoSegmentId,
@@ -385,12 +394,13 @@ const VideoSegmentHandler = ({
           timelineEndTime: roundToThreeDecimals(secondPart.timelineEndTime),
           startTimeWithinVideo: roundToThreeDecimals(secondPart.startTimeWithinVideo),
           endTimeWithinVideo: roundToThreeDecimals(secondPart.endTimeWithinVideo),
-          filePath: item.filePath,
-          positionX: secondPart.positionX ?? 0, // Add positionX
-          positionY: secondPart.positionY ?? 0, // Add positionY
-          scale: secondPart.scale ?? 1, // Add scale
-          rotation: secondPart.rotation ?? 0, // Add rotation
+          filePath: `videos/projects/${projectId}/${filename}`,
+          positionX: secondPart.positionX ?? 0,
+          positionY: secondPart.positionY ?? 0,
+          scale: secondPart.scale ?? 1,
+          rotation: secondPart.rotation ?? 0,
           speed: speed,
+          displayName: item.displayName || filename,
         };
         newLayers[layerIndex] = updatedLayer;
         return newLayers;
@@ -422,9 +432,12 @@ const VideoSegmentHandler = ({
     try {
       const token = localStorage.getItem('token');
       const filename = filePath.split('/').pop();
-      const response = await axios.get(`${API_BASE_URL}/videos/duration/${encodeURIComponent(filename)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/projects/${projectId}/video-duration/${encodeURIComponent(filename)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       return response.data; // Duration is not rounded as it is not one of the specified properties
     } catch (error) {
       console.error('Error fetching video duration:', error);

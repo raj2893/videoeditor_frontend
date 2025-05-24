@@ -1262,7 +1262,73 @@ html {
   }
 
   .dropdown-menu {
-    width: 280px;
+    position: fixed; /* Use fixed to position relative to viewport */
+    top: 140px; /* Adjust to account for nav height and padding */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Center the dropdown */
+    width: 90vw; /* Maintain viewport width scaling */
+    max-width: 320px; /* Keep max width */
+    padding: 20px; /* Retain padding */
+    border-radius: 15px; /* Keep softer corners */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); /* Retain shadow */
+    z-index: 100; /* Ensure it appears above other elements */
+  }
+
+  .dropdown-title {
+    font-size: 1rem; /* Slightly smaller for mobile */
+    text-align: center; /* Center title for better aesthetics */
+    padding-bottom: 10px; /* More space below title */
+    margin-bottom: 12px;
+  }
+
+  .dropdown-form {
+    display: flex;
+    flex-direction: column; /* Stack inputs vertically */
+    gap: 10px; /* Consistent spacing between inputs */
+  }
+
+  .dropdown-input {
+    padding: 10px; /* More padding for touch targets */
+    font-size: 0.9rem; /* Slightly larger text for readability */
+    border-radius: 10px; /* Match softer corners */
+    border: 1px solid rgba(63, 142, 252, 0.5); /* Slightly stronger border */
+  }
+
+  .dimension-inputs {
+    flex-direction: column; /* Stack dimension inputs vertically */
+    gap: 10px; /* Consistent spacing */
+  }
+
+  .dimension-input {
+    width: 100%; /* Full width for easier input */
+  }
+
+  .dropdown-presets {
+    display: flex;
+    flex-direction: column; /* Vertical stacking for presets */
+    gap: 8px; /* Tighter spacing for presets */
+    max-height: 200px; /* Limit height to prevent overflow */
+    overflow-y: auto; /* Enable scrolling for presets */
+    padding-right: 5px; /* Space for scrollbar */
+  }
+
+  .dropdown-subtitle {
+    font-size: 0.75rem; /* Smaller subtitle for hierarchy */
+    text-align: left; /* Align left for consistency */
+    padding: 8px 0; /* More padding for separation */
+  }
+
+  .dropdown-item {
+    padding: 10px; /* Larger touch target */
+    font-size: 0.85rem; /* Slightly smaller for fit */
+    border-radius: 8px; /* Softer corners */
+  }
+
+  .dropdown-create-button {
+    padding: 12px; /* Larger touch target */
+    font-size: 0.95rem; /* Slightly larger text */
+    border-radius: 10px; /* Match softer corners */
+    margin-top: 10px; /* Space above button */
   }
 
   .branding-container h1 {
@@ -1358,8 +1424,36 @@ html {
   }
 
   .dropdown-menu {
-    width: 100%;
-    max-width: 260px;
+    position: fixed; /* Use fixed for smaller screens */
+    top: 130px; /* Slightly closer due to smaller nav */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Center the dropdown */
+    width: 95vw; /* Maximize width */
+    max-width: 280px; /* Constrain max width */
+    padding: 15px; /* Retain padding */
+  }
+
+  .dropdown-title {
+    font-size: 0.95rem; /* Further reduce size */
+  }
+
+  .dropdown-input {
+    padding: 8px; /* Slightly smaller padding */
+    font-size: 0.85rem; /* Adjust text size */
+  }
+
+  .dropdown-presets {
+    max-height: 180px; /* Slightly shorter for smaller screens */
+  }
+
+  .dropdown-item {
+    padding: 8px; /* Slightly smaller touch target */
+    font-size: 0.8rem; /* Smaller text for fit */
+  }
+
+  .dropdown-create-button {
+    padding: 10px; /* Adjust padding */
+    font-size: 0.9rem; /* Slightly smaller text */
   }
 
   .branding-container h1 {

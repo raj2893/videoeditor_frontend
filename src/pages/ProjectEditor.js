@@ -13,8 +13,8 @@ import TransitionsPanel from './TransitionsPanel';
 import { v4 as uuidv4 } from 'uuid';
 import WaveSurfer from 'wavesurfer.js';
 
-//const API_BASE_URL = 'https://videoeditor-app.onrender.com';
-const API_BASE_URL = "https://videoeditor-app.onrender.com";
+const API_BASE_URL = 'https://videoeditor-app.onrender.com';
+// const API_BASE_URL = "http://localhost:8080";
 
 const ProjectEditor = () => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -1457,23 +1457,66 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
   }, [location.state?.error, navigate]);
 
   const fetchVideos = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/videos/my-videos`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const updatedVideos = response.data.map((video) => ({
-        ...video,
-        filePath: video.filePath || video.filename,
-        displayPath: video.title || (video.filePath || video.filename).split('/').pop(),
-      }));
-      setVideos(updatedVideos);
-      await Promise.all(updatedVideos.map((video) => generateVideoThumbnail(video)));
-      setThumbnailsGenerated(true);
-    } catch (error) {
-      console.error('Error fetching videos:', error);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const project = response.data;
+    if (project.videosJson) {
+      let videoFiles =
+        typeof project.videosJson === 'string' ? JSON.parse(project.videosJson) : project.videosJson;
+      if (Array.isArray(videoFiles)) {
+        const updatedVideos = await Promise.all(
+          videoFiles.map(async (video) => {
+            const fullFileName = video.videoPath.split('/').pop();
+            const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
+            // Sanitize the filename for use in id
+            const sanitizedId = `video-${fullFileName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
+            let duration = video.duration;
+            if (!duration) {
+              try {
+                const durationResponse = await axios.get(
+                  `${API_BASE_URL}/projects/${projectId}/video-duration/${encodeURIComponent(fullFileName)}`,
+                  {
+                    headers: { Authorization: `Bearer ${token}` },
+                  }
+                );
+                duration = durationResponse.data;
+              } catch (error) {
+                console.error(`Error fetching duration for video ${fullFileName}:`, error);
+                duration = 5; // Fallback duration
+              }
+            }
+            return {
+              id: sanitizedId,
+              fileName: fullFileName,
+              displayName: originalFileName,
+              filePath: `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(fullFileName)}`,
+              duration: duration,
+              audioPath: video.audioPath
+                ? `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(video.audioPath.split('/').pop())}`
+                : null,
+              waveformJsonPath: video.waveformJsonPath
+                ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(video.waveformJsonPath.split('/').pop())}`
+                : null,
+            };
+          })
+        );
+        setVideos(updatedVideos);
+        await Promise.all(updatedVideos.map((video) => generateVideoThumbnail(video)));
+        setThumbnailsGenerated(true);
+      } else {
+        setVideos([]);
+      }
+    } else {
+      setVideos([]);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching videos:', error);
+    setVideos([]);
+  }
+};
 
 const fetchAudios = async () => {
   try {
@@ -1653,26 +1696,25 @@ const preloadMedia = () => {
   document.body.appendChild(preloadContainer);
 
   videoLayers.forEach((layer) => {
-    layer.forEach((segment) => {
-      if (segment.type === 'video' && segment.filePath) {
-        const video = document.createElement('video');
-        const normalizedFilePath = segment.filePath.startsWith('videos/')
-          ? segment.filePath.substring(7)
-          : segment.filePath;
-        video.src = `${API_BASE_URL}/videos/${encodeURIComponent(normalizedFilePath)}`;
-        video.preload = 'auto';
-        video.muted = true;
-        video.className = 'preload-media';
-        preloadContainer.appendChild(video);
-        video.load();
-      } else if (segment.type === 'image' && segment.filePath) {
-        const img = document.createElement('img');
-        img.src = segment.filePath;
-        img.className = 'preload-media';
-        preloadContainer.appendChild(img);
-      }
-    });
+  layer.forEach((segment) => {
+    if (segment.type === 'video' && segment.filePath) {
+      const video = document.createElement('video');
+      // Extract filename from filePath (e.g., 'videos/projects/{projectId}/filename.mp4')
+      const fileName = segment.filePath.split('/').pop();
+      video.src = `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(fileName)}`;
+      video.preload = 'auto';
+      video.muted = true;
+      video.className = 'preload-media';
+      preloadContainer.appendChild(video);
+      video.load();
+    } else if (segment.type === 'image' && segment.filePath) {
+      const img = document.createElement('img');
+      img.src = segment.filePath;
+      img.className = 'preload-media';
+      preloadContainer.appendChild(img);
+    }
   });
+});
 
   audioLayers.forEach((layer) => {
     layer.forEach((segment) => {
@@ -1703,7 +1745,17 @@ const preloadMedia = () => {
             typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
           const newVideoLayers = [[], [], []];
           const newAudioLayers = [[], [], []];
-
+  
+          // Map filters to segments
+          const filterMap = {};
+          (timelineState.filters || []).forEach((filter) => {
+            if (!filterMap[filter.segmentId]) {
+              filterMap[filter.segmentId] = [];
+            }
+            filterMap[filter.segmentId].push(filter);
+          });
+  
+          // Process video segments
           if (timelineState.segments && timelineState.segments.length > 0) {
             for (const segment of timelineState.segments) {
               const layerIndex = segment.layer || 0;
@@ -1712,59 +1764,83 @@ const preloadMedia = () => {
                 while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
               }
               if (segment.sourceVideoPath) {
-                const video = videos.find((v) => {
-                  const vPath = v.filePath || v.filename;
-                  const normalizedVPath = vPath.startsWith('videos/') ? vPath.substring(7) : vPath;
-                  const normalizedVideoPath = segment.sourceVideoPath.startsWith('videos/')
-                    ? segment.sourceVideoPath.substring(7)
-                    : segment.sourceVideoPath;
-                  return normalizedVPath === normalizedVideoPath;
-                });
+                let videoFileName = segment.sourceVideoPath.split('/').pop();
+                let video = videos.find((v) => v.fileName === videoFileName);
                 if (video) {
+                  const thumbnail = await generateVideoThumbnail(segment.sourceVideoPath);
+                  const filters = filterMap[segment.id] || [];
                   newVideoLayers[layerIndex].push({
-                    id: segment.id,
+                    ...video,
                     type: 'video',
+                    id: segment.id,
                     startTime: segment.timelineStartTime || 0,
                     duration: (segment.timelineEndTime - segment.timelineStartTime) || 0,
-                    filePath: segment.sourceVideoPath,
                     layer: layerIndex,
-                    positionX: segment.positionX || 0,
-                    positionY: segment.positionY || 0,
-                    scale: segment.scale || 1,
-                    filters: segment.filters || [],
+                    filePath: `videos/projects/${projectId}/${videoFileName}`,
+                    positionX: segment.positionX ?? 0,
+                    positionY: segment.positionY ?? 0,
+                    scale: segment.scale ?? 1,
+                    rotation: segment.rotation ?? 0,
+                    startTimeWithinVideo: segment.startTime || 0,
+                    endTimeWithinVideo: segment.endTime || 0,
+                    thumbnail,
                     keyframes: segment.keyframes || {},
-                    cropL: segment.cropL || 0,
-                    cropR: segment.cropR || 0,
-                    cropT: segment.cropT || 0,
-                    cropB: segment.cropB || 0,
-                  });
-                }
-              } else if (segment.imagePath) {
-                const photo = photos.find((p) => p.fileName === segment.imagePath.split('/').pop());
-                if (photo) {
-                  newVideoLayers[layerIndex].push({
-                    id: segment.id,
-                    type: 'image',
-                    startTime: segment.timelineStartTime || 0,
-                    duration: (segment.timelineEndTime - segment.timelineStateTime) || 5,
-                    fileName: segment.imagePath.split('/').pop(),
-                    filePath: photo.filePath,
-                    layer: layerIndex,
-                    positionX: segment.positionX || 0,
-                    positionY: segment.positionY || 0,
-                    scale: segment.scale || 1,
-                    filters: segment.filters || [],
-                    keyframes: segment.keyframes || {},
-                    cropL: segment.cropL || 0,
-                    cropR: segment.cropR || 0,
-                    cropT: segment.cropT || 0,
-                    cropB: segment.cropB || 0,
+                    filters,
+                    cropL: segment.cropL ?? 0,
+                    cropR: segment.cropR ?? 0,
+                    cropT: segment.cropT ?? 0,
+                    cropB: segment.cropB ?? 0,
+                    opacity: segment.opacity ?? 1,
+                    speed: segment.speed ?? 1.0,
                   });
                 }
               }
             }
           }
-
+  
+          // Process image segments
+          if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
+            for (const imageSegment of timelineState.imageSegments) {
+              const layerIndex = imageSegment.layer || 0;
+              if (layerIndex < 0) continue;
+              if (layerIndex >= newVideoLayers.length) {
+                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+              }
+              const filename = imageSegment.imagePath.split('/').pop();
+              const filePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+              const thumbnail = await generateImageThumbnail(imageSegment.imagePath, imageSegment.element);
+              const filters = filterMap[imageSegment.id] || [];
+              newVideoLayers[layerIndex].push({
+                id: imageSegment.id,
+                type: 'image',
+                fileName: filename,
+                filePath,
+                thumbnail,
+                startTime: imageSegment.timelineStartTime || 0,
+                duration: (imageSegment.timelineEndTime - imageSegment.timelineStartTime) || 5,
+                layer: layerIndex,
+                positionX: imageSegment.positionX || 0,
+                positionY: imageSegment.positionY || 0,
+                scale: imageSegment.scale || 1,
+                rotation: imageSegment.rotation || 0,
+                opacity: imageSegment.opacity || 1.0,
+                width: imageSegment.width,
+                height: imageSegment.height,
+                effectiveWidth: imageSegment.effectiveWidth,
+                effectiveHeight: imageSegment.effectiveHeight,
+                maintainAspectRatio: imageSegment.maintainAspectRatio,
+                isElement: imageSegment.element !== undefined ? imageSegment.element : false,
+                keyframes: imageSegment.keyframes || {},
+                filters,
+                cropL: imageSegment.cropL ?? 0,
+                cropR: imageSegment.cropR ?? 0,
+                cropT: imageSegment.cropT ?? 0,
+                cropB: imageSegment.cropB ?? 0,
+              });
+            }
+          }
+  
+          // Process text segments
           if (timelineState.textSegments && timelineState.textSegments.length > 0) {
             for (const textSegment of timelineState.textSegments) {
               const layerIndex = textSegment.layer || 0;
@@ -1772,9 +1848,9 @@ const preloadMedia = () => {
               if (layerIndex >= newVideoLayers.length) {
                 while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
               }
-              const text = textSegment.text?.trim() || 'Default Text'; // Set default text if empty
+              const text = textSegment.text?.trim() || 'Default Text';
               newVideoLayers[layerIndex].push({
-                id: textSegment.textSegmentId,
+                id: textSegment.id,
                 type: 'text',
                 text: text,
                 startTime: textSegment.timelineStartTime || 0,
@@ -1782,6 +1858,7 @@ const preloadMedia = () => {
                 layer: layerIndex,
                 fontFamily: textSegment.fontFamily || 'Arial',
                 scale: textSegment.scale || 1.0,
+                rotation: textSegment.rotation || 0,
                 fontColor: textSegment.fontColor || '#FFFFFF',
                 backgroundColor: textSegment.backgroundColor || 'transparent',
                 positionX: textSegment.positionX || 0,
@@ -1797,13 +1874,14 @@ const preloadMedia = () => {
                 textBorderWidth: textSegment.textBorderWidth ?? 0,
                 textBorderOpacity: textSegment.textBorderOpacity ?? 1.0,
                 letterSpacing: textSegment.letterSpacing ?? 0,
-                lineSpacing: textSegment.lineSpacing ?? 1.2, // Added
-
+                lineSpacing: textSegment.lineSpacing ?? 1.2,
                 keyframes: textSegment.keyframes || {},
+                opacity: textSegment.opacity || 1,
               });
             }
           }
-
+  
+          // Process audio segments
           if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
             for (const audioSegment of timelineState.audioSegments) {
               const backendLayer = audioSegment.layer || -1;
@@ -1811,22 +1889,33 @@ const preloadMedia = () => {
               if (layerIndex >= newAudioLayers.length) {
                 while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
               }
+              const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
+              const audioUrl = `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(filename)}`;
+              const waveformJsonPath = audioSegment.waveformJsonPath
+                ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+                : null;
+              const sanitizedId = audioSegment.id.replace(/[^a-zA-Z0-9]/g, '-');
               newAudioLayers[layerIndex].push({
-                id: audioSegment.id,
+                id: sanitizedId,
                 type: 'audio',
-                audioPath: audioSegment.audioPath,
-                fileName: audioSegment.audioPath.split('/').pop(),
+                fileName: filename,
+                url: audioUrl,
                 startTime: audioSegment.timelineStartTime || 0,
                 duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+                timelineStartTime: audioSegment.timelineStartTime || 0,
+                timelineEndTime: audioSegment.timelineEndTime || 0,
                 layer: backendLayer,
-                displayName: audioSegment.audioPath.split('/').pop(),
-                waveformImage: '/images/audio.jpeg',
+                startTimeWithinAudio: audioSegment.startTime || 0,
+                endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+                displayName: filename,
+                waveformJsonPath: waveformJsonPath,
                 volume: audioSegment.volume || 1.0,
                 keyframes: audioSegment.keyframes || {},
+                isExtracted: audioSegment.isExtracted || false,
               });
             }
           }
-
+  
           setVideoLayers(newVideoLayers);
           setAudioLayers(newAudioLayers);
           let maxEndTime = 0;
@@ -1838,7 +1927,6 @@ const preloadMedia = () => {
           });
           setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
           preloadMedia();
-          // Save the updated videoLayers to persist "Default Text"
           if (timelineState.textSegments?.some((s) => !s.text?.trim())) {
             autoSaveProject(newVideoLayers, newAudioLayers);
           }
@@ -1847,8 +1935,8 @@ const preloadMedia = () => {
         console.error('Error fetching timeline data for layers:', error);
       }
     };
-    if (projectId && sessionId && videos.length > 0) fetchAndSetLayers();
-  }, [projectId, sessionId, videos]);
+    if (projectId && sessionId) fetchAndSetLayers();
+  }, [projectId, sessionId, videos, photos, audios]);
 
     // Add useEffect to preload on videoLayers/audioLayers changes
     useEffect(() => {
@@ -1864,46 +1952,74 @@ const preloadMedia = () => {
   }, [videoLayers, audioLayers]);
 
   const handleVideoUpload = async (event) => {
-    const files = Array.from(event.target.files);
-    if (files.length === 0) return;
+  const files = Array.from(event.target.files);
+  if (files.length === 0) return;
 
-    // Check user role and video limit for Basic users
-    if (userRole === 'BASIC') {
-      if (videos.length >= 5) {
-        setVideoUploadError('Basic users are limited to uploading a maximum of 5 videos. Upgrade to a premium plan to upload more.');
-        setTimeout(() => setVideoUploadError(''), 5000); // Clear error after 5 seconds
-        return;
-      }
-      // Ensure the upload won't exceed the limit
-      if (videos.length + files.length > 5) {
-        setVideoUploadError(`Basic users can only upload up to 5 videos. You can upload ${5 - videos.length} more video(s).`);
-        setTimeout(() => setVideoUploadError(''), 5000); // Clear error after 5 seconds
-        return;
-      }
+  // Check user role and video limit for Basic users
+  if (userRole === 'BASIC') {
+    if (videos.length >= 5) {
+      setVideoUploadError('Basic users are limited to uploading a maximum of 5 videos. Upgrade to a premium plan to upload more.');
+      setTimeout(() => setVideoUploadError(''), 5000);
+      return;
     }
+    if (videos.length + files.length > 5) {
+      setVideoUploadError(`Basic users can only upload up to 5 videos. You can upload ${5 - videos.length} more video(s).`);
+      setTimeout(() => setVideoUploadError(''), 5000);
+      return;
+    }
+  }
 
-    const formData = new FormData();
-    files.forEach((file) => {
-      formData.append('files', file);
-      formData.append('titles', file.name);
-    });
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('video', file);
+    formData.append('videoFileNames', file.name);
+  });
 
-    try {
-      setUploading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_BASE_URL}/videos/upload/${projectId}`, formData, {
+  try {
+    setUploading(true);
+    const token = localStorage.getItem('token');
+    const response = await axios.post(
+      `${API_BASE_URL}/projects/${projectId}/upload-video`,
+      formData,
+      {
         headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
+      }
+    );
+    const { project, videoFiles } = response.data;
+
+    if (videoFiles && Array.isArray(videoFiles)) {
+      const updatedVideos = videoFiles.map((video) => {
+        const fullFileName = video.videoFileName.split('/').pop();
+        const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
+        const sanitizedId = `video-${fullFileName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
+        return {
+          id: sanitizedId,
+          fileName: fullFileName,
+          displayName: originalFileName,
+          filePath: `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(fullFileName)}`,
+          duration: video.duration || 5,
+          audioPath: video.audioPath
+            ? `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(video.audioPath.split('/').pop())}`
+            : null,
+          waveformJsonPath: video.waveformJsonPath
+            ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(video.waveformJsonPath.split('/').pop())}`
+            : null,
+        };
       });
-      const newVideos = response.data;
-      if (newVideos) await fetchVideos();
-    } catch (error) {
-      console.error('Error uploading video:', error);
-      setVideoUploadError('Failed to upload video(s). Please try again.');
-      setTimeout(() => setVideoUploadError(''), 5000); // Clear error after 5 seconds
-    } finally {
-      setUploading(false);
+      setVideos((prev) => [...prev, ...updatedVideos]);
+      await Promise.all(updatedVideos.map((video) => generateVideoThumbnail(video)));
+      setThumbnailsGenerated(true);
     }
-  };
+
+    if (project) await fetchVideos();
+  } catch (error) {
+    console.error('Error uploading video:', error.response?.data || error.message);
+    setVideoUploadError('Failed to upload video(s). Please try again.');
+    setTimeout(() => setVideoUploadError(''), 5000);
+  } finally {
+    setUploading(false);
+  }
+};
 
   const fetchElements = async () => {
       try {
@@ -1999,41 +2115,80 @@ const preloadMedia = () => {
   };
 
   const generateVideoThumbnail = async (video) => {
-    if (!video || (!video.filePath && !video.filename)) return;
-    if (video.thumbnail) return;
-    let path = video.filePath || video.filename;
-    if (path.startsWith('videos/')) path = path.substring(7);
-    const videoUrl = `${API_BASE_URL}/videos/${encodeURIComponent(path)}`;
-    try {
-      const videoElement = document.createElement('video');
-      videoElement.crossOrigin = 'anonymous';
-      videoElement.src = videoUrl;
-      await new Promise((resolve, reject) => {
-        videoElement.onloadeddata = resolve;
-        videoElement.onerror = reject;
-        setTimeout(resolve, 5000);
-      });
-      const seekTime = Math.min(1, (video.duration || 0) * 0.25);
-      videoElement.currentTime = seekTime;
-      await new Promise((resolve) => {
-        videoElement.onseeked = resolve;
-        setTimeout(resolve, 2000);
-      });
-      const canvas = document.createElement('canvas');
-      canvas.width = 120;
-      canvas.height = 80;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-      const thumbnail = canvas.toDataURL('image/jpeg');
-      video.thumbnail = thumbnail;
-      setVideos((prevVideos) =>
-        prevVideos.map((v) =>
-          (v.filePath || v.ipath) === (video.filePath || video.filename) ? { ...v, thumbnail } : v
-        )
-      );
-    } catch (error) {
-      console.error('Error creating thumbnail for video:', path, error);
-    }
+  if (!video || !video.fileName) return;
+  if (video.thumbnail) return;
+  const path = video.fileName; // fileName is the filename from videosJson
+  const videoUrl = `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(path)}`;
+  try {
+    const videoElement = document.createElement('video');
+    videoElement.crossOrigin = 'anonymous';
+    videoElement.src = videoUrl;
+    await new Promise((resolve, reject) => {
+      videoElement.onloadeddata = resolve;
+      videoElement.onerror = reject;
+      setTimeout(resolve, 5000);
+    });
+    const seekTime = Math.min(1, (video.duration || 0) * 0.25);
+    videoElement.currentTime = seekTime;
+    await new Promise((resolve) => {
+      videoElement.onseeked = resolve;
+      setTimeout(resolve, 2000);
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = 120;
+    canvas.height = 80;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+    const thumbnail = canvas.toDataURL('image/jpeg');
+    video.thumbnail = thumbnail;
+    setVideos((prevVideos) =>
+      prevVideos.map((v) =>
+        v.fileName === video.fileName ? { ...v, thumbnail } : v
+      )
+    );
+  } catch (error) {
+    console.error('Error creating thumbnail for video:', path, error);
+  }
+};
+
+  const generateImageThumbnail = async (imagePath, isElement = false) => {
+    const filename = imagePath.split('/').pop();
+    const fullImagePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = fullImagePath;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const maxWidth = 120;
+        const maxHeight = 80;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        const thumbnail = canvas.toDataURL('image/jpeg');
+        resolve(thumbnail);
+      };
+      img.onerror = () => {
+        console.error(`Failed to load image for thumbnail: ${fullImagePath}`);
+        resolve(null);
+      };
+    });
   };
 
   const handleSaveProject = async () => {
@@ -2052,43 +2207,51 @@ const preloadMedia = () => {
     }
   };
 
-  const handleExportProject = async () => {
-    if (!projectId || !sessionId) return;
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/projects/${projectId}/export`,
-        {},
-        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-      );
-      const exportedFileName = response.data;
-      alert(`Project exported successfully as ${exportedFileName}!`);
-    } catch (error) {
-      console.error('Error exporting project:', error);
-      alert('Failed to export project. Please try again.');
-    }
-  };
+  // const handleExportProject = async () => {
+  //   if (!projectId || !sessionId) return;
+  //   try {
+  //     const token = localStorage.getItem('token');
+  //     const response = await axios.post(
+  //       `${API_BASE_URL}/projects/${projectId}/export`,
+  //       {},
+  //       { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+  //     );
+  //     const exportedFileName = response.data;
+  //     alert(`Project exported successfully as ${exportedFileName}!`);
+  //   } catch (error) {
+  //     console.error('Error exporting project:', error);
+  //     alert('Failed to export project. Please try again.');
+  //   }
+  // };
+
+  const handleExportProject = debounce(() => {
+  if (!projectId || !sessionId) {
+    alert('Cannot export: Missing project ID or session ID');
+    return;
+  }
+  navigate(`/export/${projectId}`, { state: { sessionId } });
+}, 300);
 
   const handleMediaDragStart = (e, media, type) => {
-    const mediaId = media.id || `media-${media.filePath || media.fileName || media.filename || media.imageFileName || media.displayName}-${Date.now()}`;
-    const dragData = {
-      type: type,
-      isDragOperation: true,
-      [type === 'media' ? 'video' : type === 'photo' ? 'photo' : type === 'audio' ? 'audio' : 'element']: {
-        id: mediaId,
-        filePath: type === 'media' ? (media.filePath || media.filename) : undefined,
-        fileName: type === 'audio' || type === 'photo' || type === 'element' ? media.fileName : undefined,
-        displayPath: media.displayPath || media.displayName || (media.filePath || media.fileName || media.filename || media.imageFileName || media.displayName)?.split('/').pop(),
-        duration: media.duration || 5,
-        thumbnail: media.thumbnail || (type === 'photo' || type === 'element' ? media.filePath : undefined),
-      },
-    };
-    const jsonString = JSON.stringify(dragData);
-    e.dataTransfer.setData('application/json', jsonString);
-    e.dataTransfer.setData('text/plain', jsonString);
-    e.currentTarget.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'copyMove';
+  const mediaId = media.id || `media-${media.fileName || media.displayName}-${Date.now()}`;
+  const dragData = {
+    type: type,
+    isDragOperation: true,
+    [type === 'media' ? 'video' : type === 'photo' ? 'photo' : type === 'audio' ? 'audio' : 'element']: {
+      id: mediaId,
+      filePath: type === 'media' ? `videos/projects/${projectId}/${media.fileName}` : undefined,
+      fileName: type === 'audio' || type === 'photo' || type === 'element' ? media.fileName : media.fileName,
+      displayPath: media.displayName || media.fileName?.split('/').pop(),
+      duration: media.duration || 5,
+      thumbnail: media.thumbnail || (type === 'photo' || type === 'element' ? media.filePath : undefined),
+    },
   };
+  const jsonString = JSON.stringify(dragData);
+  e.dataTransfer.setData('application/json', jsonString);
+  e.dataTransfer.setData('text/plain', jsonString);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'copyMove';
+};
 
   const handleTextStyleDragStart = (e, style) => {
     const dragData = {
@@ -2316,7 +2479,7 @@ const preloadMedia = () => {
       });
 
       const newSegment = await addVideoToTimeline(
-        video.filePath || video.filename,
+        video.fileName,
         selectedLayer,
         timelineStartTime,
         null,
@@ -2439,17 +2602,22 @@ const preloadMedia = () => {
 
 const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineEndTime, startTimeWithinVideo, endTimeWithinVideo) => {
   try {
+    if (!videoPath) {
+      throw new Error('videoPath is undefined or null');
+    }
     const token = localStorage.getItem('token');
+    // Extract filename from videoPath (handles both filename and full path)
+    const fileName = videoPath.includes('/') ? videoPath.split('/').pop() : videoPath;
     const response = await axios.post(
       `${API_BASE_URL}/projects/${projectId}/add-to-timeline`,
       {
-        videoPath,
+        videoPath: fileName, // Send only the filename
         layer: layer || 0,
         timelineStartTime: timelineStartTime || 0,
         timelineEndTime: timelineEndTime || null,
         startTime: startTimeWithinVideo || 0,
         endTime: endTimeWithinVideo || null,
-        speed: 1.0, // Add default speed
+        speed: 1.0,
       },
       { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
     );
@@ -2467,9 +2635,9 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
       throw new Error(`Newly created video segment ${videoSegmentId} not found`);
     }
 
-    const video = videos.find((v) => (v.filePath || v.filename) === videoPath);
+    const video = videos.find((v) => v.fileName === fileName);
     if (!video) {
-      throw new Error(`Video with path ${videoPath} not found in videos list`);
+      throw new Error(`Video with fileName ${fileName} not found in videos list`);
     }
 
     const newSegment = {
@@ -2477,7 +2645,7 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
       type: 'video',
       startTime: videoSegment.timelineStartTime,
       duration: videoSegment.timelineEndTime - videoSegment.timelineStartTime,
-      filePath: videoSegment.filename || videoPath,
+      filePath: `videos/projects/${projectId}/${fileName}`, // Use full path for frontend
       layer: layer || 0,
       positionX: videoSegment.positionX || 0,
       positionY: videoSegment.positionY || 0,
@@ -2487,8 +2655,9 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
       thumbnail: video.thumbnail,
       filters: videoSegment.filters || [],
       audioSegmentId: audioSegmentId || null,
-      speed: videoSegment.speed || 1.0, // Add speed to segment
-      rotation: videoSegment.rotation || 0, // Add rotation
+      speed: videoSegment.speed || 1.0,
+      rotation: videoSegment.rotation || 0,
+      displayName: video.displayName || fileName,
     };
 
     let updatedVideoLayers = videoLayers;
@@ -2501,7 +2670,6 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
     });
 
     let updatedAudioLayers = audioLayers;
-    // In addVideoToTimeline, replace the existing audio segment handling block with:
     if (audioSegmentId && segmentResponse.data.audioSegment) {
       const audioSegment = segmentResponse.data.audioSegment;
       const audioLayerIndex = Math.abs(audioSegment.layer) - 1;
@@ -2552,7 +2720,6 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
         return newLayers;
       });
 
-      // Update with backend-confirmed audio segment data
       setAudioLayers((prevLayers) => {
         const updatedLayers = prevLayers.map((layer, index) => {
           if (index === audioLayerIndex) {
@@ -2595,7 +2762,7 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
     saveHistory();
     return newSegment;
   } catch (error) {
-    console.error('Error adding video to timeline:', error);
+    console.error('Error adding video to timeline:', error.response?.data || error.message);
     throw error;
   }
 };
@@ -2731,15 +2898,21 @@ useEffect(() => {
             times.push(segment.startTime + segment.duration); // End time
           });
         });
-        times.sort((a, b) => a - b); // Sort times in ascending order
-        if (times.length === 0) return;
+        // Remove duplicates and sort
+        const uniqueTimes = [...new Set(times)].sort((a, b) => a - b);
+        if (uniqueTimes.length === 0) return;
         let newTime;
         if (e.key === 'ArrowUp') {
           // Move to previous boundary
-          newTime = times.reverse().find((t) => t < currentTime) || times[0];
+          // If exactly on a boundary, find the previous one; otherwise, include current boundary
+          const isOnBoundary = uniqueTimes.some((t) => Math.abs(t - currentTime) < 0.0001);
+          newTime = uniqueTimes
+            .slice()
+            .reverse()
+            .find((t) => (isOnBoundary ? t < currentTime : t <= currentTime)) || uniqueTimes[0];
         } else {
           // Move to next boundary
-          newTime = times.find((t) => t > currentTime) || times[times.length - 1];
+          newTime = uniqueTimes.find((t) => t > currentTime) || uniqueTimes[uniqueTimes.length - 1];
         }
         if (newTime !== undefined) {
           handleTimeUpdate(newTime, true);
@@ -4603,6 +4776,7 @@ return (
             onSegmentPositionUpdate={handleSegmentPositionUpdate}
             selectedSegment={selectedSegment}
             updateSegmentProperty={updateSegmentProperty} // Add this prop
+            projectId={projectId} // Add this
           />
         </div>
         <div className={`resize-preview-section ${isDraggingHandle ? 'dragging' : ''}`} onMouseDown={handleMouseDown}></div>

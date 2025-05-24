@@ -402,51 +402,52 @@ const TimelineComponent = ({
   }, [setPlayheadFromParent, onTimeUpdate]);
 
   const generateVideoThumbnail = async (videoPath) => {
-    const fullVideoPath = `${API_BASE_URL}/videos/${encodeURIComponent(videoPath.split('/').pop())}`;
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.crossOrigin = 'anonymous';
-      video.src = fullVideoPath;
-      video.muted = true;
-      video.preload = 'metadata';
+  const fileName = videoPath.split('/').pop();
+  const fullVideoPath = `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(fileName)}`;
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.src = fullVideoPath;
+    video.muted = true;
+    video.preload = 'metadata';
 
-      video.onloadeddata = () => {
-        video.currentTime = 1;
-      };
+    video.onloadeddata = () => {
+      video.currentTime = 1;
+    };
 
-      video.onseeked = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const maxWidth = 120;
-        const maxHeight = 80;
-        let width = video.videoWidth;
-        let height = video.videoHeight;
+    video.onseeked = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const maxWidth = 120;
+      const maxHeight = 80;
+      let width = video.videoWidth;
+      let height = video.videoHeight;
 
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
+      if (width > height) {
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
         }
+      } else {
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+      }
 
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(video, 0, 0, width, height);
-        const thumbnail = canvas.toDataURL('image/jpeg');
-        resolve(thumbnail);
-      };
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(video, 0, 0, width, height);
+      const thumbnail = canvas.toDataURL('image/jpeg');
+      resolve(thumbnail);
+    };
 
-      video.onerror = () => {
-        console.error(`Failed to load video for thumbnail: ${fullVideoPath}`);
-        resolve(null);
-      };
-    });
-  };
+    video.onerror = () => {
+      console.error(`Failed to load video for thumbnail: ${fullVideoPath}`);
+      resolve(null);
+    };
+  });
+};
 
   const generateImageThumbnail = async (imagePath, isElement = false) => {
     const filename = imagePath.split('/').pop();
@@ -518,15 +519,10 @@ const TimelineComponent = ({
               if (layerIndex < 0) continue;
               if (segment.sourceVideoPath) {
                 while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
-                let videoFileName = segment.sourceVideoPath;
-                const normalizedVideoPath = videoFileName.startsWith('videos/') ? videoFileName.substring(7) : videoFileName;
-                let video = videos.find((v) => {
-                  const vPath = v.filePath || v.filename;
-                  const normalizedVPath = vPath.startsWith('videos/') ? vPath.substring(7) : vPath;
-                  return normalizedVPath === normalizedVideoPath;
-                });
+                let videoFileName = segment.sourceVideoPath.split('/').pop();
+                let video = videos.find((v) => v.fileName === videoFileName);
                 if (video) {
-                  const thumbnail = await generateVideoThumbnail(normalizedVideoPath);
+                  const thumbnail = await generateVideoThumbnail(segment.sourceVideoPath);
                   const filters = filterMap[segment.id] || [];
                   console.log(`Video segment ID ${segment.id}: filters=`, JSON.stringify(filters, null, 2));
                   newVideoLayers[layerIndex].push({
@@ -536,23 +532,25 @@ const TimelineComponent = ({
                     startTime: segment.timelineStartTime,
                     duration: segment.timelineEndTime - segment.timelineStartTime,
                     layer: layerIndex,
-                    filePath: normalizedVideoPath,
+                    filePath: `videos/projects/${projectId}/${videoFileName}`,
                     positionX: segment.positionX ?? 0,
                     positionY: segment.positionY ?? 0,
                     scale: segment.scale ?? 1,
-                    rotation: segment.rotation ?? 0, // Add rotation
+                    rotation: segment.rotation ?? 0,
                     startTimeWithinVideo: segment.startTime,
                     endTimeWithinVideo: segment.endTime,
                     thumbnail,
                     keyframes: segment.keyframes || {},
                     filters,
-                    cropL: segment.cropL ?? 0, // Add crop values
+                    cropL: segment.cropL ?? 0,
                     cropR: segment.cropR ?? 0,
                     cropT: segment.cropT ?? 0,
                     cropB: segment.cropB ?? 0,
                     opacity: segment.opacity ?? 1,
-                    speed: segment.speed ?? 1.0, // Add speed
+                    speed: segment.speed ?? 1.0,
                   });
+                } else {
+                  console.warn(`Video with filename ${videoFileName} not found in videos list`);
                 }
               }
             }
@@ -1410,7 +1408,7 @@ const TimelineComponent = ({
             segments.push({
               id: item.id,
               type: 'video',
-              sourceVideoPath: item.filePath || item.filename,
+              sourceVideoPath: item.filePath || `videos/projects/${projectId}/${item.fileName}`,
               layer: item.layer,
               timelineStartTime: item.startTime,
               timelineEndTime: item.startTime + item.duration,

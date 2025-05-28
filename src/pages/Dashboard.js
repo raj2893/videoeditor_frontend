@@ -5,9 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Tilt } from 'react-tilt';
 import '../CSS/Dashboard.css';
 import { FaTrash, FaSignOutAlt, FaBars } from 'react-icons/fa';
-
-const API_BASE_URL = 'https://videoeditor-app.onrender.com';
-// const API_BASE_URL = "http://localhost:8080";
+import { API_BASE_URL, CDN_URL } from '../Config';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, projectName }) => {
   if (!isOpen) return null;
@@ -236,7 +234,7 @@ const Dashboard = () => {
           if (allSegments.length > 0) {
             const firstSegment = allSegments[0];
             if (firstSegment.sourceVideoPath) {
-              thumbnail = await generateVideoThumbnail(firstSegment.sourceVideoPath);
+              thumbnail = await generateVideoThumbnail(project.id, firstSegment.sourceVideoPath);
             } else if (firstSegment.imagePath) {
               thumbnail = await generateImageThumbnail(project.id, firstSegment.imagePath);
             }
@@ -262,8 +260,8 @@ const Dashboard = () => {
     }
   };
 
-  const generateVideoThumbnail = async (videoPath) => {
-    const fullVideoPath = `${API_BASE_URL}/videos/${encodeURIComponent(videoPath.split('/').pop())}`;
+  const generateVideoThumbnail = async (projectId, videoPath) => {
+    const fullVideoPath = `${CDN_URL}/video/projects/${projectId}/${encodeURIComponent(videoPath.split('/').pop())}`;
     return new Promise((resolve) => {
       const video = document.createElement('video');
       video.crossOrigin = 'anonymous';
@@ -313,7 +311,7 @@ const Dashboard = () => {
 
   const generateImageThumbnail = async (projectId, imagePath) => {
     const filename = imagePath.split('/').pop();
-    const fullImagePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+    const fullImagePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -521,10 +519,26 @@ const Dashboard = () => {
   }, [location.state?.error, navigate]);
 
   const handleLogout = () => {
+    // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('userProfile');
+  
+    // Reset state to reflect logged-out status
+    setUserProfile({
+      email: '',
+      firstName: '',
+      lastName: '',
+      picture: null,
+      googleAuth: false,
+      role: '',
+    });
+    setProjects([]);
     setIsProfileDropdownOpen(false);
-    navigate('/dashboard');
+    setIsDataLoaded(true);
+    setIsLoading(false);
+  
+    // Navigate to dashboard to reflect the logged-out state
+    navigate('/dashboard', { replace: true });
   };
 
   const toggleDropdown = () => {
@@ -936,34 +950,80 @@ const Dashboard = () => {
           </h2>
           <div className="logo-element"></div>
         </div>
-        <p>
-          At Scenith, we believe in the power of visual storytelling. Born from the vision of two college friends in India, our name—a fusion of "Scene" and "Zenith"—embodies our commitment to elevating content creation to its highest potential.
-        </p>
-        <p>
-          Developed with relentless dedication since February 2025, Scenith isn't just another video editor—it's a professional-grade creative platform designed by creators who understand what creators need. Our intuitive timeline interface houses a comprehensive toolkit that professional editors demand: precise audio manipulation, frame-perfect video splitting, dynamic keyframing, versatile transitions, and customizable elements.
-        </p>
-        <p>
-          We built Scenith because we recognized the explosive growth of digital influence and the need for accessible yet powerful tools to fuel it. Every feature has been meticulously crafted to streamline your workflow without compromising creative control—whether you're adjusting scale, applying filters, cropping content, or integrating custom elements.
-        </p>
-        <p>
-          Scenith represents our day and night commitment to one simple truth: when creators have the right tools, stories become more compelling, messages more impactful, and creative visions fully realized.
-        </p>
-        <p>
-          Join us at the peak of visual storytelling.
-        </p>
+        <motion.div
+          className="about-us-content"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="about-us-card">
+            <h3 className="about-us-subtitle">Our Mission</h3>
+            <p>
+              At Scenith, we empower creators to reach the zenith of visual storytelling. Our platform, born from the vision of two college friends in India, combines intuitive design with professional-grade tools to make your creative process seamless and impactful.
+            </p>
+          </div>
+          <div className="about-us-card">
+            <h3 className="about-us-subtitle">Our Journey</h3>
+            <p>
+              Since February 2025, we've poured our passion into crafting Scenith—a video editor designed by creators, for creators. Every feature, from precise audio manipulation to dynamic keyframing, is built to elevate your storytelling to new heights.
+            </p>
+          </div>
+          <div className="about-us-card">
+            <h3 className="about-us-subtitle">Why Scenith?</h3>
+            <p>
+              We understand the demands of digital content creation. Scenith offers a comprehensive toolkit—frame-perfect editing, versatile transitions, and customizable elements—to ensure your stories captivate and inspire without compromise.
+            </p>
+          </div>
+        </motion.div>
       </section>
 
       <section className="contact-us-section" id="contact-us-section">
-        <h2>Contact Us</h2>
-        <p>
-          Have questions or feedback? Reach out to us! We're here to help you with your creative journey.
-        </p>
-        <p>
-          Email: <a href="mailto:support@scenith.com">support@scenith.com</a>
-        </p>
-        <p>
-          Phone: +91 123-456-7890
-        </p>
+        <div className="section-header">
+          <h2>
+            <span className="letter">C</span>
+            <span className="letter">o</span>
+            <span className="letter">n</span>
+            <span className="letter">t</span>
+            <span className="letter">a</span>
+            <span className="letter">c</span>
+            <span className="letter">t</span>
+            <span className="letter space"> </span>
+            <span className="letter">U</span>
+            <span className="letter">s</span>
+          </h2>
+          <div className="logo-element"></div>
+        </div>
+        {/* Changed from motion.div to regular div to prevent re-render on scroll */}
+        <div
+          className="contact-us-content"
+          // Removed Framer Motion props to avoid re-triggering animation
+        >
+          <p className="contact-us-intro">
+            We're here to support your creative journey. Reach out with questions, feedback, or just to say hello!
+          </p>
+          <div className="contact-us-info">
+            <div className="contact-us-card">
+              <h3 className="contact-us-subtitle">Get in Touch</h3>
+              <p>Email: scenith.videoeditor@gmail.com</p>
+              <p>Follow us on social media for updates and tips!</p>
+              <div className="social-links">
+                <a href="https://x.com/scenith_1902/" target="_blank" rel="noopener noreferrer" className="social-link">
+                  <img src="/images/X_logo.png" alt="X" className="social-icon" />
+                </a>
+                <a href="https://www.instagram.com/scenith.labs/" target="_blank" rel="noopener noreferrer" className="social-link">
+                  <img src="/images/Instagram_logo.png" alt="Instagram" className="social-icon" />
+                </a>
+                <a href="https://linkedin.com/company/scenith/" target="_blank" rel="noopener noreferrer" className="social-link">
+                  <img src="/images/LinkedIn_logo.png" alt="LinkedIn" className="social-icon" />
+                </a>
+                <a href="https://www.youtube.com/@Scenith-f4n" target="_blank" rel="noopener noreferrer" className="social-link">
+                  <img src="/images/Youtube_logo.png" alt="YouTube" className="social-icon" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </div>
   );

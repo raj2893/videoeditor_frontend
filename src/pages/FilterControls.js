@@ -192,7 +192,7 @@ const FilterControls = ({
               </div>
             </div>
             <div className="control-group">
-              <label>Blur (0 to 1)</label>
+              <label>Blur (0 to 10)</label>
               <div className="slider-container">
                 <input
                   type="range"

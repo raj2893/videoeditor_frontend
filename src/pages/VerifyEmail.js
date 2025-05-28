@@ -2,9 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import '../CSS/VerifyEmail.css';
-
-const API_BASE_URL = 'https://videoeditor-app.onrender.com';
-// const API_BASE_URL = "http://localhost:8080";
+import { API_BASE_URL } from '../Config';
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();

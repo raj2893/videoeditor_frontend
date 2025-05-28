@@ -1,6 +1,7 @@
 import React from 'react';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
+import { CDN_URL } from '../Config';
 
 const AudioSegmentHandler = ({
   projectId,
@@ -129,12 +130,6 @@ const AudioSegmentHandler = ({
         }
       );
 
-      const waveformImage = response.data.waveformPath
-        ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(
-            response.data.waveformPath.split('/').pop()
-          )}`
-        : item.waveformImage || '/images/audio.jpeg';
-
       const updatedItem = {
         ...item,
         startTime: roundToThreeDecimals(newStartTime),
@@ -143,7 +138,6 @@ const AudioSegmentHandler = ({
         timelineEndTime: roundToThreeDecimals(adjustedTimelineEndTime),
         startTimeWithinAudio: roundToThreeDecimals(clampedStartTimeWithinAudio),
         endTimeWithinAudio: roundToThreeDecimals(clampedEndTimeWithinAudio),
-        waveformImage,
       };
       const layerIndex = Math.abs(newLayer) - 1;
       setAudioLayers((prevLayers) => {
@@ -252,9 +246,7 @@ const AudioSegmentHandler = ({
             id: tempSegmentId,
             type: 'audio',
             fileName: audio.fileName,
-            url: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(
-              audio.fileName
-            )}`,
+            url: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.fileName)}`,
             displayName: audio.displayName || audio.fileName.split('/').pop(),
             waveformJsonPath: audio.waveformJsonPath || null, // Ensure waveformJsonPath is set
             startTime: roundToThreeDecimals(adjustedStartTime),
@@ -332,7 +324,7 @@ const AudioSegmentHandler = ({
 
             // Update waveformJsonPath based on backend response
             const waveformJsonPath = newAudioSegment.waveformJsonPath
-              ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(
+              ? `${API_BASE_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(
                   newAudioSegment.waveformJsonPath.split('/').pop()
                 )}`
               : audio.waveformJsonPath || null;
@@ -448,7 +440,6 @@ const AudioSegmentHandler = ({
       timelineEndTime: roundToThreeDecimals(newStartTime + draggingItem.duration),
       startTimeWithinAudio: roundToThreeDecimals(draggingItem.startTimeWithinAudio),
       endTimeWithinAudio: roundToThreeDecimals(draggingItem.endTimeWithinAudio),
-      waveformImage: draggingItem.waveformImage || '/images/audio.jpeg',
     };
 
     if (isSameLayer) {
@@ -564,7 +555,6 @@ const AudioSegmentHandler = ({
         timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration),
         startTime: roundToThreeDecimals(item.startTime),
         endTimeWithinAudio: roundToThreeDecimals(startWithinAudio + firstPartDuration),
-        waveformImage: item.waveformImage || '/images/audio.jpeg',
       };
 
       const doesIdExist = (id) => {
@@ -585,7 +575,6 @@ const AudioSegmentHandler = ({
         startTimeWithinAudio: roundToThreeDecimals(startWithinAudio + firstPartDuration),
         endTimeWithinAudio: roundToThreeDecimals(startWithinAudio + item.duration),
         fileName: audioFileName,
-        waveformImage: item.waveformImage || '/images/audio.jpeg',
         extracted: item.extracted || false, // Preserve isExtracted flag
       };
       console.log('firstPart=', firstPart);
@@ -656,11 +645,6 @@ const AudioSegmentHandler = ({
         }
 
         setAudioLayers((prevLayers) => {
-          const waveformImage = newAudioSegment.waveformPath
-            ? `${API_BASE_URL}/projects/${projectId}/waveforms/${encodeURIComponent(
-                newAudioSegment.waveformPath.split('/').pop()
-              )}`
-            : item.waveformImage || '/images/audio.jpeg';
           const updatedLayers = prevLayers.map((layer, idx) => {
             if (idx === layerIndex) {
               return layer.map((segment) =>
@@ -668,7 +652,6 @@ const AudioSegmentHandler = ({
                   ? {
                       ...segment,
                       id: finalSegmentId,
-                      waveformImage,
                       startTime: roundToThreeDecimals(newAudioSegment.timelineStartTime),
                       duration: roundToThreeDecimals(
                         newAudioSegment.timelineEndTime - newAudioSegment.timelineStartTime

@@ -12,16 +12,15 @@ import TextSegmentHandler from './TextSegmentHandler';
 import ImageSegmentHandler from './ImageSegmentHandler';
 import AudioSegmentHandler from './AudioSegmentHandler';
 import GeneralSegmentHandler from './GeneralSegmentHandler';
+import { API_BASE_URL, CDN_URL } from "../Config";
 
 const TimelineComponent = ({
   videos,
-  audios,
   sessionId,
   projectId,
   totalDuration,
   setTotalDuration,
   onVideoSelect,
-  canvasDimensions,
   addVideoToTimeline,
   onTimeUpdate,
   onSegmentSelect,
@@ -32,7 +31,6 @@ const TimelineComponent = ({
   thumbnailsGenerated,
   openTextTool,
   timeScale,
-  setTimeScale,
   setPlayheadFromParent,
   transitions,
   setTransitions,
@@ -40,7 +38,6 @@ const TimelineComponent = ({
   onTransitionSelect,
   isPlaying,
   setIsPlaying,
-  fps = 25,
   saveHistory,
   handleUndo,
   handleRedo,
@@ -67,10 +64,6 @@ const TimelineComponent = ({
   const [isResizing, setIsResizing] = useState(false); // Track resize state
 
   const SNAP_THRESHOLD = 0.5;
-  const API_BASE_URL = 'https://videoeditor-app.onrender.com';
-//  const API_BASE_URL = "http://localhost:8080";
-  const MIN_TIME_SCALE = 0.1;
-  const MAX_TIME_SCALE = 200;
   const MAGNETIC_THRESHOLD = 0.2; // Time in seconds for magnetic snap to playhead
 
   const timelineRef = useRef(null);
@@ -403,7 +396,7 @@ const TimelineComponent = ({
 
   const generateVideoThumbnail = async (videoPath) => {
   const fileName = videoPath.split('/').pop();
-  const fullVideoPath = `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(fileName)}`;
+  const fullVideoPath = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fileName)}`;
   return new Promise((resolve) => {
     const video = document.createElement('video');
     video.crossOrigin = 'anonymous';
@@ -451,7 +444,7 @@ const TimelineComponent = ({
 
   const generateImageThumbnail = async (imagePath, isElement = false) => {
     const filename = imagePath.split('/').pop();
-    const fullImagePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+    const fullImagePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -562,7 +555,7 @@ const TimelineComponent = ({
               if (layerIndex < 0) continue;
               while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
               const filename = imageSegment.imagePath.split('/').pop();
-              const filePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+              const filePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
               const thumbnail = await generateImageThumbnail(imageSegment.imagePath, imageSegment.element);
               const filters = filterMap[imageSegment.id] || [];
               console.log(`Image segment ID ${imageSegment.id}: filters=`, JSON.stringify(filters, null, 2));
@@ -641,9 +634,9 @@ const TimelineComponent = ({
               const layerIndex = Math.abs(backendLayer) - 1;
               while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
               const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
-              const audioUrl = `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(filename)}`;
+              const audioUrl = `${API_BASE_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
               const waveformJsonPath = audioSegment.waveformJsonPath
-                ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+                ? `${CDN_URL}audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
                 : null;
               console.log(`Audio segment ID ${audioSegment.id}: no filters applied`);
               // Sanitize audioSegment.id
@@ -962,7 +955,7 @@ const TimelineComponent = ({
       if (audioDropResult && audioDropResult.newSegment) {
         // Update waveformJsonPath and isExtracted based on backend response
         const waveformJsonPath = audioDropResult.response.waveformJsonPath
-          ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audioDropResult.response.waveformJsonPath.split('/').pop())}`
+          ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioDropResult.response.waveformJsonPath.split('/').pop())}`
           : null;
         setAudioLayers((prevLayers) => {
           const newLayers = [...prevLayers];

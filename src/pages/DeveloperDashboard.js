@@ -2,9 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../CSS/DeveloperDashboard.css';
-
-const API_BASE_URL = 'https://videoeditor-app.onrender.com';
-// const API_BASE_URL = "http://localhost:8080";
+import { API_BASE_URL, CDN_URL } from '../Config';
 
 const DeveloperDashboard = () => {
   const [elements, setElements] = useState([]);
@@ -135,7 +133,10 @@ const DeveloperDashboard = () => {
           <div className="elements-grid">
             {elements.map((element) => (
               <div key={element.id} className="element-card">
-                <img src={`${API_BASE_URL}${element.filePath}`} alt={element.title} />
+                <img
+                  src={`${CDN_URL}/elements/projects/${element.projectId}/${encodeURIComponent(element.filePath.split('/').pop())}`}
+                  alt={element.title}
+                />
                 <p>{element.title}</p>
               </div>
             ))}

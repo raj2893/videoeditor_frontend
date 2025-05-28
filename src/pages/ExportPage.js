@@ -2,9 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../CSS/ExportPage.css';
-
-const API_BASE_URL = 'https://videoeditor-app.onrender.com';
-// const API_BASE_URL = "http://localhost:8080";
+import { API_BASE_URL } from '../Config';
 
 const ExportPage = () => {
   const { projectId } = useParams();

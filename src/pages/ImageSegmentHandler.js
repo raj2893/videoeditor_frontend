@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { CDN_URL } from '../Config';
 
 const ImageSegmentHandler = ({
   projectId,
@@ -15,7 +16,7 @@ const ImageSegmentHandler = ({
 }) => {
   const generateImageThumbnail = async (imagePath, isElement = false) => {
     const filename = imagePath.split('/').pop();
-    const fullImagePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+    const fullImagePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
     console.log(`Generating thumbnail for: ${fullImagePath}`);
     return new Promise((resolve) => {
       const img = new Image();
@@ -93,7 +94,7 @@ const ImageSegmentHandler = ({
         id: segment.id,
         type: 'image',
         fileName: imageFileName,
-        filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(imageFileName)}`,
+        filePath: `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(imageFileName)}`,
         thumbnail,
         startTime: timelineStartTime,
         duration: timelineEndTime - timelineStartTime,

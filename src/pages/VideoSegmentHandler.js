@@ -1,6 +1,7 @@
 import React from 'react';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
+import { CDN_URL } from '../Config';
 
 const VideoSegmentHandler = ({
   projectId,
@@ -155,7 +156,7 @@ const VideoSegmentHandler = ({
             startTimeWithinVideo: roundToThreeDecimals(newSegment.startTimeWithinVideo || 0),
             endTimeWithinVideo: roundToThreeDecimals(newSegment.endTimeWithinVideo || newSegment.duration),
             duration: roundToThreeDecimals((newSegment.endTimeWithinVideo - newSegment.startTimeWithinVideo) / (newSegment.speed ?? 1.0)),
-            filePath: `videos/projects/${projectId}/${video.fileName}`, // Ensure correct filePath format
+            filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(video.fileName)}`,
             positionX: newSegment.positionX ?? 0,
             positionY: newSegment.positionY ?? 0,
             scale: newSegment.scale ?? 1,
@@ -394,7 +395,7 @@ const VideoSegmentHandler = ({
           timelineEndTime: roundToThreeDecimals(secondPart.timelineEndTime),
           startTimeWithinVideo: roundToThreeDecimals(secondPart.startTimeWithinVideo),
           endTimeWithinVideo: roundToThreeDecimals(secondPart.endTimeWithinVideo),
-          filePath: `videos/projects/${projectId}/${filename}`,
+          filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(filename)}`,
           positionX: secondPart.positionX ?? 0,
           positionY: secondPart.positionY ?? 0,
           scale: secondPart.scale ?? 1,

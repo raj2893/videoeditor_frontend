@@ -5,16 +5,11 @@ import '../CSS/ProjectEditor.css';
 import TimelineComponent from './TimelineComponent.js';
 import VideoPreview from './VideoPreview';
 import { debounce } from 'lodash';
-import ImageSegmentHandler from './ImageSegmentHandler';
-import AudioSegmentHandler from './AudioSegmentHandler';
 import KeyframeControls from './KeyframeControls';
 import FilterControls from './FilterControls';
 import TransitionsPanel from './TransitionsPanel';
 import { v4 as uuidv4 } from 'uuid';
-import WaveSurfer from 'wavesurfer.js';
-
-const API_BASE_URL = 'https://videoeditor-app.onrender.com';
-// const API_BASE_URL = "http://localhost:8080";
+import { API_BASE_URL, CDN_URL } from '../Config.js';
 
 const ProjectEditor = () => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -89,6 +84,10 @@ const ProjectEditor = () => {
   const [userRole, setUserRole] = useState('BASIC'); // Default to BASIC
   const [videoUploadError, setVideoUploadError] = useState('');
   const [defaultTextStyles, setDefaultTextStyles] = useState([]);
+  // Add to existing state declarations at the top of ProjectEditor
+  const [uploadProgress, setUploadProgress] = useState({}); // Object to store progress for each file
+  const [tempThumbnails, setTempThumbnails] = useState({}); // Store temporary blurred thumbnails
+  const [isContentPanelOpen, setIsContentPanelOpen] = useState(false);
   const textSettingsRef = useRef(textSettings);
 
   const canUndo = historyIndex > 0;
@@ -687,7 +686,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
       id: tempId,
       type: 'audio',
       fileName: audio.fileName,
-      url: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(audio.fileName)}`, // Changed audioPath to url for consistency
+      url: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.fileName)}`,
       displayName: audio.displayName || audio.fileName.split('/').pop(),
       waveformJsonPath: audio.waveformJsonPath,
       startTime: timelineStartTime,
@@ -764,8 +763,10 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
 
     // Update waveformJsonPath based on backend response
     const waveformJsonPath = newAudioSegment.waveformJsonPath
-      ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(newAudioSegment.waveformJsonPath.split('/').pop())}`
-      : audio.waveformJsonPath;
+        ? `${CDN_URL}/waveform-json/projects/${projectId}/${encodeURIComponent(newAudioSegment.waveformJsonPath.split('/').pop())}`
+        : audio.waveformJsonPath
+        ? `${CDN_URL}/waveform-json/projects/${projectId}/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
+        : null;
 
     setAudioLayers((prevLayers) => {
       const newLayers = prevLayers.map((layer, index) => {
@@ -785,7 +786,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
                   timelineStartTime: roundToThreeDecimals(newAudioSegment.timelineStartTime),
                   timelineEndTime: roundToThreeDecimals(newAudioSegment.timelineEndTime),
                   layer: newAudioSegment.layer || backendLayer,
-                  url: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(audio.fileName)}`, // Ensure url is set
+                  url: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.fileName)}`,
                   waveformJsonPath: waveformJsonPath,
                   isExtracted: newAudioSegment.isExtracted || false, // Include isExtracted
                 }
@@ -832,7 +833,12 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
 }, 300);
 
   const toggleTransitionsPanel = () => {
-    setIsTransitionsOpen((prev) => !prev);
+    setIsTransitionsOpen((prev) => {
+      const newState = !prev;
+      setIsContentPanelOpen(newState);
+      setExpandedSection(newState ? 'transitions' : null);
+      return newState;
+    });
     setIsTransformOpen(false);
     setIsFiltersOpen(false);
     setIsTextToolOpen(false);
@@ -989,28 +995,24 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
   const areTimesEqual = (time1, time2, epsilon = 0.0001) => Math.abs(time1 - time2) < epsilon;
 
   const toggleTransformPanel = () => {
-    setIsTransformOpen((prev) => !prev);
-    setIsFiltersOpen(false);
-    setIsTextToolOpen(false);
+    toggleSection('transform');
+  };
+  
+  const toggleFiltersPanel = () => {
+    toggleSection('filters');
+  };
+  
+  const toggleTextTool = () => {
+    if (selectedSegment && selectedSegment.type === 'text') {
+      toggleSection('text');
+    } else {
+      setIsTextToolOpen(false);
+      setIsContentPanelOpen(false);
+      setExpandedSection(null);
+    }
   };
 
   const toggleMediaPanel = () => setIsMediaPanelOpen((prev) => !prev);
-  const toggleToolsPanel = () => setIsToolsPanelOpen((prev) => !prev);
-
-  const toggleFiltersPanel = () => {
-    setIsFiltersOpen((prev) => !prev);
-    setIsTransformOpen(false);
-    setIsTextToolOpen(false);
-  };
-
-  const toggleTextTool = () => {
-    if (selectedSegment && selectedSegment.type === 'text') {
-      setIsTextToolOpen((prev) => !prev);
-      setIsFiltersOpen(false);
-    } else {
-      setIsTextToolOpen(false);
-    }
-  };
 
   const handleTextSegmentSelect = (segment) => {
     setEditingTextSegment(segment);
@@ -1492,13 +1494,13 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
               id: sanitizedId,
               fileName: fullFileName,
               displayName: originalFileName,
-              filePath: `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(fullFileName)}`,
+              filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fullFileName)}`,
               duration: duration,
               audioPath: video.audioPath
-                ? `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(video.audioPath.split('/').pop())}`
-                : null,
+                  ? `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(video.audioPath.split('/').pop())}`
+                  : null,
               waveformJsonPath: video.waveformJsonPath
-                ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(video.waveformJsonPath.split('/').pop())}`
+                ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(video.waveformJsonPath.split('/').pop())}`
                 : null,
             };
           })
@@ -1538,9 +1540,9 @@ const fetchAudios = async () => {
             id: sanitizedId,
             fileName: fullFileName,
             displayName: originalFileName,
-            audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(fullFileName)}`,
+            audioPath: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(fullFileName)}`,
             waveformJsonPath: audio.waveformJsonPath
-              ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
+              ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
               : null,
           };
         });
@@ -1575,7 +1577,7 @@ const fetchAudios = async () => {
               const thumbnail = await new Promise((resolve) => {
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
-                img.src = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(fullFileName)}`;
+                img.src = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(fullFileName)}`;
                 img.onload = () => {
                   const canvas = document.createElement('canvas');
                   const ctx = canvas.getContext('2d');
@@ -1605,7 +1607,7 @@ const fetchAudios = async () => {
                 id: image.imagePath || `image-${fullFileName}-${Date.now()}`,
                 fileName: fullFileName,
                 displayName: originalFileName,
-                filePath: `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(fullFileName)}`,
+                filePath: `${API_BASE_URL}/image/projects/${projectId}/${encodeURIComponent(fullFileName)}`,
                 thumbnail,
               };
             })
@@ -1701,7 +1703,7 @@ const preloadMedia = () => {
       const video = document.createElement('video');
       // Extract filename from filePath (e.g., 'videos/projects/{projectId}/filename.mp4')
       const fileName = segment.filePath.split('/').pop();
-      video.src = `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(fileName)}`;
+      video.src = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fileName)}`;
       video.preload = 'auto';
       video.muted = true;
       video.className = 'preload-media';
@@ -1709,7 +1711,9 @@ const preloadMedia = () => {
       video.load();
     } else if (segment.type === 'image' && segment.filePath) {
       const img = document.createElement('img');
-      img.src = segment.filePath;
+      img.src = segment.isElement
+        ?  `${CDN_URL}/elements/${encodeURIComponent(segment.fileName)}`
+        : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(segment.fileName)}`;
       img.className = 'preload-media';
       preloadContainer.appendChild(img);
     }
@@ -1720,7 +1724,7 @@ const preloadMedia = () => {
     layer.forEach((segment) => {
       if (segment.audioPath) {
         const audio = document.createElement('audio');
-        audio.src = segment.audioPath;
+        audio.src = `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(segment.fileName)}`;
         audio.preload = 'auto';
         audio.className = 'preload-media';
         preloadContainer.appendChild(audio);
@@ -1745,7 +1749,7 @@ const preloadMedia = () => {
             typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
           const newVideoLayers = [[], [], []];
           const newAudioLayers = [[], [], []];
-  
+
           // Map filters to segments
           const filterMap = {};
           (timelineState.filters || []).forEach((filter) => {
@@ -1754,7 +1758,7 @@ const preloadMedia = () => {
             }
             filterMap[filter.segmentId].push(filter);
           });
-  
+
           // Process video segments
           if (timelineState.segments && timelineState.segments.length > 0) {
             for (const segment of timelineState.segments) {
@@ -1776,7 +1780,7 @@ const preloadMedia = () => {
                     startTime: segment.timelineStartTime || 0,
                     duration: (segment.timelineEndTime - segment.timelineStartTime) || 0,
                     layer: layerIndex,
-                    filePath: `videos/projects/${projectId}/${videoFileName}`,
+                    filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(videoFileName)}`,
                     positionX: segment.positionX ?? 0,
                     positionY: segment.positionY ?? 0,
                     scale: segment.scale ?? 1,
@@ -1797,7 +1801,7 @@ const preloadMedia = () => {
               }
             }
           }
-  
+
           // Process image segments
           if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
             for (const imageSegment of timelineState.imageSegments) {
@@ -1807,7 +1811,7 @@ const preloadMedia = () => {
                 while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
               }
               const filename = imageSegment.imagePath.split('/').pop();
-              const filePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+              const filePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
               const thumbnail = await generateImageThumbnail(imageSegment.imagePath, imageSegment.element);
               const filters = filterMap[imageSegment.id] || [];
               newVideoLayers[layerIndex].push({
@@ -1839,7 +1843,7 @@ const preloadMedia = () => {
               });
             }
           }
-  
+
           // Process text segments
           if (timelineState.textSegments && timelineState.textSegments.length > 0) {
             for (const textSegment of timelineState.textSegments) {
@@ -1880,7 +1884,7 @@ const preloadMedia = () => {
               });
             }
           }
-  
+
           // Process audio segments
           if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
             for (const audioSegment of timelineState.audioSegments) {
@@ -1890,9 +1894,9 @@ const preloadMedia = () => {
                 while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
               }
               const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
-              const audioUrl = `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(filename)}`;
+              const audioUrl = `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
               const waveformJsonPath = audioSegment.waveformJsonPath
-                ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+                ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
                 : null;
               const sanitizedId = audioSegment.id.replace(/[^a-zA-Z0-9]/g, '-');
               newAudioLayers[layerIndex].push({
@@ -1915,7 +1919,7 @@ const preloadMedia = () => {
               });
             }
           }
-  
+
           setVideoLayers(newVideoLayers);
           setAudioLayers(newAudioLayers);
           let maxEndTime = 0;
@@ -1951,7 +1955,7 @@ const preloadMedia = () => {
     }
   }, [videoLayers, audioLayers]);
 
-  const handleVideoUpload = async (event) => {
+const handleVideoUpload = async (event) => {
   const files = Array.from(event.target.files);
   if (files.length === 0) return;
 
@@ -1977,12 +1981,36 @@ const preloadMedia = () => {
 
   try {
     setUploading(true);
+    // Initialize progress for all files
+    setUploadProgress(
+      files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {})
+    );
+
     const token = localStorage.getItem('token');
     const response = await axios.post(
       `${API_BASE_URL}/projects/${projectId}/upload-video`,
       formData,
       {
-        headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`
+        },
+        // Ensure progress events are captured
+        onUploadProgress: (progressEvent) => {
+          const total = progressEvent.total || 1;
+          const loaded = progressEvent.loaded;
+          const percentCompleted = Math.round((loaded * 100) / total);
+          console.log(`Upload progress: ${percentCompleted}%`); // Debug log
+
+          // Update progress for all files
+          setUploadProgress((prev) => {
+            const updatedProgress = { ...prev };
+            files.forEach((file) => {
+              updatedProgress[file.name] = percentCompleted;
+            });
+            return updatedProgress;
+          });
+        },
       }
     );
     const { project, videoFiles } = response.data;
@@ -1996,13 +2024,13 @@ const preloadMedia = () => {
           id: sanitizedId,
           fileName: fullFileName,
           displayName: originalFileName,
-          filePath: `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(fullFileName)}`,
+          filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fullFileName)}`,
           duration: video.duration || 5,
           audioPath: video.audioPath
-            ? `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(video.audioPath.split('/').pop())}`
+            ? `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(video.audioPath.split('/').pop())}`
             : null,
           waveformJsonPath: video.waveformJsonPath
-            ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(video.waveformJsonPath.split('/').pop())}`
+            ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(video.waveformJsonPath.split('/').pop())}`
             : null,
         };
       });
@@ -2018,6 +2046,7 @@ const preloadMedia = () => {
     setTimeout(() => setVideoUploadError(''), 5000);
   } finally {
     setUploading(false);
+    setUploadProgress({}); // Clear progress
   }
 };
 
@@ -2078,11 +2107,29 @@ const preloadMedia = () => {
 
     try {
       setUploading(true);
+      setUploadProgress((prev) => ({
+        ...prev,
+        ...files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {}),
+      }));
+
       const token = localStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/projects/${projectId}/upload-audio`,
         formData,
-        { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
+        {
+          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
+          onUploadProgress: (progressEvent) => {
+            const total = progressEvent.total || 1;
+            const loaded = progressEvent.loaded;
+            const percentCompleted = Math.round((loaded * 100) / total);
+            files.forEach((file) => {
+              setUploadProgress((prev) => ({
+                ...prev,
+                [file.name]: percentCompleted,
+              }));
+            });
+          },
+        }
       );
       const { project, audioFiles } = response.data;
 
@@ -2090,15 +2137,14 @@ const preloadMedia = () => {
         const updatedAudios = audioFiles.map((audio) => {
           const fullFileName = audio.audioFileName.split('/').pop();
           const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
-          // Sanitize the filename for use in id
           const sanitizedId = `audio-${fullFileName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
           return {
             id: sanitizedId,
             fileName: fullFileName,
             displayName: originalFileName,
-            audioPath: `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(fullFileName)}`,
+            audioPath: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(fullFileName)}`,
             waveformJsonPath: audio.waveformJsonPath
-              ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
+              ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
               : null,
           };
         });
@@ -2111,14 +2157,15 @@ const preloadMedia = () => {
       alert('Failed to upload one or more audio files. Please try again.');
     } finally {
       setUploading(false);
+      setUploadProgress({}); // Clear progress
     }
   };
 
-  const generateVideoThumbnail = async (video) => {
+const generateVideoThumbnail = async (video) => {
   if (!video || !video.fileName) return;
   if (video.thumbnail) return;
   const path = video.fileName; // fileName is the filename from videosJson
-  const videoUrl = `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(path)}`;
+  const videoUrl = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(path)}`;
   try {
     const videoElement = document.createElement('video');
     videoElement.crossOrigin = 'anonymous';
@@ -2153,7 +2200,7 @@ const preloadMedia = () => {
 
   const generateImageThumbnail = async (imagePath, isElement = false) => {
     const filename = imagePath.split('/').pop();
-    const fullImagePath = `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(filename)}`;
+    const fullImagePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -2549,8 +2596,8 @@ const preloadMedia = () => {
         type: 'image',
         fileName: imageFileName,
         filePath: isElement
-          ? `${API_BASE_URL}/projects/${projectId}/images/${encodeURIComponent(imageFileName)}`
-          : photo?.filePath,
+          ? `${API_BASE_URL}/elements/projects/${projectId}/${encodeURIComponent(imageFileName)}`
+          : `${API_BASE_URL}/image/projects/${projectId}/${encodeURIComponent(imageFileName)}`,
         startTime: newImageSegment.timelineStartTime,
         duration: newImageSegment.timelineEndTime - newImageSegment.timelineStartTime,
         layer: layer || 0,
@@ -2645,7 +2692,7 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
       type: 'video',
       startTime: videoSegment.timelineStartTime,
       duration: videoSegment.timelineEndTime - videoSegment.timelineStartTime,
-      filePath: `videos/projects/${projectId}/${fileName}`, // Use full path for frontend
+      filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fileName)}`,
       layer: layer || 0,
       positionX: videoSegment.positionX || 0,
       positionY: videoSegment.positionY || 0,
@@ -2684,11 +2731,15 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
         type: 'audio',
         fileName: audioSegment.audioFileName || audioSegment.audioPath.split('/').pop(),
         url: audioSegment.audioPath
-          ? `${API_BASE_URL}/projects/${projectId}/audio/${encodeURIComponent(audioSegment.audioPath.split('/').pop())}`
-          : audioPath,
+            ? `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioSegment.audioPath.split('/').pop())}`
+            : audioPath
+            ? `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioPath.split('/').pop())}`
+            : null,
         waveformJsonPath: audioSegment.waveformJsonPath
-          ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
-          : waveformJsonPath,
+            ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+            : waveformJsonPath
+            ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(waveformJsonPath.split('/').pop())}`
+            : null,
         startTime: roundToThreeDecimals(audioSegment.timelineStartTime),
         duration: roundToThreeDecimals(audioSegment.timelineEndTime - audioSegment.timelineStartTime),
         timelineStartTime: roundToThreeDecimals(audioSegment.timelineStartTime),
@@ -2936,6 +2987,11 @@ const handleMouseDown = (e) => {
   setIsDraggingHandle(true);
 };
 
+const handleTouchStart = (e) => {
+  e.preventDefault();
+  setIsDraggingHandle(true);
+};
+
 const handleMouseMove = (e) => {
   if (!isDraggingHandle) return;
   const contentWrapper = document.querySelector('.content-wrapper');
@@ -2944,11 +3000,14 @@ const handleMouseMove = (e) => {
   const resizeHandleHeight = 6;
   const zoomSliderHeight = 40;
   const previewMarginTotal = 40;
-  const mouseY = e.clientY;
-  const wrapperTop = contentWrapper.getBoundingClientRect().top;
-  const distanceFromTop = mouseY - wrapperTop;
+
+  // Use clientY from mouse or first touch
+  const clientY = e.clientY !== undefined ? e.clientY : e.touches[0].clientY;
 
   const availableHeight = wrapperHeight - controlsPanelHeight - resizeHandleHeight - zoomSliderHeight - previewMarginTotal;
+
+  const wrapperTop = contentWrapper.getBoundingClientRect().top;
+  const distanceFromTop = clientY - wrapperTop;
 
   const previewHeightPx = distanceFromTop - resizeHandleHeight - 20;
   const minPreviewHeight = 100;
@@ -2965,18 +3024,51 @@ const handleMouseMove = (e) => {
   setTimelineHeight(clampedTimelineHeight);
 };
 
-const handleMouseUp = () => setIsDraggingHandle(false);
+const handleMouseUp = () => {
+  setIsDraggingHandle(false);
+};
+
+const handleTouchEnd = () => {
+  setIsDraggingHandle(false);
+};
 
 useEffect(() => {
+  const handleTouchMove = (e) => {
+    handleMouseMove(e); // Reuse the same logic for touchmove
+  };
+
   document.addEventListener('mousemove', handleMouseMove);
   document.addEventListener('mouseup', handleMouseUp);
+  document.addEventListener('touchmove', handleTouchMove, { passive: false });
+  document.addEventListener('touchend', handleTouchEnd);
+
   return () => {
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', handleMouseUp);
+    document.removeEventListener('touchmove', handleTouchMove);
+    document.removeEventListener('touchend', handleTouchEnd);
   };
 }, [isDraggingHandle]);
 
-const toggleSection = (section) => setExpandedSection(expandedSection === section ? null : section);
+const toggleSection = (section) => {
+  if (expandedSection === section) {
+    setExpandedSection(null);
+    setIsContentPanelOpen(false);
+    // Reset tool panel states when closing
+    setIsTransformOpen(false);
+    setIsFiltersOpen(false);
+    setIsTextToolOpen(false);
+    setIsTransitionsOpen(false);
+  } else {
+    setExpandedSection(section);
+    setIsContentPanelOpen(true);
+    // Update tool panel states based on section
+    setIsTransformOpen(section === 'transform');
+    setIsFiltersOpen(section === 'filters');
+    setIsTextToolOpen(section === 'text' && selectedSegment?.type === 'text');
+    setIsTransitionsOpen(section === 'transitions');
+  }
+};
 
 const handleSegmentSelect = async (segment) => {
   setSelectedSegment(segment);
@@ -3876,11 +3968,29 @@ const handlePhotoUpload = async (event) => {
 
   try {
     setUploading(true);
+    setUploadProgress((prev) => ({
+      ...prev,
+      ...files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {}),
+    }));
+
     const token = localStorage.getItem('token');
     const response = await axios.post(
       `${API_BASE_URL}/projects/${projectId}/upload-image`,
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
+      {
+        headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
+        onUploadProgress: (progressEvent) => {
+          const total = progressEvent.total || 1;
+          const loaded = progressEvent.loaded;
+          const percentCompleted = Math.round((loaded * 100) / total);
+          files.forEach((file) => {
+            setUploadProgress((prev) => ({
+              ...prev,
+              [file.name]: percentCompleted,
+            }));
+          });
+        },
+      }
     );
     const updatedProject = response.data;
     if (updatedProject) await fetchPhotos();
@@ -3889,6 +3999,7 @@ const handlePhotoUpload = async (event) => {
     alert('Failed to upload one or more images. Please try again.');
   } finally {
     setUploading(false);
+    setUploadProgress({}); // Clear progress
   }
 };
 
@@ -4502,243 +4613,26 @@ return (
             <button className="section-button" data-section="videos" onClick={() => toggleSection('videos')}>
               Videos
             </button>
-            {expandedSection === 'videos' && (
-              <div className="section-content">
-                <input
-                  type="file"
-                  accept="video/*"
-                  onChange={handleVideoUpload}
-                  id="upload-video"
-                  className="hidden-input"
-                  multiple
-                />
-                <label htmlFor="upload-video" className="upload-icon-button">
-                  <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </label>
-                {videos.length === 0 ? (
-                  <div className="empty-state">Pour it in, I am waiting!</div>
-                ) : (
-                  <div className="video-list">
-                    {videos.map((video) => (
-                      <div
-                        key={video.id || video.filePath || video.filename}
-                        className={`video-item ${
-                          selectedVideo && (selectedVideo.id === video.id || selectedVideo.filePath === video.filePath)
-                            ? 'selected'
-                            : ''
-                        }`}
-                        draggable={true}
-                        onDragStart={(e) => handleMediaDragStart(e, video, 'media')}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleVideoClick(video);
-                        }}
-                        onDragEnd={(e) => e.stopPropagation()}
-                      >
-                        {video.thumbnail ? (
-                          <div
-                            className="video-thumbnail"
-                            style={{
-                              backgroundImage: `url(${video.thumbnail})`,
-                              height: '130px',
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                              borderRadius: '4px',
-                            }}
-                          ></div>
-                        ) : (
-                          <div className="video-thumbnail-placeholder"></div>
-                        )}
-                        {video.title || (video.displayPath ? video.displayPath.split('/').pop().replace(/^\d+_/, '') : 'Untitled Video')}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
           <div className="media-section">
             <button className="section-button" data-section="photos" onClick={() => toggleSection('photos')}>
               Photos
             </button>
-            {expandedSection === 'photos' && (
-              <div className="section-content">
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={handlePhotoUpload}
-                  id="upload-photo"
-                  className="hidden-input"
-                  multiple
-                />
-                <label htmlFor="upload-photo" className="upload-icon-button">
-                  <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </label>
-                {photos.length === 0 ? (
-                  <div className="empty-state">Pour it in, I am waiting!</div>
-                ) : (
-                  <div className="photo-list">
-                    {photos.map((photo) => (
-                      <div
-                        key={photo.id}
-                        className="photo-item"
-                        draggable={true}
-                        onDragStart={(e) => handleMediaDragStart(e, photo, 'photo')}
-                        onClick={() => handlePhotoClick(photo)}
-                      >
-                        <img src={photo.filePath} alt={photo.displayName} className="photo-thumbnail" />
-                        <div className="photo-title">{photo.displayName}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
           <div className="media-section">
             <button className="section-button" data-section="audios" onClick={() => toggleSection('audios')}>
               Audio
             </button>
-            {expandedSection === 'audios' && (
-              <div className="section-content">
-                <input
-                  type="file"
-                  accept="audio/*"
-                  onChange={handleAudioUpload}
-                  id="upload-audio"
-                  className="hidden-input"
-                  multiple
-                />
-                <label htmlFor="upload-audio" className="upload-icon-button">
-                  <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </label>
-                {audios.length === 0 ? (
-                  <div className="empty-state">Pour it in, I am waiting!</div>
-                ) : (
-                  <div className="audio-list">
-                    {audios.map((audio) => (
-                      <div
-                        key={audio.id}
-                        className="audio-item"
-                        draggable={true}
-                        onDragStart={(e) => handleMediaDragStart(e, audio, 'audio')}
-                        onClick={() => handleAudioClick(audio)}
-                      >
-                        <div
-                          className="audio-waveform"
-                          id={`waveform-${audio.id}`}
-                          style={{ width: '100%', height: '50px' }}
-                        ></div>
-                        <div className="audio-title">{audio.displayName}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
           <div className="media-section">
-            <button
-              className="section-button"
-              data-section="elements"
-              onClick={() => toggleSection('elements')}
-            >
+            <button className="section-button" data-section="elements" onClick={() => toggleSection('elements')}>
               Elements {userRole === 'BASIC' && <span className="lock-icon">🔒</span>}
             </button>
-            {expandedSection === 'elements' && (
-              <div className="section-content">
-                <input
-                  type="text"
-                  placeholder="Search elements..."
-                  value={elementSearchQuery}
-                  onChange={(e) => setElementSearchQuery(e.target.value)}
-                  className="search-input"
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    marginBottom: '10px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc',
-                    boxSizing: 'border-box',
-                    fontSize: '14px',
-                  }}
-                />
-                {filteredElements.length === 0 ? (
-                  <div className="empty-state">
-                    {elementSearchQuery ? 'No elements match your search.' : 'No elements available!'}
-                  </div>
-                ) : (
-                  <div className="element-list">
-                    {filteredElements.map((element) => (
-                      <div
-                        key={element.id}
-                        className={`element-item ${userRole === 'BASIC' ? 'basic-user' : ''}`}
-                        draggable={userRole !== 'BASIC'} // Disable dragging for Basic users
-                        onDragStart={userRole !== 'BASIC' ? (e) => handleMediaDragStart(e, element, 'element') : undefined}
-                        onClick={userRole !== 'BASIC' ? () => handleElementClick(element) : undefined}
-                        title={userRole === 'BASIC' ? 'Elements are accessible to premium users only.' : ''}
-                      >
-                        <img
-                          src={element.thumbnail || element.filePath}
-                          alt={element.displayName}
-                          className="element-thumbnail"
-                        />
-                        <div className="element-title">{element.displayName}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
           <div className="media-section">
             <button className="section-button" data-section="textStyles" onClick={() => toggleSection('textStyles')}>
               Text Styles
             </button>
-            {expandedSection === 'textStyles' && (
-              <div className="section-content">
-                {defaultTextStyles.length === 0 ? (
-                  <div className="empty-state">No text styles available!</div>
-                ) : (
-                  <div className="text-style-list">
-                    {defaultTextStyles.map((style, index) => (
-                      <div
-                        key={`text-style-${index}`}
-                        className="text-style-item"
-                        draggable={true}
-                        onDragStart={(e) => handleTextStyleDragStart(e, style)}
-                        onClick={() => handleTextStyleClick(style)}
-                        style={{
-                          backgroundColor: style.backgroundColor,
-                          color: style.fontColor,
-                          fontFamily: style.fontFamily,
-                          padding: `${Math.max(style.backgroundH / 2, style.backgroundW / 2)}px`,
-                          borderRadius: `${style.backgroundBorderRadius}px`,
-                          border: `${style.backgroundBorderWidth}px solid ${style.backgroundBorderColor}`,
-                          opacity: style.backgroundOpacity,
-                          textAlign: style.alignment,
-                          margin: '10px 0',
-                          cursor: 'pointer',
-                          WebkitTextStroke: style.textBorderWidth > 0 ? `${style.textBorderWidth}px ${style.textBorderColor}` : 'none', // Added
-                          WebkitTextStrokeOpacity: style.textBorderOpacity || 1.0, // Added (Note: CSS does not support stroke opacity directly)
-                        }}
-                      >
-                        {style.text}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
           <div className="media-section">
             <button
@@ -4750,153 +4644,333 @@ return (
               <span>AI Subtitles</span>
             </button>
           </div>
+          {/* Tool Sections */}
+          <div className="media-section">
+            <button
+              className={`section-button ${expandedSection === 'transform' ? 'active' : ''}`}
+              data-section="transform"
+              onClick={toggleTransformPanel}
+            >
+              Transform
+            </button>
+          </div>
+          <div className="media-section">
+            <button
+              className={`section-button ${expandedSection === 'filters' ? 'active' : ''}`}
+              data-section="filters"
+              onClick={toggleFiltersPanel}
+            >
+              Filters
+            </button>
+          </div>
+          <div className="media-section">
+            <button
+              className={`section-button ${expandedSection === 'text' ? 'active' : ''}`}
+              data-section="text"
+              onClick={toggleTextTool}
+              disabled={!selectedSegment || selectedSegment.type !== 'text'}
+            >
+              Text
+            </button>
+          </div>
+          <div className="media-section">
+            <button
+              className={`section-button ${expandedSection === 'transitions' ? 'active' : ''}`}
+              data-section="transitions"
+              onClick={toggleTransitionsPanel}
+            >
+              Transitions
+            </button>
+          </div>
         </div>
       )}
     </aside>
 
-    <div className="main-content">
-      <div className="content-wrapper">
-        <div className="preview-section" style={{ height: previewHeight }}>
-          <VideoPreview
-            videoLayers={videoLayers}
-            audioLayers={audioLayers}
-            currentTime={currentTime}
-            isPlaying={isPlaying}
-            canvasDimensions={canvasDimensions}
-            totalDuration={totalDuration}
-            onTimeUpdate={handleTimeUpdate}
-            setIsPlaying={setIsPlaying}
-            containerHeight={previewHeight}
-            videos={videos}
-            photos={photos}
-            transitions={transitions}
-            fps={projectFps}
-            onLoadedAudioSegmentsUpdate={handleLoadedAudioSegmentsUpdate}
-            onSegmentSelect={handleSegmentSelect}
-            onSegmentPositionUpdate={handleSegmentPositionUpdate}
-            selectedSegment={selectedSegment}
-            updateSegmentProperty={updateSegmentProperty} // Add this prop
-            projectId={projectId} // Add this
-          />
+    {/* Content Panel */}
+    {isContentPanelOpen && (
+      <aside className="content-panel open">
+        <div className="panel-header">
+          <button className="toggle-button" onClick={() => {
+            setIsContentPanelOpen(false);
+            setExpandedSection(null);
+            // Reset tool panel states when closing
+            setIsTransformOpen(false);
+            setIsFiltersOpen(false);
+            setIsTextToolOpen(false);
+            setIsTransitionsOpen(false);
+          }}>
+            ◄
+          </button>
         </div>
-        <div className={`resize-preview-section ${isDraggingHandle ? 'dragging' : ''}`} onMouseDown={handleMouseDown}></div>
-        <div className="controls-panel">
-           <button className="control-button" onClick={handleSaveProject} title="Save Project">
-             💾
-           </button>
-           <button
-             className="delete-button"
-             onClick={handleDeleteSegment}
-             disabled={!selectedSegment}
-             title="Delete Segment"
-           >
-             🗑️
-           </button>
-           <button className="control-button" onClick={handleExportProject} title="Export Project">
-             ⬆️
-           </button>
-        </div>
-        <div
-          className={`timeline-section ${isTimelineSelected ? 'selected' : ''}`}
-          style={{ height: `${timelineHeight}%` }}
-          ref={timelineRef}
-        >
-          {sessionId ? (
-            <TimelineComponent
-              videos={videos}
-              audios={audios}
-              sessionId={sessionId}
-              projectId={projectId}
-              totalDuration={totalDuration}
-              setTotalDuration={setTotalDuration}
-              onVideoSelect={(time, video) => setCurrentTime(time)}
-              canvasDimensions={canvasDimensions}
-              addVideoToTimeline={addVideoToTimeline}
-              onTimeUpdate={(newTime) => handleTimeUpdate(newTime, false)}
-              onSegmentSelect={handleSegmentSelect}
-              videoLayers={videoLayers}
-              audioLayers={audioLayers}
-              setVideoLayers={setVideoLayers}
-              setAudioLayers={setAudioLayers}
-              thumbnailsGenerated={thumbnailsGenerated}
-              openTextTool={openTextTool}
-              timeScale={timeScale}
-              setTimeScale={setTimeScale}
-              setPlayheadFromParent={(setPlayhead) => (timelineSetPlayhead = setPlayhead)}
-              onDeleteSegment={handleDeleteSegment}
-              transitions={transitions}
-              setTransitions={setTransitions}
-              handleTransitionDrop={handleTransitionDrop}
-              onTransitionSelect={handleTransitionSelect}
-              isPlaying={isPlaying}
-              setIsPlaying={setIsPlaying}
-              fps={projectFps}
-              saveHistory={saveHistory}
-              handleUndo={handleUndo}
-              handleRedo={handleRedo}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              currentTime={currentTime}
-              preloadMedia={preloadMedia} // Add this line
-              onTimelineClick={() => setIsTimelineSelected(true)} // Add this prop
-              MIN_TIME_SCALE={MIN_TIME_SCALE}
-              MAX_TIME_SCALE={MAX_TIME_SCALE}
-            />
-          ) : (
-            <div className="loading-container">
-              <div className="branding-container">
-                <h1>
-                  <span className="letter">S</span>
-                  <span className="letter">C</span>
-                  <span className="letter">E</span>
-                  <span className="letter">N</span>
-                  <span className="letter">I</span>
-                  <span className="letter">T</span>
-                  <span className="letter">H</span>
-                </h1>
-                <div className="logo-element"></div>
-              </div>
+        <div className="panel-content">
+          {expandedSection === 'videos' && (
+            <div className="section-content">
+              <input
+                type="file"
+                accept="video/*"
+                onChange={handleVideoUpload}
+                id="upload-video"
+                className="hidden-input"
+                multiple
+              />
+              <label htmlFor="upload-video" className="upload-icon-button">
+                <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </label>
+              {videos.length === 0 ? (
+                <div className="empty-state">Pour it in, I am waiting!</div>
+              ) : (
+                <div className="video-list">
+                  {videos.map((video) => (
+                    <div
+                      key={video.id || video.filePath || video.filename}
+                      className={`video-item ${
+                        selectedVideo && (selectedVideo.id === video.id || selectedVideo.filePath === video.filePath)
+                          ? 'selected'
+                          : ''
+                      }`}
+                      draggable={true}
+                      onDragStart={(e) => handleMediaDragStart(e, video, 'media')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVideoClick(video);
+                      }}
+                      onDragEnd={(e) => e.stopPropagation()}
+                    >
+                      {typeof uploadProgress[video.displayName] === 'number' ? (
+                        <div className="video-thumbnail uploading">
+                          <div
+                            className="video-thumbnail-image"
+                            style={{
+                              backgroundImage: `url(${tempThumbnails[video.displayName] || video.thumbnail || ''})`,
+                              height: '130px',
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              borderRadius: '4px',
+                              filter: tempThumbnails[video.displayName] ? 'blur(5px)' : 'none',
+                            }}
+                          ></div>
+                          <div className="upload-progress-overlay">
+                            <div className="upload-progress-bar">
+                              <div
+                                className="upload-progress-fill"
+                                style={{ width: `${uploadProgress[video.displayName]}%` }}
+                              ></div>
+                            </div>
+                            <div className="upload-progress-text">
+                              Uploading video: {uploadProgress[video.displayName]}%
+                            </div>
+                          </div>
+                        </div>
+                      ) : video.thumbnail ? (
+                        <div
+                          className="video-thumbnail"
+                          style={{
+                            backgroundImage: `url(${video.thumbnail})`,
+                            height: '130px',
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            borderRadius: '4px',
+                          }}
+                        ></div>
+                      ) : (
+                        <div className="video-thumbnail-placeholder"></div>
+                      )}
+                      <div className="video-title">
+                        {video.title || (video.displayName ? video.displayName.split('/').pop().replace(/^\d+_/, '') : 'Untitled Video')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-        </div>
-        <div className="zoom-slider-container">
-          <input
-            type="range"
-            min={MIN_TIME_SCALE}
-            max={MAX_TIME_SCALE}
-            step={0.1}
-            value={timeScale}
-            onChange={(e) => {
-              const newTimeScale = Number(e.target.value);
-              const clampedTimeScale = Math.max(MIN_TIME_SCALE, Math.min(MAX_TIME_SCALE, newTimeScale));
-              setTimeScale(clampedTimeScale);
-            }}
-            className="zoom-slider"
-          />
-          <span>Zoom: {timeScale.toFixed(1)}px/s</span>
-        </div>
-      </div>
-    </div>
-
-    <aside className={`tools-panel ${isToolsPanelOpen ? 'open' : 'closed'}`}>
-  <div className="panel-header">
-    <button className="toggle-button" onClick={toggleToolsPanel}>
-      {isToolsPanelOpen ? '►' : '◄'}
-    </button>
-  </div>
-  {isToolsPanelOpen && (
-    <div className="panel-content">
-      <div className="tools-sections">
-        <div className="tools-section">
-          <button
-            className={`tool-button ${isTransformOpen ? 'active' : ''}`}
-            data-section="transform" // Add this
-            onClick={toggleTransformPanel}
-          >
-            Transform
-          </button>
-          {selectedSegment && isTransformOpen && (
-            <div className="tool-subpanel transform-panel">
+          {expandedSection === 'photos' && (
+            <div className="section-content">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handlePhotoUpload}
+                id="upload-photo"
+                className="hidden-input"
+                multiple
+              />
+              <label htmlFor="upload-photo" className="upload-icon-button">
+                <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </label>
+              {photos.length === 0 ? (
+                <div className="empty-state">Pour it in, I am waiting!</div>
+              ) : (
+                <div className="photo-list">
+                  {photos.map((photo) => (
+                    <div
+                      key={photo.id}
+                      className="photo-item"
+                      draggable={true}
+                      onDragStart={(e) => handleMediaDragStart(e, photo, 'photo')}
+                      onClick={() => handlePhotoClick(photo)}
+                    >
+                      {uploadProgress[photo.displayName] !== undefined && (
+                        <div className="upload-progress-overlay">
+                          <div className="upload-progress-bar">
+                            <div
+                              className="upload-progress-fill"
+                              style={{ width: `${uploadProgress[photo.displayName]}%` }}
+                            ></div>
+                          </div>
+                          <div className="upload-progress-text">
+                            Uploading photo: {uploadProgress[photo.displayName]}%
+                          </div>
+                        </div>
+                      )}
+                      <img src={photo.filePath} alt={photo.displayName} className="photo-thumbnail" />
+                      <div className="photo-title">{photo.displayName}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {expandedSection === 'audios' && (
+            <div className="section-content">
+              <input
+                type="file"
+                accept="audio/*"
+                onChange={handleAudioUpload}
+                id="upload-audio"
+                className="hidden-input"
+                multiple
+              />
+              <label htmlFor="upload-audio" className="upload-icon-button">
+                <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </label>
+              {audios.length === 0 ? (
+                <div className="empty-state">Pour it in, I am waiting!</div>
+              ) : (
+                <div className="audio-list">
+                  {audios.map((audio) => (
+                    <div
+                      key={audio.id}
+                      className="audio-item"
+                      draggable={true}
+                      onDragStart={(e) => handleMediaDragStart(e, audio, 'audio')}
+                      onClick={() => handleAudioClick(audio)}
+                    >
+                      {uploadProgress[audio.displayName] !== undefined && (
+                        <div className="upload-progress-overlay">
+                          <div className="upload-progress-bar">
+                            <div
+                              className="upload-progress-fill"
+                              style={{ width: `${uploadProgress[audio.displayName]}%` }}
+                            ></div>
+                          </div>
+                          <div className="upload-progress-text">
+                            Uploading audio: {uploadProgress[audio.displayName]}%
+                          </div>
+                        </div>
+                      )}
+                      <div
+                        className="audio-waveform"
+                        id={`waveform-${audio.id}`}
+                        style={{ width: '100%', height: '50px' }}
+                      ></div>
+                      <div className="audio-title">{audio.displayName}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {expandedSection === 'elements' && (
+            <div className="section-content">
+              <input
+                type="text"
+                placeholder="Search elements..."
+                value={elementSearchQuery}
+                onChange={(e) => setElementSearchQuery(e.target.value)}
+                className="search-input"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  marginBottom: '10px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  boxSizing: 'border-box',
+                  fontSize: '14px',
+                }}
+              />
+              {filteredElements.length === 0 ? (
+                <div className="empty-state">
+                  {elementSearchQuery ? 'No elements match your search.' : 'No elements available!'}
+                </div>
+              ) : (
+                <div className="element-list">
+                  {filteredElements.map((element) => (
+                    <div
+                      key={element.id}
+                      className={`element-item ${userRole === 'BASIC' ? 'basic-user' : ''}`}
+                      draggable={userRole !== 'BASIC'}
+                      onDragStart={userRole !== 'BASIC' ? (e) => handleMediaDragStart(e, element, 'element') : undefined}
+                      onClick={userRole !== 'BASIC' ? () => handleElementClick(element) : undefined}
+                      title={userRole === 'BASIC' ? 'Elements are accessible to premium users only.' : ''}
+                    >
+                      <img
+                        src={element.thumbnail || element.filePath}
+                        alt={element.displayName}
+                        className="element-thumbnail"
+                      />
+                      <div className="element-title">{element.displayName}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {expandedSection === 'textStyles' && (
+            <div className="section-content">
+              {defaultTextStyles.length === 0 ? (
+                <div className="empty-state">No text styles available!</div>
+              ) : (
+                <div className="text-style-list">
+                  {defaultTextStyles.map((style, index) => (
+                    <div
+                      key={`text-style-${index}`}
+                      className="text-style-item"
+                      draggable={true}
+                      onDragStart={(e) => handleTextStyleDragStart(e, style)}
+                      onClick={() => handleTextStyleClick(style)}
+                      style={{
+                        backgroundColor: style.backgroundColor,
+                        color: style.fontColor,
+                        fontFamily: style.fontFamily,
+                        padding: `${Math.max(style.backgroundH / 2, style.backgroundW / 2)}px`,
+                        borderRadius: `${style.backgroundBorderRadius}px`,
+                        border: `${style.backgroundBorderWidth}px solid ${style.backgroundBorderColor}`,
+                        opacity: style.backgroundOpacity,
+                        textAlign: style.alignment,
+                        margin: '10px 0',
+                        cursor: 'pointer',
+                        WebkitTextStroke: style.textBorderWidth > 0 ? `${style.textBorderWidth}px ${style.textBorderColor}` : 'none',
+                        WebkitTextStrokeOpacity: style.textBorderOpacity || 1.0,
+                      }}
+                    >
+                      {style.text}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {expandedSection === 'transform' && (
+            <div className="section-content tool-subpanel transform-panel">
               <h3>Transform</h3>
               <KeyframeControls
                 selectedSegment={selectedSegment}
@@ -4919,17 +4993,9 @@ return (
               />
             </div>
           )}
-        </div>
-        <div className="tools-section">
-          <button
-            className={`tool-button ${isFiltersOpen ? 'active' : ''}`}
-            data-section="filters" // Add this
-            onClick={toggleFiltersPanel}
-          >
-            Filters
-          </button>
-          {isFiltersOpen && (
-            <div className="tool-subpanel filter-panel">
+          {expandedSection === 'filters' && (
+            <div className="section-content tool-subpanel filter-panel">
+              <h3>Filters</h3>
               <FilterControls
                 selectedSegment={selectedSegment}
                 filterParams={filterParams}
@@ -4939,18 +5005,8 @@ return (
               />
             </div>
           )}
-        </div>
-        <div className="tools-section">
-          <button
-            className={`tool-button ${isTextToolOpen ? 'active' : ''}`}
-            data-section="text" // Add this
-            onClick={toggleTextTool}
-            disabled={!selectedSegment || selectedSegment.type !== 'text'}
-          >
-            Text
-          </button>
-          {isTextToolOpen && selectedSegment && selectedSegment.type === 'text' && (
-            <div className="tool-subpanel text-tool-panel">
+          {expandedSection === 'text' && selectedSegment && selectedSegment.type === 'text' && (
+            <div className="section-content tool-subpanel text-tool-panel">
               <h3>Text Settings</h3>
               <div className="control-group">
                 <label>Text Content</label>
@@ -5170,17 +5226,9 @@ return (
               </div>
             </div>
           )}
-        </div>
-        <div className="tools-section">
-          <button
-            className={`tool-button ${isTransitionsOpen ? 'active' : ''}`}
-            data-section="transitions" // Add this
-            onClick={toggleTransitionsPanel}
-          >
-            Transitions
-          </button>
-          {isTransitionsOpen && (
-            <div className="tool-subpanel transitions-panel">
+          {expandedSection === 'transitions' && (
+            <div className="section-content tool-subpanel transitions-panel">
+              <h3>Transitions</h3>
               <TransitionsPanel
                 availableTransitions={availableTransitions}
                 selectedTransition={selectedTransition}
@@ -5192,10 +5240,132 @@ return (
             </div>
           )}
         </div>
+    </aside>
+  )}
+
+    <div className="main-content">
+      <div className="content-wrapper">
+        <div className="preview-section" style={{ height: previewHeight }}>
+          <VideoPreview
+            videoLayers={videoLayers}
+            audioLayers={audioLayers}
+            currentTime={currentTime}
+            isPlaying={isPlaying}
+            canvasDimensions={canvasDimensions}
+            totalDuration={totalDuration}
+            onTimeUpdate={handleTimeUpdate}
+            setIsPlaying={setIsPlaying}
+            containerHeight={previewHeight}
+            videos={videos}
+            photos={photos}
+            transitions={transitions}
+            fps={projectFps}
+            onLoadedAudioSegmentsUpdate={handleLoadedAudioSegmentsUpdate}
+            onSegmentSelect={handleSegmentSelect}
+            onSegmentPositionUpdate={handleSegmentPositionUpdate}
+            selectedSegment={selectedSegment}
+            updateSegmentProperty={updateSegmentProperty}
+            projectId={projectId}
+          />
+        </div>
+        <div className={`resize-preview-section ${isDraggingHandle ? 'dragging' : ''}`} onMouseDown={handleMouseDown} onTouchStart={handleTouchStart}></div>
+        <div className="controls-panel">
+          <button className="control-button" onClick={handleSaveProject} title="Save Project">
+            💾
+          </button>
+          <button
+            className="delete-button"
+            onClick={handleDeleteSegment}
+            disabled={!selectedSegment}
+            title="Delete Segment"
+          >
+            🗑️
+          </button>
+          <button className="control-button" onClick={handleExportProject} title="Export Project">
+            ⬆️
+          </button>
+        </div>
+        <div
+          className={`timeline-section ${isTimelineSelected ? 'selected' : ''}`}
+          style={{ height: `${timelineHeight}%` }}
+          ref={timelineRef}
+        >
+          {sessionId ? (
+            <TimelineComponent
+              videos={videos}
+              audios={audios}
+              sessionId={sessionId}
+              projectId={projectId}
+              totalDuration={totalDuration}
+              setTotalDuration={setTotalDuration}
+              onVideoSelect={(time, video) => setCurrentTime(time)}
+              canvasDimensions={canvasDimensions}
+              addVideoToTimeline={addVideoToTimeline}
+              onTimeUpdate={(newTime) => handleTimeUpdate(newTime, false)}
+              onSegmentSelect={handleSegmentSelect}
+              videoLayers={videoLayers}
+              audioLayers={audioLayers}
+              setVideoLayers={setVideoLayers}
+              setAudioLayers={setAudioLayers}
+              thumbnailsGenerated={thumbnailsGenerated}
+              openTextTool={openTextTool}
+              timeScale={timeScale}
+              setTimeScale={setTimeScale}
+              setPlayheadFromParent={(setPlayhead) => (timelineSetPlayhead = setPlayhead)}
+              onDeleteSegment={handleDeleteSegment}
+              transitions={transitions}
+              setTransitions={setTransitions}
+              handleTransitionDrop={handleTransitionDrop}
+              onTransitionSelect={handleTransitionSelect}
+              isPlaying={isPlaying}
+              setIsPlaying={setIsPlaying}
+              fps={projectFps}
+              saveHistory={saveHistory}
+              handleUndo={handleUndo}
+              handleRedo={handleRedo}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              currentTime={currentTime}
+              preloadMedia={preloadMedia}
+              onTimelineClick={() => setIsTimelineSelected(true)}
+              MIN_TIME_SCALE={MIN_TIME_SCALE}
+              MAX_TIME_SCALE={MAX_TIME_SCALE}
+            />
+          ) : (
+            <div className="loading-container">
+              <div className="branding-container">
+                <h1>
+                  <span className="letter">S</span>
+                  <span className="letter">C</span>
+                  <span className="letter">E</span>
+                  <span className="letter">N</span>
+                  <span className="letter">I</span>
+                  <span className="letter">T</span>
+                  <span className="letter">H</span>
+                </h1>
+                <div className="logo-element"></div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="zoom-slider-container">
+          <input
+            type="range"
+            min={MIN_TIME_SCALE}
+            max={MAX_TIME_SCALE}
+            step={0.1}
+            value={timeScale}
+            onChange={(e) => {
+              const newTimeScale = Number(e.target.value);
+              const clampedTimeScale = Math.max(MIN_TIME_SCALE, Math.min(MAX_TIME_SCALE, newTimeScale));
+              setTimeScale(clampedTimeScale);
+            }}
+            className="zoom-slider"
+          />
+          <span>Zoom: {timeScale.toFixed(1)}px/s</span>
+        </div>
       </div>
     </div>
-  )}
-</aside>
   </div>
 );
 };

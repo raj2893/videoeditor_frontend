@@ -1,10 +1,7 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import '../CSS/VideoPreview.css';
 import fx from 'glfx';
-import PropTypes from 'prop-types';
-
-const API_BASE_URL = 'https://videoeditor-app.onrender.com';
-// const API_BASE_URL = "http://localhost:8080";
+import { CDN_URL } from '../Config';
 const baseFontSize = 24.0;
 
 const VideoPreview = ({
@@ -13,14 +10,10 @@ const VideoPreview = ({
   currentTime,
   isPlaying,
   canvasDimensions = { width: 1080, height: 1920 },
-  onTimeUpdate,
-  totalDuration = 0,
   setIsPlaying,
   containerHeight,
-  videos = [],
   photos = [],
   transitions = [],
-  fps = 25,
   onLoadedAudioSegmentsUpdate, // New prop to share loadedAudioSegments
   onSegmentSelect,
   onSegmentPositionUpdate,
@@ -287,8 +280,7 @@ const VideoPreview = ({
     // Construct URL
     const audioUrl = segment.url.startsWith('http')
       ? segment.url
-      : `${API_BASE_URL}/projects/${segment.projectId || 136}/audio/${encodeURIComponent(segment.audioPath.split('/').pop())}`;
-    audio.src = audioUrl;
+      : `${CDN_URL}/audio/projects/${segment.projectId || 136}/${encodeURIComponent(segment.audioPath.split('/').pop())}`;
 
     return new Promise((resolve) => {
       let hasErrored = false;
@@ -670,7 +662,7 @@ const VideoPreview = ({
       const allVideoItems = videoLayers.flat().filter((item) => item.type === 'video');
       const preloadPromises = allVideoItems.map((item) => {
         const filename = item.filePath.split('/').pop();
-        const videoUrl = `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(filename)}`;
+        const videoUrl = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(filename)}`;
   
         if (!preloadRefs.current[item.id]) {
           const video = document.createElement('video');
@@ -775,7 +767,7 @@ const VideoPreview = ({
         const videoRef = videoRefs.current[element.id];
         if (videoRef) {
           const filename = element.filePath.split('/').pop();
-          const videoUrl = `${API_BASE_URL}/projects/${projectId}/videos/${encodeURIComponent(filename)}`;
+          const videoUrl = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(filename)}`;
   
           if (!videoRef.src) {
             videoRef.src = videoUrl;

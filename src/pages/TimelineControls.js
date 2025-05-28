@@ -18,13 +18,16 @@ const TimelineControls = ({
   return (
     <div className="timeline-controls">
       <button onClick={togglePlayback}>
-        {isPlaying ? '⏸️ Pause' : '▶️ Play'}
+        <span className="button-icon">{isPlaying ? '⏸️' : '▶️'}</span>
+        <span className="button-text">{isPlaying ? 'Pause' : 'Play'}</span>
       </button>
       <span className="time-display">
         {formatTime(currentTime)} / {formatTime(totalDuration)}
       </span>
       <div className="add-text-control">
-        <button onClick={onAddTextClick}>Add Text</button>
+        <button onClick={onAddTextClick}>
+          <span className="button-text">Add Text</span>
+        </button>
       </div>
       <div className="split-control">
         <button
@@ -35,6 +38,7 @@ const TimelineControls = ({
           ✂️
         </button>
       </div>
+      {isSaving && <span className="saving-indicator">Saving...</span>}
     </div>
   );
 };

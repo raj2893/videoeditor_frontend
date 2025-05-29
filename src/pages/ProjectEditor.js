@@ -608,7 +608,6 @@ const ProjectEditor = () => {
       });
 
       setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
-      preloadMedia();
       saveHistory();
 
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
@@ -731,7 +730,6 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
     });
 
     setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
-    preloadMedia(); // Ensure preloading happens before backend call
     saveHistory();
 
     const response = await axios.post(
@@ -801,9 +799,6 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
 
     // Update total duration with backend-confirmed values
     setTotalDuration((prev) => Math.max(prev, newAudioSegment.timelineEndTime));
-
-    // Preload media again to ensure the audio is immediately playable
-    preloadMedia();
 
     // Auto-save project with updated audio layers
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
@@ -1360,7 +1355,6 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         lineSpacing: updatedSegment.lineSpacing, // Added
       });
       setIsTextToolOpen(true);
-      preloadMedia();
       saveHistory();
 
       // Auto-save the project with updated videoLayers
@@ -1607,7 +1601,7 @@ const fetchAudios = async () => {
                 id: image.imagePath || `image-${fullFileName}-${Date.now()}`,
                 fileName: fullFileName,
                 displayName: originalFileName,
-                filePath: `${API_BASE_URL}/image/projects/${projectId}/${encodeURIComponent(fullFileName)}`,
+                filePath: `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(fullFileName)}`,
                 thumbnail,
               };
             })
@@ -1687,53 +1681,6 @@ const fetchAudios = async () => {
       alert('Failed to add transition. Please try again.');
     }
   };
-
-const preloadMedia = () => {
-  const existingPreloadElements = document.querySelectorAll('.preload-media');
-  existingPreloadElements.forEach((el) => el.remove());
-
-  const preloadContainer = document.createElement('div');
-  preloadContainer.style.display = 'none';
-  preloadContainer.className = 'preload-media-container';
-  document.body.appendChild(preloadContainer);
-
-  videoLayers.forEach((layer) => {
-  layer.forEach((segment) => {
-    if (segment.type === 'video' && segment.filePath) {
-      const video = document.createElement('video');
-      // Extract filename from filePath (e.g., 'videos/projects/{projectId}/filename.mp4')
-      const fileName = segment.filePath.split('/').pop();
-      video.src = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fileName)}`;
-      video.preload = 'auto';
-      video.muted = true;
-      video.className = 'preload-media';
-      preloadContainer.appendChild(video);
-      video.load();
-    } else if (segment.type === 'image' && segment.filePath) {
-      const img = document.createElement('img');
-      img.src = segment.isElement
-        ?  `${CDN_URL}/elements/${encodeURIComponent(segment.fileName)}`
-        : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(segment.fileName)}`;
-      img.className = 'preload-media';
-      preloadContainer.appendChild(img);
-    }
-  });
-});
-
-  audioLayers.forEach((layer) => {
-    layer.forEach((segment) => {
-      if (segment.audioPath) {
-        const audio = document.createElement('audio');
-        audio.src = `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(segment.fileName)}`;
-        audio.preload = 'auto';
-        audio.className = 'preload-media';
-        preloadContainer.appendChild(audio);
-        audio.load();
-        console.log(`Preloading audio for project ${projectId}: ${segment.fileName}`);
-      }
-    });
-  });
-};
 
   useEffect(() => {
     const fetchAndSetLayers = async () => {
@@ -1930,7 +1877,6 @@ const preloadMedia = () => {
             });
           });
           setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
-          preloadMedia();
           if (timelineState.textSegments?.some((s) => !s.text?.trim())) {
             autoSaveProject(newVideoLayers, newAudioLayers);
           }
@@ -1942,16 +1888,13 @@ const preloadMedia = () => {
     if (projectId && sessionId) fetchAndSetLayers();
   }, [projectId, sessionId, videos, photos, audios]);
 
-    // Add useEffect to preload on videoLayers/audioLayers changes
     useEffect(() => {
       if (videoLayers.some((layer) => layer.length > 0) || audioLayers.some((layer) => layer.length > 0)) {
-        preloadMedia();
       }
     }, [videoLayers, audioLayers]);
 
   useEffect(() => {
     if (videoLayers.some((layer) => layer.length > 0) || audioLayers.some((layer) => layer.length > 0)) {
-      preloadMedia();
     }
   }, [videoLayers, audioLayers]);
 
@@ -2466,7 +2409,6 @@ const generateVideoThumbnail = async (video) => {
         lineSpacing: updatedSegment.lineSpacing, // Added
       });
       setIsTextToolOpen(true);
-      preloadMedia();
       saveHistory();
 
       // Trigger auto-save
@@ -2550,8 +2492,6 @@ const generateVideoThumbnail = async (video) => {
       const segmentDuration = newSegment.timelineEndTime - newSegment.timelineStartTime;
       setTotalDuration((prev) => Math.max(prev, timelineStartTime + segmentDuration));
 
-      // Ensure audio is preloaded
-      preloadMedia();
 
       // Save history and auto-save with updated layers
       saveHistory();
@@ -2596,8 +2536,8 @@ const generateVideoThumbnail = async (video) => {
         type: 'image',
         fileName: imageFileName,
         filePath: isElement
-          ? `${API_BASE_URL}/elements/projects/${projectId}/${encodeURIComponent(imageFileName)}`
-          : `${API_BASE_URL}/image/projects/${projectId}/${encodeURIComponent(imageFileName)}`,
+          ? `${CDN_URL}/elements/projects/${projectId}/${encodeURIComponent(imageFileName)}`
+          : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(imageFileName)}`,
         startTime: newImageSegment.timelineStartTime,
         duration: newImageSegment.timelineEndTime - newImageSegment.timelineStartTime,
         layer: layer || 0,
@@ -2632,7 +2572,6 @@ const generateVideoThumbnail = async (video) => {
       });
 
       setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
-      preloadMedia();
 
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
@@ -2803,7 +2742,6 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
     }
 
     setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
-    preloadMedia();
 
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     updateTimeoutRef.current = setTimeout(() => {
@@ -2915,7 +2853,6 @@ const handleDeleteSegment = async () => {
     setIsTextToolOpen(false);
     setIsTransformOpen(false);
     setIsFiltersOpen(false);
-    preloadMedia();
 
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     updateTimeoutRef.current = setTimeout(() => {
@@ -3936,7 +3873,6 @@ const navigateKeyframes = (property, direction) => {
       // Refresh keyframes after saving
       await fetchKeyframes(selectedSegment.id, selectedSegment.type);
       await fetchTransitions();
-      preloadMedia();
 
       // Trigger auto-save of the project with updated layers
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
@@ -4054,7 +3990,6 @@ const handlePhotoClick = async (photo, isDragEvent = false) => {
     );
 
     setTotalDuration((prev) => Math.max(prev, timelineStartTime + (timelineEndTime - timelineStartTime)));
-    preloadMedia();
     saveHistory();
   } catch (error) {
     console.error('Error adding photo to timeline:', error);
@@ -5326,7 +5261,6 @@ return (
               canUndo={canUndo}
               canRedo={canRedo}
               currentTime={currentTime}
-              preloadMedia={preloadMedia}
               onTimelineClick={() => setIsTimelineSelected(true)}
               MIN_TIME_SCALE={MIN_TIME_SCALE}
               MAX_TIME_SCALE={MAX_TIME_SCALE}

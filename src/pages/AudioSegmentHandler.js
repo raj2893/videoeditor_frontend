@@ -324,7 +324,7 @@ const AudioSegmentHandler = ({
 
             // Update waveformJsonPath based on backend response
             const waveformJsonPath = newAudioSegment.waveformJsonPath
-              ? `${API_BASE_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(
+              ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(
                   newAudioSegment.waveformJsonPath.split('/').pop()
                 )}`
               : audio.waveformJsonPath || null;

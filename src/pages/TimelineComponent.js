@@ -44,7 +44,6 @@ const TimelineComponent = ({
   canUndo,
   canRedo,
   currentTime, // Added prop to receive currentTime from ProjectEditor
-  preloadMedia, // Add preloadMedia prop
   onTimelineClick, // Add this prop
 }) => {
   // Removed local playhead and currentTime states
@@ -402,7 +401,6 @@ const TimelineComponent = ({
     video.crossOrigin = 'anonymous';
     video.src = fullVideoPath;
     video.muted = true;
-    video.preload = 'metadata';
 
     video.onloadeddata = () => {
       video.currentTime = 1;
@@ -634,9 +632,9 @@ const TimelineComponent = ({
               const layerIndex = Math.abs(backendLayer) - 1;
               while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
               const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
-              const audioUrl = `${API_BASE_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
+              const audioUrl = `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
               const waveformJsonPath = audioSegment.waveformJsonPath
-                ? `${CDN_URL}audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+                ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
                 : null;
               console.log(`Audio segment ID ${audioSegment.id}: no filters applied`);
               // Sanitize audioSegment.id
@@ -769,7 +767,6 @@ const TimelineComponent = ({
     timelineRef,
     roundToThreeDecimals,
     setTotalDuration, // Pass setTotalDuration from props
-    preloadMedia, // Pass preloadMedia from ProjectEditor
     videoLayers, // Ensure videoLayers is passed
   });
 

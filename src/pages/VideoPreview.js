@@ -21,16 +21,12 @@ const VideoPreview = ({
   projectId, // Add projectId
 }) => {
   const [loadingVideos, setLoadingVideos] = useState(new Set());
-  const [preloadComplete, setPreloadComplete] = useState(false);
   const [scale, setScale] = useState(1);
   const [loadedAudioSegments, setLoadedAudioSegments] = useState(new Set());
   const previewContainerRef = useRef(null);
   const videoRefs = useRef({});
-  const preloadRefs = useRef({});
   const audioRefs = useRef({});
-  const animationFrameRef = useRef(null);
   const glCanvasRef = useRef(null);
-  const glTextureRefs = useRef({});
   const fxCanvasRef = useRef(null);
   const [videoDimensions, setVideoDimensions] = useState({});
   const audioContextRefs = useRef({});
@@ -266,7 +262,6 @@ const VideoPreview = ({
     console.log(`Creating audio element for segment ${segment.id}: ${segment.url}`);
     const audio = new Audio();
     audio.crossOrigin = 'anonymous';
-    audio.preload = 'auto';
     audio.playbackRate = 1.0;
     audio.volume = 1.0;
 
@@ -658,107 +653,6 @@ const VideoPreview = ({
   }, []);
 
   useEffect(() => {
-    const preloadVideos = () => {
-      const allVideoItems = videoLayers.flat().filter((item) => item.type === 'video');
-      const preloadPromises = allVideoItems.map((item) => {
-        const filename = item.filePath.split('/').pop();
-        const videoUrl = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(filename)}`;
-  
-        if (!preloadRefs.current[item.id]) {
-          const video = document.createElement('video');
-          video.preload = 'auto';
-          video.src = videoUrl;
-          video.crossOrigin = 'anonymous';
-          video.muted = true;
-          video.style.display = 'none';
-          document.body.appendChild(video);
-          preloadRefs.current[item.id] = video;
-  
-          return new Promise((resolve) => {
-            video.onloadedmetadata = () => {
-              setVideoDimensions((prev) => ({
-                ...prev,
-                [item.id]: { width: video.videoWidth, height: video.videoHeight },
-              }));
-              try {
-                if (fxCanvasRef.current) {
-                  const texture = fxCanvasRef.current.texture(video);
-                  glTextureRefs.current[item.id] = texture;
-                }
-              } catch (e) {
-                console.error(`Failed to create WebGL texture for video ${item.id}:`, e);
-              }
-              setLoadingVideos((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(item.id);
-                return newSet;
-              });
-              resolve();
-            };
-            video.onerror = () => {
-              console.error(`Failed to preload video ${videoUrl}`);
-              resolve();
-            };
-          });
-        }
-        return Promise.resolve();
-      });
-  
-      setLoadingVideos(new Set(allVideoItems.map((item) => item.id)));
-      Promise.all(preloadPromises).then(() => {
-        setPreloadComplete(true);
-        console.log('All videos preloaded');
-      });
-    };
-  
-    preloadVideos();
-  
-    return () => {
-      Object.values(preloadRefs.current).forEach((video) => {
-        video.pause();
-        document.body.removeChild(video);
-      });
-      Object.values(glTextureRefs.current).forEach((texture) => {
-        try {
-          texture.destroy();
-        } catch (e) {
-          console.error('Error destroying texture:', e);
-        }
-      });
-      preloadRefs.current = {};
-      glTextureRefs.current = {};
-    };
-  }, [videoLayerIds, projectId]);
-
-  useEffect(() => {
-    const preloadImages = () => {
-      const allImageItems = videoLayers.flat().filter((item) => item.type === 'image');
-      allImageItems.forEach((item) => {
-        if (!glTextureRefs.current[item.id]) {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.src = item.filePath;
-          img.onload = () => {
-            try {
-              if (fxCanvasRef.current) {
-                const texture = fxCanvasRef.current.texture(img);
-                glTextureRefs.current[item.id] = texture;
-              }
-            } catch (e) {
-              console.error(`Failed to create WebGL texture for image ${item.id}:`, e);
-            }
-          };
-          img.onerror = () => {
-            console.error(`Failed to preload image ${item.filePath}`);
-          };
-        }
-      });
-    };
-
-    preloadImages();
-  }, [videoLayers]);
-
-  useEffect(() => {
     const visibleElements = getVisibleElements();
     const setVideoTimeFunctions = new Map();
   
@@ -801,7 +695,7 @@ const VideoPreview = ({
             videoRef.addEventListener('loadeddata', setVideoTime, { once: true });
           }
   
-          if (isPlaying && preloadComplete) {
+          if (isPlaying) {
             videoRef.play().catch((error) => console.error('Playback error:', error));
           } else {
             videoRef.pause();
@@ -825,7 +719,7 @@ const VideoPreview = ({
         }
       });
     };
-  }, [currentTime, isPlaying, videoLayers, preloadComplete, projectId]);
+  }, [currentTime, isPlaying, videoLayers, projectId]);
 
   useEffect(() => {
     if (previewContainerRef.current) {
@@ -1056,7 +950,6 @@ const VideoPreview = ({
                             }));
                           }
                         }}
-                        preload="auto"
                       />
                       {vignetteValue > 0 && (
                         <div

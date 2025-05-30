@@ -16,7 +16,9 @@ const ImageSegmentHandler = ({
 }) => {
   const generateImageThumbnail = async (imagePath, isElement = false) => {
     const filename = imagePath.split('/').pop();
-    const fullImagePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
+    const fullImagePath = isElement
+      ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
+      : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
     console.log(`Generating thumbnail for: ${fullImagePath}`);
     return new Promise((resolve) => {
       const img = new Image();
@@ -94,7 +96,9 @@ const ImageSegmentHandler = ({
         id: segment.id,
         type: 'image',
         fileName: imageFileName,
-        filePath: `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(imageFileName)}`,
+        filePath: effectiveIsElement
+          ? `${CDN_URL}/elements/${encodeURIComponent(imageFileName)}`
+          : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(imageFileName)}`,
         thumbnail,
         startTime: timelineStartTime,
         duration: timelineEndTime - timelineStartTime,
@@ -102,7 +106,7 @@ const ImageSegmentHandler = ({
         positionX: segment.positionX || 0,
         positionY: segment.positionY || 0,
         scale: segment.scale || 1,
-        rotation: segment.rotation || 0, // Add rotation
+        rotation: segment.rotation || 0,
         opacity: segment.opacity || 1.0,
         width: segment.width,
         height: segment.height,
@@ -112,7 +116,7 @@ const ImageSegmentHandler = ({
         isElement: effectiveIsElement,
         timelineStartTime: roundedStartTime,
         timelineEndTime: roundedEndTime,
-        keyframes: segment.keyframes || {}, // Add keyframes
+        keyframes: segment.keyframes || {},
       };
 
       setVideoLayers((prev) => {
@@ -337,10 +341,13 @@ const ImageSegmentHandler = ({
       layer: targetLayer,
       timelineStartTime: roundToThreeDecimals(adjustedStartTime),
       timelineEndTime: roundToThreeDecimals(adjustedStartTime + draggingItem.duration),
-      positionX: draggingItem.positionX || 0, // Add positionX
-      positionY: draggingItem.positionY || 0, // Add positionY
-      scale: draggingItem.scale || 1, // Add scale
-      rotation: draggingItem.rotation || 0, // Add rotation
+      positionX: draggingItem.positionX || 0,
+      positionY: draggingItem.positionY || 0,
+      scale: draggingItem.scale || 1,
+      rotation: draggingItem.rotation || 0,
+      filePath: isElementSegment
+        ? `${CDN_URL}/elements/${encodeURIComponent(draggingItem.fileName)}`
+        : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(draggingItem.fileName)}`,
     };
     newVideoLayers[targetLayer].push(updatedItem);
 
@@ -403,10 +410,13 @@ const ImageSegmentHandler = ({
       ...item,
       duration: firstPartDuration,
       timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration),
-      positionX: item.positionX || 0, // Add positionX
-      positionY: item.positionY || 0, // Add positionY
-      scale: item.scale || 1, // Add scale
-      rotation: item.rotation || 0, // Add rotation
+      positionX: item.positionX || 0,
+      positionY: item.positionY || 0,
+      scale: item.scale || 1,
+      rotation: item.rotation || 0,
+      filePath: isElement
+        ? `${CDN_URL}/elements/${encodeURIComponent(item.fileName)}`
+        : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(item.fileName)}`,
       isElement,
     };
     layer[itemIndex] = firstPart;
@@ -419,10 +429,13 @@ const ImageSegmentHandler = ({
       duration: secondPartDuration,
       timelineStartTime: roundToThreeDecimals(item.startTime + splitTime),
       timelineEndTime: roundToThreeDecimals(item.startTime + item.duration),
-      positionX: item.positionX || 0, // Add positionX
-      positionY: item.positionY || 0, // Add positionY
-      scale: item.scale || 1, // Add scale
-      rotation: item.rotation || 0, // Add rotation
+      positionX: item.positionX || 0,
+      positionY: item.positionY || 0,
+      scale: item.scale || 1,
+      rotation: item.rotation || 0,
+      filePath: isElement
+        ? `${CDN_URL}/elements/${encodeURIComponent(item.fileName)}`
+        : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(item.fileName)}`,
       isElement,
     };
     layer.push(secondPart);

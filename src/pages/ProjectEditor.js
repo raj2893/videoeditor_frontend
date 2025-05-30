@@ -4,12 +4,14 @@ import axios from 'axios';
 import '../CSS/ProjectEditor.css';
 import TimelineComponent from './TimelineComponent.js';
 import VideoPreview from './VideoPreview';
-import { debounce } from 'lodash';
 import KeyframeControls from './KeyframeControls';
 import FilterControls from './FilterControls';
 import TransitionsPanel from './TransitionsPanel';
+import TextPanel from './TextPanel'; // Adjust the path based on your project structure
 import { v4 as uuidv4 } from 'uuid';
+import { debounce } from 'lodash';
 import { API_BASE_URL, CDN_URL } from '../Config.js';
+
 
 const ProjectEditor = () => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -685,7 +687,9 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
       id: tempId,
       type: 'audio',
       fileName: audio.fileName,
-      url: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.fileName)}`,
+      url: audio.extracted
+        ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audio.fileName)}`
+        : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.fileName)}`,
       displayName: audio.displayName || audio.fileName.split('/').pop(),
       waveformJsonPath: audio.waveformJsonPath,
       startTime: timelineStartTime,
@@ -697,7 +701,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
       timelineStartTime: timelineStartTime,
       timelineEndTime: timelineStartTime + duration,
       keyframes: {},
-      isExtracted: audio.isExtracted || false, // Added for consistency
+      extracted: audio.extracted || false,
     };
 
     let updatedAudioLayers = audioLayers;
@@ -752,19 +756,17 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
       throw new Error('Backend did not return audioSegmentId');
     }
 
-    // Sanitize backend audioSegmentId if necessary
     let finalSegmentId = newAudioSegment.audioSegmentId.replace(/[^a-zA-Z0-9]/g, '-');
     if (doesIdExist(finalSegmentId)) {
       console.warn(`Backend returned duplicate audioSegmentId ${finalSegmentId}. Generating new ID.`);
       finalSegmentId = `${finalSegmentId}-${uuidv4()}`;
     }
 
-    // Update waveformJsonPath based on backend response
     const waveformJsonPath = newAudioSegment.waveformJsonPath
-        ? `${CDN_URL}/waveform-json/projects/${projectId}/${encodeURIComponent(newAudioSegment.waveformJsonPath.split('/').pop())}`
-        : audio.waveformJsonPath
-        ? `${CDN_URL}/waveform-json/projects/${projectId}/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
-        : null;
+      ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(newAudioSegment.waveformJsonPath.split('/').pop())}`
+      : audio.waveformJsonPath
+      ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
+      : null;
 
     setAudioLayers((prevLayers) => {
       const newLayers = prevLayers.map((layer, index) => {
@@ -784,9 +786,11 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
                   timelineStartTime: roundToThreeDecimals(newAudioSegment.timelineStartTime),
                   timelineEndTime: roundToThreeDecimals(newAudioSegment.timelineEndTime),
                   layer: newAudioSegment.layer || backendLayer,
-                  url: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.fileName)}`,
+                  url: newAudioSegment.extracted
+                    ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audio.fileName)}`
+                    : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.fileName)}`,
                   waveformJsonPath: waveformJsonPath,
-                  isExtracted: newAudioSegment.isExtracted || false, // Include isExtracted
+                  extracted: newAudioSegment.extracted || false,
                 }
               : item
           );
@@ -797,10 +801,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
       return newLayers;
     });
 
-    // Update total duration with backend-confirmed values
     setTotalDuration((prev) => Math.max(prev, newAudioSegment.timelineEndTime));
 
-    // Auto-save project with updated audio layers
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     updateTimeoutRef.current = setTimeout(() => {
       autoSaveProject(videoLayers, updatedAudioLayers);
@@ -1528,7 +1530,6 @@ const fetchAudios = async () => {
         const updatedAudios = audioFiles.map((audio) => {
           const fullFileName = audio.audioPath.split('/').pop();
           const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
-          // Sanitize the filename for use in id
           const sanitizedId = `audio-${fullFileName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
           return {
             id: sanitizedId,
@@ -1564,6 +1565,8 @@ const fetchAudios = async () => {
         let imageFiles =
           typeof project.imagesJson === 'string' ? JSON.parse(project.imagesJson) : project.imagesJson;
         if (Array.isArray(imageFiles)) {
+          // Filter out elements (assuming elements have isElement: true or specific path)
+          imageFiles = imageFiles.filter(image => !image.isElement);
           const updatedPhotos = await Promise.all(
             imageFiles.map(async (image) => {
               const fullFileName = image.imagePath.split('/').pop();
@@ -1696,8 +1699,7 @@ const fetchAudios = async () => {
             typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
           const newVideoLayers = [[], [], []];
           const newAudioLayers = [[], [], []];
-
-          // Map filters to segments
+  
           const filterMap = {};
           (timelineState.filters || []).forEach((filter) => {
             if (!filterMap[filter.segmentId]) {
@@ -1705,8 +1707,7 @@ const fetchAudios = async () => {
             }
             filterMap[filter.segmentId].push(filter);
           });
-
-          // Process video segments
+  
           if (timelineState.segments && timelineState.segments.length > 0) {
             for (const segment of timelineState.segments) {
               const layerIndex = segment.layer || 0;
@@ -1748,8 +1749,7 @@ const fetchAudios = async () => {
               }
             }
           }
-
-          // Process image segments
+  
           if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
             for (const imageSegment of timelineState.imageSegments) {
               const layerIndex = imageSegment.layer || 0;
@@ -1758,8 +1758,11 @@ const fetchAudios = async () => {
                 while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
               }
               const filename = imageSegment.imagePath.split('/').pop();
-              const filePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
-              const thumbnail = await generateImageThumbnail(imageSegment.imagePath, imageSegment.element);
+              const isElement = imageSegment.element || false;
+              const filePath = isElement
+                ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
+                : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
+              const thumbnail = await generateImageThumbnail(imageSegment.imagePath, isElement);
               const filters = filterMap[imageSegment.id] || [];
               newVideoLayers[layerIndex].push({
                 id: imageSegment.id,
@@ -1780,7 +1783,7 @@ const fetchAudios = async () => {
                 effectiveWidth: imageSegment.effectiveWidth,
                 effectiveHeight: imageSegment.effectiveHeight,
                 maintainAspectRatio: imageSegment.maintainAspectRatio,
-                isElement: imageSegment.element !== undefined ? imageSegment.element : false,
+                isElement,
                 keyframes: imageSegment.keyframes || {},
                 filters,
                 cropL: imageSegment.cropL ?? 0,
@@ -1790,8 +1793,7 @@ const fetchAudios = async () => {
               });
             }
           }
-
-          // Process text segments
+  
           if (timelineState.textSegments && timelineState.textSegments.length > 0) {
             for (const textSegment of timelineState.textSegments) {
               const layerIndex = textSegment.layer || 0;
@@ -1831,8 +1833,7 @@ const fetchAudios = async () => {
               });
             }
           }
-
-          // Process audio segments
+  
           if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
             for (const audioSegment of timelineState.audioSegments) {
               const backendLayer = audioSegment.layer || -1;
@@ -1841,7 +1842,10 @@ const fetchAudios = async () => {
                 while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
               }
               const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
-              const audioUrl = `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
+              const extracted = audioSegment.extracted || false;
+              const audioUrl = extracted
+                ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(filename)}`
+                : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
               const waveformJsonPath = audioSegment.waveformJsonPath
                 ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
                 : null;
@@ -1862,11 +1866,11 @@ const fetchAudios = async () => {
                 waveformJsonPath: waveformJsonPath,
                 volume: audioSegment.volume || 1.0,
                 keyframes: audioSegment.keyframes || {},
-                isExtracted: audioSegment.isExtracted || false,
+                extracted,
               });
             }
           }
-
+  
           setVideoLayers(newVideoLayers);
           setAudioLayers(newAudioLayers);
           let maxEndTime = 0;
@@ -2018,8 +2022,8 @@ const handleVideoUpload = async (event) => {
               id: element.id || `element-${element.fileName || 'unknown'}-${Date.now()}`,
               fileName: element.fileName || 'unknown.png', // Fallback
               displayName: element.fileName || 'Untitled Element', // Use fileName directly
-              filePath: `${API_BASE_URL}/api/global-elements/${encodeURIComponent(element.fileName || 'unknown.png')}`,
-              thumbnail: `${API_BASE_URL}/api/global-elements/${encodeURIComponent(element.fileName || 'unknown.png')}`,
+              filePath: `${CDN_URL}/elements/${encodeURIComponent(element.fileName || 'unknown.png')}`,
+              thumbnail: `${CDN_URL}/elements/${encodeURIComponent(element.fileName || 'unknown.png')}`,
             };
           });
 
@@ -2519,24 +2523,23 @@ const generateVideoThumbnail = async (video) => {
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
-
+  
       const newImageSegment = response.data;
       if (!newImageSegment) {
         throw new Error(`Failed to add image segment for ${imageFileName}`);
       }
-
-      const photo = photos.find((p) => p.fileName === imageFileName);
+  
+      const photo = isElement ? elements.find((e) => e.fileName === imageFileName) : photos.find((p) => p.fileName === imageFileName);
       if (!photo && !isElement) {
         throw new Error(`Photo with fileName ${imageFileName} not found`);
       }
-
-      // Ensure isElement is set based on the input parameter
+  
       const newSegment = {
         id: newImageSegment.id,
         type: 'image',
         fileName: imageFileName,
         filePath: isElement
-          ? `${CDN_URL}/elements/projects/${projectId}/${encodeURIComponent(imageFileName)}`
+          ? `${CDN_URL}/elements/${encodeURIComponent(imageFileName)}`
           : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(imageFileName)}`,
         startTime: newImageSegment.timelineStartTime,
         duration: newImageSegment.timelineEndTime - newImageSegment.timelineStartTime,
@@ -2548,15 +2551,15 @@ const generateVideoThumbnail = async (video) => {
         filters: newImageSegment.filters || [],
         keyframes: newImageSegment.keyframes || {},
         thumbnail: photo?.thumbnail,
-        isElement: isElement || newImageSegment.element || false, // Explicitly set isElement
+        isElement: isElement || newImageSegment.element || false,
         width: newImageSegment.width,
         height: newImageSegment.height,
         effectiveWidth: newImageSegment.effectiveWidth,
         effectiveHeight: newImageSegment.effectiveHeight,
         maintainAspectRatio: newImageSegment.maintainAspectRatio,
-        rotation: newImageSegment.rotation || 0, // Add rotation
+        rotation: newImageSegment.rotation || 0,
       };
-
+  
       let updatedVideoLayers = videoLayers;
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
@@ -2570,14 +2573,14 @@ const generateVideoThumbnail = async (video) => {
         updatedVideoLayers = newLayers;
         return newLayers;
       });
-
+  
       setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
-
+  
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
         autoSaveProject(updatedVideoLayers, audioLayers);
       }, 1000);
-
+  
       saveHistory();
       return newSegment;
     } catch (error) {
@@ -2592,12 +2595,11 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
       throw new Error('videoPath is undefined or null');
     }
     const token = localStorage.getItem('token');
-    // Extract filename from videoPath (handles both filename and full path)
     const fileName = videoPath.includes('/') ? videoPath.split('/').pop() : videoPath;
     const response = await axios.post(
       `${API_BASE_URL}/projects/${projectId}/add-to-timeline`,
       {
-        videoPath: fileName, // Send only the filename
+        videoPath: fileName,
         layer: layer || 0,
         timelineStartTime: timelineStartTime || 0,
         timelineEndTime: timelineEndTime || null,
@@ -2669,16 +2671,16 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
         id: tempSegmentId,
         type: 'audio',
         fileName: audioSegment.audioFileName || audioSegment.audioPath.split('/').pop(),
-        url: audioSegment.audioPath
-            ? `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioSegment.audioPath.split('/').pop())}`
-            : audioPath
-            ? `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioPath.split('/').pop())}`
-            : null,
+        url: audioSegment.extracted
+          ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioSegment.audioPath.split('/').pop())}`
+          : audioPath
+          ? `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioPath.split('/').pop())}`
+          : null,
         waveformJsonPath: audioSegment.waveformJsonPath
-            ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
-            : waveformJsonPath
-            ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(waveformJsonPath.split('/').pop())}`
-            : null,
+          ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+          : waveformJsonPath
+          ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(waveformJsonPath.split('/').pop())}`
+          : null,
         startTime: roundToThreeDecimals(audioSegment.timelineStartTime),
         duration: roundToThreeDecimals(audioSegment.timelineEndTime - audioSegment.timelineStartTime),
         timelineStartTime: roundToThreeDecimals(audioSegment.timelineStartTime),
@@ -2691,7 +2693,7 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
           : audioSegment.audioFileName,
         volume: audioSegment.volume || 1.0,
         keyframes: audioSegment.keyframes || {},
-        isExtracted: audioSegment.isExtracted || false,
+        extracted: audioSegment.extracted || false,
       };
 
       setAudioLayers((prevLayers) => {
@@ -2727,9 +2729,12 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
                     volume: audioSegment.volume || 1.0,
                     keyframes: audioSegment.keyframes || {},
                     waveformJsonPath: audioSegment.waveformJsonPath
-                      ? `${API_BASE_URL}/projects/${projectId}/waveform-json/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+                      ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
                       : waveformJsonPath,
-                    isExtracted: audioSegment.isExtracted || false,
+                    url: audioSegment.extracted
+                      ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioSegment.audioPath.split('/').pop())}`
+                      : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioSegment.audioPath.split('/').pop())}`,
+                    extracted: audioSegment.extracted || false,
                   }
                 : item
             );
@@ -4561,7 +4566,7 @@ return (
           </div>
           <div className="media-section">
             <button className="section-button" data-section="elements" onClick={() => toggleSection('elements')}>
-              Elements {userRole === 'BASIC' && <span className="lock-icon">🔒</span>}
+              Elements
             </button>
           </div>
           <div className="media-section">
@@ -4851,11 +4856,10 @@ return (
                   {filteredElements.map((element) => (
                     <div
                       key={element.id}
-                      className={`element-item ${userRole === 'BASIC' ? 'basic-user' : ''}`}
-                      draggable={userRole !== 'BASIC'}
-                      onDragStart={userRole !== 'BASIC' ? (e) => handleMediaDragStart(e, element, 'element') : undefined}
-                      onClick={userRole !== 'BASIC' ? () => handleElementClick(element) : undefined}
-                      title={userRole === 'BASIC' ? 'Elements are accessible to premium users only.' : ''}
+                      className="element-item"
+                      draggable={true}
+                      onDragStart={(e) => handleMediaDragStart(e, element, 'element')}
+                      onClick={() => handleElementClick(element)}
                     >
                       <img
                         src={element.thumbnail || element.filePath}
@@ -4941,225 +4945,11 @@ return (
             </div>
           )}
           {expandedSection === 'text' && selectedSegment && selectedSegment.type === 'text' && (
-            <div className="section-content tool-subpanel text-tool-panel">
-              <h3>Text Settings</h3>
-              <div className="control-group">
-                <label>Text Content</label>
-                <textarea
-                  value={textSettings.text}
-                  onChange={(e) => updateTextSettings({ ...textSettings, text: e.target.value })}
-                  rows="4"
-                  style={{
-                    width: '100%',
-                    resize: 'vertical',
-                    padding: '8px',
-                    fontSize: '14px',
-                    borderRadius: '4px',
-                    border: isTextEmpty ? '2px solid red' : '1px solid #ccc',
-                    boxSizing: 'border-box',
-                  }}
-                  placeholder={isTextEmpty ? 'Text cannot be empty' : 'Enter text (press Enter for new line)'}
-                />
-              </div>
-              <div className="control-group">
-                <label>Font Family</label>
-                <select
-                  value={textSettings.fontFamily}
-                  onChange={(e) => updateTextSettings({ ...textSettings, fontFamily: e.target.value })}
-                >
-                  <option value="Arial">Arial</option>
-                  <option value="Helvetica">Helvetica</option>
-                  <option value="Times New Roman">Times New Roman</option>
-                  <option value="Courier New">Courier New</option>
-                  <option value="Georgia">Georgia</option>
-                  <option value="Impact">Impact</option>
-                </select>
-              </div>
-              <div className="control-group">
-                <label>Font Color</label>
-                <input
-                  type="color"
-                  value={textSettings.fontColor}
-                  onChange={(e) => updateTextSettings({ ...textSettings, fontColor: e.target.value })}
-                />
-              </div>
-              <div className="control-group">
-                <label>Background Color</label>
-                <input
-                  type="color"
-                  value={textSettings.backgroundColor === 'transparent' ? '#000000' : textSettings.backgroundColor}
-                  onChange={(e) =>
-                    updateTextSettings({
-                      ...textSettings,
-                      backgroundColor: e.target.value === '#000000' ? 'transparent' : e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className="control-group">
-                <label>Background Opacity</label>
-                <div className="slider-container">
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={textSettings.backgroundOpacity}
-                    onChange={(e) => updateTextSettings({ ...textSettings, backgroundOpacity: parseFloat(e.target.value) })}
-                  />
-                  <input
-                    type="number"
-                    value={textSettings.backgroundOpacity}
-                    onChange={(e) => updateTextSettings({ ...textSettings, backgroundOpacity: parseFloat(e.target.value) || 1.0 })}
-                    step="0.01"
-                    min="0"
-                    max="1"
-                    style={{ width: '60px', marginLeft: '10px' }}
-                  />
-                </div>
-              </div>
-              <div className="control-group">
-                <label>Background Border Width</label>
-                <input
-                  type="number"
-                  value={textSettings.backgroundBorderWidth}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundBorderWidth: parseInt(e.target.value) || 0 })}
-                  min="0"
-                  step="1"
-                  style={{ width: '60px' }}
-                />
-              </div>
-              <div className="control-group">
-                <label>Background Border Color</label>
-                <input
-                  type="color"
-                  value={textSettings.backgroundBorderColor}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundBorderColor: e.target.value })}
-                />
-              </div>
-              <div className="control-group">
-                <label>Background Height</label>
-                <input
-                  type="number"
-                  value={textSettings.backgroundH}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundH: parseInt(e.target.value) })}
-                  min="0"
-                  step="1"
-                  style={{ width: '60px' }}
-                />
-              </div>
-              <div className="control-group">
-                <label>Background Width</label>
-                <input
-                  type="number"
-                  value={textSettings.backgroundW}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundW: parseInt(e.target.value) })}
-                  min="0"
-                  step="1"
-                  style={{ width: '60px' }}
-                />
-              </div>
-              <div className="control-group">
-                <label>Background Border Radius</label>
-                <input
-                  type="number"
-                  value={textSettings.backgroundBorderRadius}
-                  onChange={(e) => updateTextSettings({ ...textSettings, backgroundBorderRadius: parseInt(e.target.value) || 0 })}
-                  min="0"
-                  step="1"
-                  style={{ width: '60px' }}
-                />
-              </div>
-              <div className="control-group">
-                <label>Text Border Color</label>
-                <input
-                  type="color"
-                  value={textSettings.textBorderColor === 'transparent' ? '#000000' : textSettings.textBorderColor}
-                  onChange={(e) =>
-                    updateTextSettings({
-                      ...textSettings,
-                      textBorderColor: e.target.value === '#000000' ? 'transparent' : e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className="control-group">
-                <label>Text Border Width</label>
-                <input
-                  type="number"
-                  value={textSettings.textBorderWidth}
-                  onChange={(e) => updateTextSettings({ ...textSettings, textBorderWidth: parseInt(e.target.value) || 0 })}
-                  min="0"
-                  step="1"
-                  style={{ width: '60px' }}
-                />
-              </div>
-              <div className="control-group">
-                <label>Text Border Opacity</label>
-                <div className="slider-container">
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={textSettings.textBorderOpacity}
-                    onChange={(e) => updateTextSettings({ ...textSettings, textBorderOpacity: parseFloat(e.target.value) })}
-                  />
-                  <input
-                    type="number"
-                    value={textSettings.textBorderOpacity}
-                    onChange={(e) => updateTextSettings({ ...textSettings, textBorderOpacity: parseFloat(e.target.value) || 1.0 })}
-                    step="0.01"
-                    min="0"
-                    max="1"
-                    style={{ width: '60px', marginLeft: '10px' }}
-                  />
-                </div>
-              </div>
-              <div className="control-group">
-                <label>Letter Spacing (px)</label>
-                <input
-                  type="number"
-                  value={textSettings.letterSpacing}
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0;
-                    if (value >= 0) {
-                      updateTextSettings({ ...textSettings, letterSpacing: value });
-                    }
-                  }}
-                  min="0"
-                  step="0.1"
-                  style={{ width: '60px' }}
-                />
-              </div>
-              <div className="control-group">
-                <label>Line Spacing</label>
-                <input
-                  type="number"
-                  value={textSettings.lineSpacing}
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0;
-                    if (value >= 0) {
-                      updateTextSettings({ ...textSettings, lineSpacing: value });
-                    }
-                  }}
-                  min="0"
-                  step="0.1"
-                  style={{ width: '60px' }}
-                />
-              </div>
-              <div className="control-group">
-                <label>Alignment</label>
-                <select
-                  value={textSettings.alignment}
-                  onChange={(e) => updateTextSettings({ ...textSettings, alignment: e.target.value })}
-                >
-                  <option value="left">Left</option>
-                  <option value="center">Center</option>
-                  <option value="right">Right</option>
-                </select>
-              </div>
-            </div>
+            <TextPanel
+              textSettings={textSettings}
+              updateTextSettings={updateTextSettings}
+              isTextEmpty={isTextEmpty}
+            />
           )}
           {expandedSection === 'transitions' && (
             <div className="section-content tool-subpanel transitions-panel">

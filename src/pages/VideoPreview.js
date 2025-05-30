@@ -273,9 +273,11 @@ const VideoPreview = ({
     audioContextRefs.current[segment.id] = { audioContext, source, gainNode };
 
     // Construct URL
-    const audioUrl = segment.url.startsWith('http')
-      ? segment.url
-      : `${CDN_URL}/audio/projects/${segment.projectId || 136}/${encodeURIComponent(segment.audioPath.split('/').pop())}`;
+    const filename = segment.fileName || segment.audioPath.split('/').pop();
+    const audioUrl = segment.extracted
+      ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(filename)}`
+      : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
+    audio.src = audioUrl;
 
     return new Promise((resolve) => {
       let hasErrored = false;
@@ -293,7 +295,7 @@ const VideoPreview = ({
 
       audio.addEventListener('error', (e) => {
         hasErrored = true;
-        console.error(`Error loading audio ${audioUrl}:`, e, { readyState: audio.readyState, hasLoaded });
+        console.error(`Error loading audio ${audioUrl}: ${segment.extracted}`, e, { readyState: audio.readyState, hasLoaded });
         if (!hasLoaded) {
           fetch(audioUrl)
             .then((response) => {
@@ -660,7 +662,7 @@ const VideoPreview = ({
       if (element.type === 'video') {
         const videoRef = videoRefs.current[element.id];
         if (videoRef) {
-          const filename = element.filePath.split('/').pop();
+          const filename = element.fileName || element.filePath.split('/').pop();
           const videoUrl = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(filename)}`;
   
           if (!videoRef.src) {
@@ -977,10 +979,6 @@ const VideoPreview = ({
                 const centerX = canvasDimensions.width / 2 - displayWidth / 2;
                 const centerY = canvasDimensions.height / 2 - displayHeight / 2;
 
-                const photo = photos.find((p) => p.fileName === element.fileName) || {
-                  filePath: element.filePath,
-                };
-
                 const safeFilters = Array.isArray(element.filters) ? element.filters : [];
                 const vignetteFilter = safeFilters.find((f) => f.filterName === 'vignette');
                 const vignetteValue = vignetteFilter ? parseFloat(vignetteFilter.filterValue) : 0;
@@ -1012,7 +1010,11 @@ const VideoPreview = ({
                     }}
                   >
                       <img
-                        src={photo.filePath}
+                        src={
+                          element.isElement
+                            ? `${CDN_URL}/elements/${encodeURIComponent(element.fileName)}`
+                            : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(element.fileName)}`
+                        }
                         alt="Preview"
                         crossOrigin="anonymous"
                         style={{

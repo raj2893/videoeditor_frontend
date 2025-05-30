@@ -80,7 +80,7 @@ const TimelineComponent = ({
       console.log(`Waveform for segment ${segmentId} already initialized`);
       return undefined;
     }
-
+  
     try {
       const token = localStorage.getItem('token');
       let waveformData = waveformDataCache.current.get(segment.waveformJsonPath);
@@ -91,62 +91,60 @@ const TimelineComponent = ({
         waveformData = response.data;
         waveformDataCache.current.set(segment.waveformJsonPath, waveformData);
       }
-
+  
       const containerId = `waveform-segment-${segmentId}`;
       const container = document.querySelector(`#${containerId}`);
       if (!container) {
         console.warn(`Waveform container #${containerId} not found for segment ${segmentId}`);
         return undefined;
       }
-
+  
       const { sampleRate, peaks } = waveformData;
       const fullDuration = peaks.length / sampleRate;
       const startTime = segment.startTimeWithinAudio || 0;
       const endTime = segment.endTimeWithinAudio || segment.duration;
-
+  
       if (startTime < 0 || endTime > fullDuration || startTime >= endTime) {
         console.warn(`Invalid time range for segment ${segmentId}: startTime=${startTime}, endTime=${endTime}, fullDuration=${fullDuration}`);
         return undefined;
       }
-
+  
       // Calculate pixel width of the segment
       const segmentDuration = endTime - startTime;
       const pixelWidth = segmentDuration * timeScale;
-
+  
       // Skip rendering if waveform is too small (less than 10 pixels)
       if (pixelWidth < 10) {
         console.log(`Skipping waveform rendering for segment ${segmentId}: pixelWidth=${pixelWidth} is too small`);
         return undefined;
       }
-
+  
       // Dynamically adjust barWidth and barGap based on timeScale and duration
       const baseBarWidth = 2;
       const baseBarGap = 1;
-      const scaleFactor = Math.max(0.1, Math.min(1, timeScale / 100)); // Adjust based on timeScale
+      const scaleFactor = Math.max(0.1, Math.min(1, timeScale / 100));
       const barWidth = Math.max(1, baseBarWidth * scaleFactor);
       const barGap = Math.max(0.5, baseBarGap * scaleFactor);
-
+  
       const startIndex = Math.floor((startTime / fullDuration) * peaks.length);
       let endIndex = Math.ceil((endTime / fullDuration) * peaks.length);
-
-      // Ensure endIndex does not exceed peaks.length
+  
       endIndex = Math.min(endIndex, peaks.length);
-
-      // Ensure at least one peak is included if startIndex equals endIndex
+  
       if (startIndex === endIndex && endIndex < peaks.length) {
         endIndex = startIndex + 1;
       } else if (startIndex >= endIndex) {
         console.warn(`Invalid index range for segment ${segmentId}: startIndex=${startIndex}, endIndex=${endIndex}`);
         return undefined;
       }
-
+  
       const slicedPeaks = peaks.slice(startIndex, endIndex);
-
+  
       if (slicedPeaks.length === 0) {
         console.warn(`No peaks available for segment ${segmentId} after slicing: startIndex=${startIndex}, endIndex=${endIndex}`);
         return undefined;
       }
-
+  
       const wavesurfer = WaveSurfer.create({
         container: `#${containerId}`,
         waveColor: '#00FFFF',
@@ -157,12 +155,16 @@ const TimelineComponent = ({
         barWidth,
         barGap,
       });
-
-      wavesurfer.load(segment.url, slicedPeaks, sampleRate);
+  
+      // Ensure correct URL based on extracted
+      const audioUrl = segment.extracted
+        ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(segment.fileName)}`
+        : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(segment.fileName)}`;
+      wavesurfer.load(audioUrl, slicedPeaks, sampleRate);
       waveSurferInstances.current.set(segmentId, wavesurfer);
-
+  
       console.log(`Waveform initialized for segment ${segmentId} with barWidth=${barWidth}, barGap=${barGap}, pixelWidth=${pixelWidth}`);
-
+  
       return () => {
         console.log(`Cleaning up waveform for segment ${segmentId}`);
         wavesurfer.destroy();
@@ -172,7 +174,7 @@ const TimelineComponent = ({
       console.error(`Error initializing waveform for segment ${segmentId}:`, error);
       return undefined;
     }
-  }, [timeScale]); // Add timeScale as a dependency
+  }, [timeScale, projectId]); // Add projectId as a dependency
 
   // Update waveform for a specific segment (called after resize)
   const updateWaveform = useCallback((segment) => {
@@ -182,22 +184,22 @@ const TimelineComponent = ({
       console.warn(`No WaveSurfer instance found for segment ${segmentId}`);
       return;
     }
-
+  
     const waveformData = waveformDataCache.current.get(segment.waveformJsonPath);
     if (!waveformData) {
       console.warn(`No waveform data found for segment ${segmentId}`);
       return;
     }
-
+  
     const { sampleRate, peaks } = waveformData;
     const fullDuration = peaks.length / sampleRate;
     const startTime = segment.startTimeWithinAudio || 0;
     const endTime = segment.endTimeWithinAudio || segment.duration;
-
+  
     // Calculate pixel width of the segment
     const segmentDuration = endTime - startTime;
     const pixelWidth = segmentDuration * timeScale;
-
+  
     // Destroy waveform if too small
     if (pixelWidth < 10) {
       console.log(`Destroying waveform for segment ${segmentId}: pixelWidth=${pixelWidth} is too small`);
@@ -205,21 +207,19 @@ const TimelineComponent = ({
       waveSurferInstances.current.delete(segmentId);
       return;
     }
-
+  
     // Dynamically adjust barWidth and barGap
     const baseBarWidth = 2;
     const baseBarGap = 1;
     const scaleFactor = Math.max(0.1, Math.min(1, timeScale / 100));
     const barWidth = Math.max(1, baseBarWidth * scaleFactor);
     const barGap = Math.max(0.5, baseBarGap * scaleFactor);
-
+  
     const startIndex = Math.floor((startTime / fullDuration) * peaks.length);
     let endIndex = Math.ceil((endTime / fullDuration) * peaks.length);
-
-    // Ensure endIndex does not exceed peaks.length
+  
     endIndex = Math.min(endIndex, peaks.length);
-
-    // Ensure at least one peak is included if startIndex equals endIndex
+  
     if (startIndex === endIndex && endIndex < peaks.length) {
       endIndex = startIndex + 1;
     } else if (startIndex >= endIndex) {
@@ -228,21 +228,25 @@ const TimelineComponent = ({
       waveSurferInstances.current.delete(segmentId);
       return;
     }
-
+  
     const slicedPeaks = peaks.slice(startIndex, endIndex);
-
+  
     if (slicedPeaks.length === 0) {
       console.warn(`No peaks available for segment ${segmentId} after slicing: startIndex=${startIndex}, endIndex=${endIndex}`);
       wavesurfer.destroy();
       waveSurferInstances.current.delete(segmentId);
       return;
     }
-
+  
     // Update WaveSurfer options
     wavesurfer.setOptions({ barWidth, barGap });
-    wavesurfer.load(segment.url, slicedPeaks, sampleRate);
+    // Ensure correct URL based on extracted
+    const audioUrl = segment.extracted
+      ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(segment.fileName)}`
+      : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(segment.fileName)}`;
+    wavesurfer.load(audioUrl, slicedPeaks, sampleRate);
     console.log(`Waveform updated for segment ${segmentId} with barWidth=${barWidth}, barGap=${barGap}, pixelWidth=${pixelWidth}`);
-  }, [timeScale]); // Add timeScale as a dependency
+  }, [timeScale, projectId]); // Add projectId as a dependency
 
   // Initialize waveforms only on mount or when new segments are added
   useEffect(() => {
@@ -442,7 +446,9 @@ const TimelineComponent = ({
 
   const generateImageThumbnail = async (imagePath, isElement = false) => {
     const filename = imagePath.split('/').pop();
-    const fullImagePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
+    const fullImagePath = isElement
+      ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
+      : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -454,7 +460,7 @@ const TimelineComponent = ({
         const maxHeight = 80;
         let width = img.width;
         let height = img.height;
-
+  
         if (width > height) {
           if (width > maxWidth) {
             height = (height * maxWidth) / width;
@@ -466,7 +472,7 @@ const TimelineComponent = ({
             height = maxHeight;
           }
         }
-
+  
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
@@ -481,220 +487,224 @@ const TimelineComponent = ({
   };
 
   const loadProjectTimeline = async () => {
-      if (!projectId || !sessionId) return;
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
-          headers: { Authorization: `Bearer ${token}` },
+    if (!projectId || !sessionId) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const project = response.data;
+      console.log('Backend timelineState:', JSON.stringify(project.timelineState, null, 2));
+  
+      if (project && project.timelineState) {
+        const timelineState = typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
+        const newVideoLayers = [[], [], []];
+        const newAudioLayers = [[], [], []];
+  
+        // Map filters to segments
+        const filterMap = {};
+        (timelineState.filters || []).forEach((filter) => {
+          if (!filterMap[filter.segmentId]) {
+            filterMap[filter.segmentId] = [];
+          }
+          filterMap[filter.segmentId].push(filter);
         });
-        const project = response.data;
-        console.log('Backend timelineState:', JSON.stringify(project.timelineState, null, 2));
-
-        if (project && project.timelineState) {
-          const timelineState = typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
-          const newVideoLayers = [[], [], []];
-          const newAudioLayers = [[], [], []];
-
-          // Map filters to segments
-          const filterMap = {};
-          (timelineState.filters || []).forEach((filter) => {
-            if (!filterMap[filter.segmentId]) {
-              filterMap[filter.segmentId] = [];
-            }
-            filterMap[filter.segmentId].push(filter);
-          });
-
-          if (timelineState.segments && timelineState.segments.length > 0) {
-            for (const segment of timelineState.segments) {
-              const layerIndex = segment.layer || 0;
-              if (layerIndex < 0) continue;
-              if (segment.sourceVideoPath) {
-                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
-                let videoFileName = segment.sourceVideoPath.split('/').pop();
-                let video = videos.find((v) => v.fileName === videoFileName);
-                if (video) {
-                  const thumbnail = await generateVideoThumbnail(segment.sourceVideoPath);
-                  const filters = filterMap[segment.id] || [];
-                  console.log(`Video segment ID ${segment.id}: filters=`, JSON.stringify(filters, null, 2));
-                  newVideoLayers[layerIndex].push({
-                    ...video,
-                    type: 'video',
-                    id: segment.id,
-                    startTime: segment.timelineStartTime,
-                    duration: segment.timelineEndTime - segment.timelineStartTime,
-                    layer: layerIndex,
-                    filePath: `videos/projects/${projectId}/${videoFileName}`,
-                    positionX: segment.positionX ?? 0,
-                    positionY: segment.positionY ?? 0,
-                    scale: segment.scale ?? 1,
-                    rotation: segment.rotation ?? 0,
-                    startTimeWithinVideo: segment.startTime,
-                    endTimeWithinVideo: segment.endTime,
-                    thumbnail,
-                    keyframes: segment.keyframes || {},
-                    filters,
-                    cropL: segment.cropL ?? 0,
-                    cropR: segment.cropR ?? 0,
-                    cropT: segment.cropT ?? 0,
-                    cropB: segment.cropB ?? 0,
-                    opacity: segment.opacity ?? 1,
-                    speed: segment.speed ?? 1.0,
-                  });
-                } else {
-                  console.warn(`Video with filename ${videoFileName} not found in videos list`);
-                }
+  
+        if (timelineState.segments && timelineState.segments.length > 0) {
+          for (const segment of timelineState.segments) {
+            const layerIndex = segment.layer || 0;
+            if (layerIndex < 0) continue;
+            if (segment.sourceVideoPath) {
+              while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+              let videoFileName = segment.sourceVideoPath.split('/').pop();
+              let video = videos.find((v) => v.fileName === videoFileName);
+              if (video) {
+                const thumbnail = await generateVideoThumbnail(segment.sourceVideoPath);
+                const filters = filterMap[segment.id] || [];
+                console.log(`Video segment ID ${segment.id}: filters=`, JSON.stringify(filters, null, 2));
+                newVideoLayers[layerIndex].push({
+                  ...video,
+                  type: 'video',
+                  id: segment.id,
+                  startTime: segment.timelineStartTime,
+                  duration: segment.timelineEndTime - segment.timelineStartTime,
+                  layer: layerIndex,
+                  filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(videoFileName)}`,
+                  positionX: segment.positionX ?? 0,
+                  positionY: segment.positionY ?? 0,
+                  scale: segment.scale ?? 1,
+                  rotation: segment.rotation ?? 0,
+                  startTimeWithinVideo: segment.startTime,
+                  endTimeWithinVideo: segment.endTime,
+                  thumbnail,
+                  keyframes: segment.keyframes || {},
+                  filters,
+                  cropL: segment.cropL ?? 0,
+                  cropR: segment.cropR ?? 0,
+                  cropT: segment.cropT ?? 0,
+                  cropB: segment.cropB ?? 0,
+                  opacity: segment.opacity ?? 1,
+                  speed: segment.speed ?? 1.0,
+                });
+              } else {
+                console.warn(`Video with filename ${videoFileName} not found in videos list`);
               }
             }
           }
-
-          if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
-            for (const imageSegment of timelineState.imageSegments) {
-              const layerIndex = imageSegment.layer || 0;
-              if (layerIndex < 0) continue;
-              while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
-              const filename = imageSegment.imagePath.split('/').pop();
-              const filePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
-              const thumbnail = await generateImageThumbnail(imageSegment.imagePath, imageSegment.element);
-              const filters = filterMap[imageSegment.id] || [];
-              console.log(`Image segment ID ${imageSegment.id}: filters=`, JSON.stringify(filters, null, 2));
-              newVideoLayers[layerIndex].push({
-                id: imageSegment.id,
-                type: 'image',
-                fileName: filename,
-                filePath,
-                thumbnail,
-                startTime: imageSegment.timelineStartTime,
-                duration: imageSegment.timelineEndTime - imageSegment.timelineStartTime,
-                layer: layerIndex,
-                positionX: imageSegment.positionX || 0,
-                positionY: imageSegment.positionY || 0,
-                scale: imageSegment.scale || 1,
-                rotation: imageSegment.rotation || 0, // Add rotation
-                opacity: imageSegment.opacity || 1.0,
-                width: imageSegment.width,
-                height: imageSegment.height,
-                effectiveWidth: imageSegment.effectiveWidth,
-                effectiveHeight: imageSegment.effectiveHeight,
-                maintainAspectRatio: imageSegment.maintainAspectRatio,
-                isElement: imageSegment.element !== undefined ? imageSegment.element : false,
-                keyframes: imageSegment.keyframes || {},
-                filters,
-                cropL: imageSegment.cropL ?? 0, // Add crop values
-                cropR: imageSegment.cropR ?? 0,
-                cropT: imageSegment.cropT ?? 0,
-                cropB: imageSegment.cropB ?? 0,
-              });
-            }
-          }
-
-          if (timelineState.textSegments && timelineState.textSegments.length > 0) {
-            for (const textSegment of timelineState.textSegments) {
-              const layerIndex = textSegment.layer || 0;
-              if (layerIndex < 0) continue;
-              while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
-              console.log(`Text segment ID ${textSegment.id}: no filters applied`);
-              newVideoLayers[layerIndex].push({
-                id: textSegment.id,
-                type: 'text',
-                text: textSegment.text,
-                startTime: textSegment.timelineStartTime || 0,
-                duration: (textSegment.timelineEndTime - textSegment.timelineStartTime) || 0,
-                layer: layerIndex,
-                fontFamily: textSegment.fontFamily || 'Arial',
-                scale: textSegment.scale || 1.0,
-                rotation: textSegment.rotation || 0, // Add rotation
-                fontColor: textSegment.fontColor || '#FFFFFF',
-                backgroundColor: textSegment.backgroundColor || 'transparent',
-                positionX: textSegment.positionX || 0,
-                positionY: textSegment.positionY || 0,
-                alignment: textSegment.alignment || 'center',
-                backgroundOpacity: textSegment.backgroundOpacity ?? 1.0,
-                backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0,
-                backgroundBorderColor: textSegment.backgroundBorderColor || '#000000',
-                backgroundH: textSegment.backgroundH ?? 0,
-                backgroundW: textSegment.backgroundW ?? 0,
-                backgroundBorderRadius: textSegment.backgroundBorderRadius ?? 0,
-                textBorderColor: textSegment.textBorderColor || 'transparent', // Added
-                textBorderWidth: textSegment.textBorderWidth ?? 0, // Added
-                textBorderOpacity: textSegment.textBorderOpacity ?? 1.0, // Added
-                letterSpacing: textSegment.letterSpacing ?? 0, // Added
-                lineSpacing: textSegment.lineSpacing ?? 1.2, // Added
-                keyframes: textSegment.keyframes || {},
-                opacity: textSegment.opacity || 1,
-              });
-            }
-          }
-
-          if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
-            console.log('Processing audioSegments:', timelineState.audioSegments);
-            for (const audioSegment of timelineState.audioSegments) {
-              const backendLayer = audioSegment.layer || -1;
-              const layerIndex = Math.abs(backendLayer) - 1;
-              while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
-              const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
-              const audioUrl = `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
-              const waveformJsonPath = audioSegment.waveformJsonPath
-                ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
-                : null;
-              console.log(`Audio segment ID ${audioSegment.id}: no filters applied`);
-              // Sanitize audioSegment.id
-              const sanitizedId = audioSegment.id.replace(/[^a-zA-Z0-9]/g, '-');
-              const newSegment = {
-                id: sanitizedId,
-                type: 'audio',
-                fileName: filename,
-                url: audioUrl,
-                startTime: audioSegment.timelineStartTime || 0,
-                duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
-                timelineStartTime: audioSegment.timelineStartTime || 0,
-                timelineEndTime: audioSegment.timelineEndTime || 0,
-                layer: backendLayer,
-                startTimeWithinAudio: audioSegment.startTime || 0,
-                endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
-                displayName: filename,
-                waveformJsonPath: waveformJsonPath,
-                volume: audioSegment.volume || 1.0,
-                keyframes: audioSegment.keyframes || {},
-                isExtracted: audioSegment.isExtracted || false,
-              };
-              console.log(`Created audio segment, ${sanitizedId} with URL: ${audioUrl}, waveformJsonPath: ${waveformJsonPath}`, newSegment);
-              newAudioLayers[layerIndex].push(newSegment);
-            }
-          } else {
-            console.warn('No audioSegments found in timelineState');
-          }
-
-          // Fetch transitions
-          const transitionsResponse = await axios.get(
-            `${API_BASE_URL}/projects/${projectId}/transitions`,
-            { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-          );
-
-          console.log('Loaded videoLayers:', JSON.stringify(newVideoLayers, null, 2));
-          console.log('Loaded audioLayers:', JSON.stringify(newAudioLayers, null, 2));
-          setVideoLayers(newVideoLayers);
-          setAudioLayers(newAudioLayers);
-          setTransitions(transitionsResponse.data || []);
-          let maxEndTime = 0;
-          [...newVideoLayers, ...newAudioLayers].forEach((layer) => {
-            layer.forEach((item) => {
-              const endTime = item.startTime + item.duration;
-              if (endTime > maxEndTime) maxEndTime = endTime;
+        }
+  
+        if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
+          for (const imageSegment of timelineState.imageSegments) {
+            const layerIndex = imageSegment.layer || 0;
+            if (layerIndex < 0) continue;
+            while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+            const filename = imageSegment.imagePath.split('/').pop();
+            const isElement = imageSegment.element || false;
+            const filePath = isElement
+              ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
+              : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
+            const thumbnail = await generateImageThumbnail(imageSegment.imagePath, isElement);
+            const filters = filterMap[imageSegment.id] || [];
+            console.log(`Image segment ID ${imageSegment.id}: filters=`, JSON.stringify(filters, null, 2));
+            newVideoLayers[layerIndex].push({
+              id: imageSegment.id,
+              type: 'image',
+              fileName: filename,
+              filePath,
+              thumbnail,
+              startTime: imageSegment.timelineStartTime,
+              duration: imageSegment.timelineEndTime - imageSegment.timelineStartTime,
+              layer: layerIndex,
+              positionX: imageSegment.positionX || 0,
+              positionY: imageSegment.positionY || 0,
+              scale: imageSegment.scale || 1,
+              rotation: imageSegment.rotation || 0,
+              opacity: imageSegment.opacity || 1.0,
+              width: imageSegment.width,
+              height: imageSegment.height,
+              effectiveWidth: imageSegment.effectiveWidth,
+              effectiveHeight: imageSegment.effectiveHeight,
+              maintainAspectRatio: imageSegment.maintainAspectRatio,
+              isElement,
+              keyframes: imageSegment.keyframes || {},
+              filters,
+              cropL: imageSegment.cropL ?? 0,
+              cropR: imageSegment.cropR ?? 0,
+              cropT: imageSegment.cropT ?? 0,
+              cropB: imageSegment.cropB || 0,
             });
-          });
-          setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
-
-          // Force state refresh and notify parent
-          console.log('Setting videoLayers and triggering state refresh');
-          if (onSegmentSelect) {
-            console.log('Calling onSegmentSelect with null to refresh state');
-            onSegmentSelect(null); // Trigger state refresh
           }
         }
-      } catch (error) {
-        console.error('Error loading project timeline:', error);
+  
+        if (timelineState.textSegments && timelineState.textSegments.length > 0) {
+          for (const textSegment of timelineState.textSegments) {
+            const layerIndex = textSegment.layer || 0;
+            if (layerIndex < 0) continue;
+            while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+            console.log(`Text segment ID ${textSegment.id}: no filters applied`);
+            newVideoLayers[layerIndex].push({
+              id: textSegment.id,
+              type: 'text',
+              text: textSegment.text,
+              startTime: textSegment.timelineStartTime || 0,
+              duration: (textSegment.timelineEndTime - textSegment.timelineStartTime) || 0,
+              layer: layerIndex,
+              fontFamily: textSegment.fontFamily || 'Arial',
+              scale: textSegment.scale || 1.0,
+              rotation: textSegment.rotation || 0,
+              fontColor: textSegment.fontColor || '#FFFFFF',
+              backgroundColor: textSegment.backgroundColor || 'transparent',
+              positionX: textSegment.positionX || 0,
+              positionY: textSegment.positionY || 0,
+              alignment: textSegment.alignment || 'center',
+              backgroundOpacity: textSegment.backgroundOpacity ?? 1.0,
+              backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0,
+              backgroundBorderColor: textSegment.backgroundBorderColor || '#000000',
+              backgroundH: textSegment.backgroundH || 0,
+              backgroundW: textSegment.backgroundW || 0,
+              backgroundBorderRadius: textSegment.backgroundBorderRadius || 0,
+              textBorderColor: textSegment.textBorderColor || 'transparent',
+              textBorderWidth: textSegment.textBorderWidth || 0,
+              textBorderOpacity: textSegment.textBorderOpacity || 1.0,
+              letterSpacing: textSegment.letterSpacing || 0,
+              lineSpacing: textSegment.lineSpacing || 1.2,
+              keyframes: textSegment.keyframes || {},
+              opacity: textSegment.opacity || 1,
+            });
+          }
+        }
+  
+        if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
+          console.log('Processing audioSegments:', timelineState.audioSegments);
+          for (const audioSegment of timelineState.audioSegments) {
+            const backendLayer = audioSegment.layer || -1;
+            const layerIndex = Math.abs(backendLayer) - 1;
+            while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
+            const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
+            const extracted = audioSegment.extracted || false;
+            const audioUrl = extracted
+              ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(filename)}`
+              : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
+            const waveformJsonPath = audioSegment.waveformJsonPath
+              ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+              : null;
+            console.log(`Audio segment ID ${audioSegment.id}: no filters applied`);
+            const sanitizedId = audioSegment.id.replace(/[^a-zA-Z0-9]/g, '-');
+            const newSegment = {
+              id: sanitizedId,
+              type: 'audio',
+              fileName: filename,
+              url: audioUrl,
+              startTime: audioSegment.timelineStartTime || 0,
+              duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+              timelineStartTime: audioSegment.timelineStartTime || 0,
+              timelineEndTime: audioSegment.timelineEndTime || 0,
+              layer: backendLayer,
+              startTimeWithinAudio: audioSegment.startTime || 0,
+              endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+              displayName: filename,
+              waveformJsonPath: waveformJsonPath,
+              volume: audioSegment.volume || 1.0,
+              keyframes: audioSegment.keyframes || {},
+              extracted,
+            };
+            console.log(`Created audio segment, ${sanitizedId} with URL: ${audioUrl}, waveformJsonPath: ${waveformJsonPath}`, newSegment);
+            newAudioLayers[layerIndex].push(newSegment);
+          }
+        } else {
+          console.warn('No audioSegments found in timelineState');
+        }
+  
+        // Fetch transitions
+        const transitionsResponse = await axios.get(
+          `${API_BASE_URL}/projects/${projectId}/transitions`,
+          { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+        );
+  
+        console.log('Loaded videoLayers:', JSON.stringify(newVideoLayers, null, 2));
+        console.log('Loaded audioLayers:', JSON.stringify(newAudioLayers, null, 2));
+        setVideoLayers(newVideoLayers);
+        setAudioLayers(newAudioLayers);
+        setTransitions(transitionsResponse.data || []);
+        let maxEndTime = 0;
+        [...newVideoLayers, ...newAudioLayers].forEach((layer) => {
+          layer.forEach((item) => {
+            const endTime = item.startTime + item.duration;
+            if (endTime > maxEndTime) maxEndTime = endTime;
+          });
+        });
+        setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
+  
+        console.log('Setting videoLayers and triggering state refresh');
+        if (onSegmentSelect) {
+          console.log('Calling onSegmentSelect with null to refresh state');
+          onSegmentSelect(null);
+        }
       }
-    };
+    } catch (error) {
+      console.error('Error loading project timeline:', error);
+    }
+  };
 
   useEffect(() => {
     if (projectId && sessionId && thumbnailsGenerated) {
@@ -871,15 +881,15 @@ const TimelineComponent = ({
     const dragElements = document.querySelectorAll('.dragging');
     dragElements.forEach((el) => el.classList.remove('dragging'));
     if (timelineRef.current) timelineRef.current.classList.remove('showing-new-layer');
-
+  
     setDraggingItem(null);
     setDragLayer(null);
     setDragOffset(0);
     setSnapIndicators([]);
-
+  
     const mouseX = e.clientX;
     const mouseY = e.clientY;
-
+  
     const dataString = e.dataTransfer.getData('application/json');
     let dragData = null;
     if (dataString) {
@@ -889,7 +899,7 @@ const TimelineComponent = ({
         console.error('Error parsing drag data:', error);
       }
     }
-
+  
     if (dragData?.type === 'transition') {
       const rect = timelineRef.current.getBoundingClientRect();
       const clickX = mouseX - rect.left;
@@ -901,7 +911,7 @@ const TimelineComponent = ({
       const reversedIndex = Math.floor((mouseY - rect.top) / layerHeight);
       let layerIndex;
       let isAudioLayer = false;
-
+  
       if (reversedIndex <= totalVideoLayers) {
         layerIndex = totalVideoLayers - reversedIndex;
       } else if (reversedIndex >= totalVideoLayers + 1 && reversedIndex < totalLayers - 1) {
@@ -910,7 +920,7 @@ const TimelineComponent = ({
       } else {
         layerIndex = 0;
       }
-
+  
       if (!isAudioLayer && layerIndex >= 0 && layerIndex < videoLayers.length) {
         const { segment, start, end } = findAdjacentSegments(timelinePosition, layerIndex, videoLayers);
         if (segment && (start || end)) {
@@ -929,15 +939,14 @@ const TimelineComponent = ({
       } else {
         console.warn('Transition drop ignored: Invalid layer or audio layer');
       }
-
+  
       setDraggingItem(null);
       setDragLayer(null);
       setDragOffset(0);
       setSnapIndicators([]);
       return;
     }
-
-    // Rest of the method remains unchanged
+  
     if (dragData?.type === 'audio' || (draggingItem && draggingItem.type === 'audio')) {
       const audioDropResult = await audioHandler.handleAudioDrop(
         e,
@@ -950,10 +959,11 @@ const TimelineComponent = ({
         snapIndicators
       );
       if (audioDropResult && audioDropResult.newSegment) {
-        // Update waveformJsonPath and isExtracted based on backend response
+        // Update waveformJsonPath and extracted based on backend response
         const waveformJsonPath = audioDropResult.response.waveformJsonPath
           ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioDropResult.response.waveformJsonPath.split('/').pop())}`
           : null;
+        const extracted = audioDropResult.response.extracted || false;
         setAudioLayers((prevLayers) => {
           const newLayers = [...prevLayers];
           const layerIndex = Math.abs(audioDropResult.newSegment.layer) - 1;
@@ -962,7 +972,10 @@ const TimelineComponent = ({
               ? {
                   ...segment,
                   waveformJsonPath,
-                  isExtracted: audioDropResult.response.isExtracted || false, // Include isExtracted from backend
+                  extracted,
+                  url: extracted
+                    ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(segment.fileName)}`
+                    : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(segment.fileName)}`,
                 }
               : segment
           );
@@ -981,7 +994,7 @@ const TimelineComponent = ({
       setSnapIndicators([]);
       saveHistory();
     }
-
+  
     if (dragData?.type === 'media' || (draggingItem && draggingItem.type === 'video')) {
       await videoHandler.handleVideoDrop(
         e,
@@ -999,7 +1012,7 @@ const TimelineComponent = ({
       setSnapIndicators([]);
       return;
     }
-
+  
     if (
       dragData?.type === 'photo' ||
       dragData?.type === 'element' ||
@@ -1017,6 +1030,24 @@ const TimelineComponent = ({
         snapIndicators,
         isElement
       );
+      if (imageDropResult && imageDropResult.newSegment) {
+        setVideoLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          const layerIndex = imageDropResult.newSegment.layer;
+          newLayers[layerIndex] = newLayers[layerIndex].map((segment) =>
+            segment.id === imageDropResult.newSegment.id
+              ? {
+                  ...segment,
+                  filePath: isElement
+                    ? `${CDN_URL}/elements/${encodeURIComponent(segment.fileName)}`
+                    : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(segment.fileName)}`,
+                  isElement,
+                }
+              : segment
+          );
+          return newLayers;
+        });
+      }
       if (imageDropResult === undefined) {
         setDraggingItem(null);
         setDragLayer(null);
@@ -1026,7 +1057,7 @@ const TimelineComponent = ({
       }
       saveHistory();
     }
-
+  
     if (dragData?.type === 'textStyle') {
       const style = dragData.textStyle;
       const rect = timelineRef.current.getBoundingClientRect();
@@ -1038,19 +1069,19 @@ const TimelineComponent = ({
       const totalLayers = totalVideoLayers + totalAudioLayers + 2;
       const reversedIndex = Math.floor((mouseY - rect.top) / layerHeight);
       let layerIndex;
-
+  
       if (reversedIndex <= totalVideoLayers) {
         layerIndex = totalVideoLayers - reversedIndex;
       } else {
         layerIndex = 0;
       }
-
+  
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         while (newLayers.length <= layerIndex) newLayers.push([]);
         return newLayers;
       });
-
+  
       try {
         const token = localStorage.getItem('token');
         const duration = style.duration || 5;
@@ -1074,11 +1105,11 @@ const TimelineComponent = ({
             backgroundH: style.backgroundH ?? 0,
             backgroundW: style.backgroundW ?? 0,
             backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
-            textBorderColor: style.textBorderColor || 'transparent', // Added
-            textBorderWidth: style.textBorderWidth ?? 0, // Added
-            textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
-            letterSpacing: style.letterSpacing ?? 0, // Added
-            lineSpacing: style.lineSpacing ?? 1.2, // Added
+            textBorderColor: style.textBorderColor || 'transparent',
+            textBorderWidth: style.textBorderWidth || 0,
+            textBorderOpacity: style.textBorderOpacity || 1.0,
+            letterSpacing: style.letterSpacing || 0,
+            lineSpacing: style.lineSpacing || 1.2,
           },
           { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
         );
@@ -1092,7 +1123,7 @@ const TimelineComponent = ({
           layer: layerIndex,
           fontFamily: style.fontFamily || 'Arial',
           scale: style.scale || 1.0,
-          rotation: style.rotation || 0, // Add rotation
+          rotation: style.rotation || 0,
           fontColor: style.fontColor || '#FFFFFF',
           backgroundColor: style.backgroundColor || 'transparent',
           positionX: style.positionX || 0,
@@ -1101,23 +1132,23 @@ const TimelineComponent = ({
           backgroundOpacity: style.backgroundOpacity ?? 1.0,
           backgroundBorderWidth: style.backgroundBorderWidth ?? 0,
           backgroundBorderColor: style.backgroundBorderColor || '#000000',
-          backgroundH: style.backgroundH ?? 0,
-          backgroundW: style.backgroundW ?? 0,
-          backgroundBorderRadius: style.backgroundBorderRadius ?? 0,
-          textBorderColor: style.textBorderColor || 'transparent', // Added
-          textBorderWidth: style.textBorderWidth ?? 0, // Added
-          textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
-          letterSpacing: style.letterSpacing ?? 0, // Added
-          lineSpacing: style.lineSpacing ?? 1.2, // Added
+          backgroundH: style.backgroundH || 0,
+          backgroundW: style.backgroundW || 0,
+          backgroundBorderRadius: style.backgroundBorderRadius || 0,
+          textBorderColor: style.textBorderColor || 'transparent',
+          textBorderWidth: style.textBorderWidth || 0,
+          textBorderOpacity: style.textBorderOpacity || 1.0,
+          letterSpacing: style.letterSpacing || 0,
+          lineSpacing: style.lineSpacing || 1.2,
           keyframes: {},
         };
-
+  
         setVideoLayers((prevLayers) => {
           const newLayers = [...prevLayers];
           newLayers[layerIndex].push(newSegment);
           return newLayers;
         });
-
+  
         setTotalDuration((prev) => Math.max(prev, timelinePosition + duration));
         if (onSegmentSelect) {
           onSegmentSelect(newSegment);
@@ -1127,14 +1158,14 @@ const TimelineComponent = ({
       } catch (error) {
         console.error('Error adding text style to timeline:', error);
       }
-
+  
       setDraggingItem(null);
       setDragLayer(null);
       setDragOffset(0);
       setSnapIndicators([]);
       return;
     }
-
+  
     const textDropResult = await textHandler.handleTextDrop(
       e,
       draggingItem,
@@ -1153,7 +1184,7 @@ const TimelineComponent = ({
       saveHistory();
       return;
     }
-
+  
     setDraggingItem(null);
     setDragLayer(null);
     setDragOffset(0);
@@ -1260,7 +1291,7 @@ const TimelineComponent = ({
         await videoHandler.handleVideoSplit(foundItem, clickTime, clickedLayerIndex);
         saveHistory();
       } else if (foundItem.type === 'audio') {
-        console.log('Splitting audio:', foundItem.id, 'isExtracted=', foundItem.isExtracted);
+        console.log('Splitting audio:', foundItem.id, 'extracted=', foundItem.extracted);
         await audioHandler.handleAudioSplit(foundItem, clickTime, clickedLayerIndex);
         saveHistory();
       } else if (foundItem.type === 'text') {

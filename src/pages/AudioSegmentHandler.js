@@ -246,9 +246,11 @@ const AudioSegmentHandler = ({
             id: tempSegmentId,
             type: 'audio',
             fileName: audio.fileName,
-            url: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.fileName)}`,
+            url: audio.extracted
+              ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audio.fileName)}`
+              : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.fileName)}`,
             displayName: audio.displayName || audio.fileName.split('/').pop(),
-            waveformJsonPath: audio.waveformJsonPath || null, // Ensure waveformJsonPath is set
+            waveformJsonPath: audio.waveformJsonPath || null,
             startTime: roundToThreeDecimals(adjustedStartTime),
             duration: roundToThreeDecimals(audio.duration),
             timelineStartTime: roundToThreeDecimals(adjustedStartTime),
@@ -258,7 +260,7 @@ const AudioSegmentHandler = ({
             endTimeWithinAudio: roundToThreeDecimals(audio.duration),
             volume: 1.0,
             keyframes: {},
-            isExtracted: audio.isExtracted || false,
+            extracted: audio.extracted || false,
           };
 
           // Check for existing segment with the same ID
@@ -354,7 +356,7 @@ const AudioSegmentHandler = ({
                           volume: newAudioSegment.volume || 1.0,
                           keyframes: newAudioSegment.keyframes || {},
                           waveformJsonPath: waveformJsonPath,
-                          isExtracted: newAudioSegment.isExtracted || false,
+                          extracted: newAudioSegment.extracted || false,
                         }
                       : item
                   );
@@ -502,7 +504,7 @@ const AudioSegmentHandler = ({
       }
 
       let audioFileName = item.fileName;
-      if (item.isExtracted) {
+      if (item.extracted) {
         const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
           headers: { Authorization: `Bearer ${token}` },
           params: { sessionId },
@@ -555,6 +557,10 @@ const AudioSegmentHandler = ({
         timelineEndTime: roundToThreeDecimals(item.startTime + firstPartDuration),
         startTime: roundToThreeDecimals(item.startTime),
         endTimeWithinAudio: roundToThreeDecimals(startWithinAudio + firstPartDuration),
+        url: item.extracted
+          ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioFileName)}`
+          : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioFileName)}`,
+        extracted: item.extracted || false,
       };
 
       const doesIdExist = (id) => {
@@ -575,7 +581,10 @@ const AudioSegmentHandler = ({
         startTimeWithinAudio: roundToThreeDecimals(startWithinAudio + firstPartDuration),
         endTimeWithinAudio: roundToThreeDecimals(startWithinAudio + item.duration),
         fileName: audioFileName,
-        extracted: item.extracted || false, // Preserve isExtracted flag
+        url: item.extracted
+          ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioFileName)}`
+          : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioFileName)}`,
+        extracted: item.extracted || false,
       };
       console.log('firstPart=', firstPart);
       console.log('secondPart=', secondPart);
@@ -662,7 +671,10 @@ const AudioSegmentHandler = ({
                       endTimeWithinAudio: roundToThreeDecimals(newAudioSegment.endTime),
                       volume: newAudioSegment.volume || 1.0,
                       keyframes: newAudioSegment.keyframes || {},
-                      extracted: item.extracted || false, // Preserve isExtracted from original item
+                      url: newAudioSegment.extracted
+                        ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioFileName)}`
+                        : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioFileName)}`,
+                      extracted: newAudioSegment.extracted || false,
                     }
                   : segment
               );

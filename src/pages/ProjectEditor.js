@@ -90,6 +90,7 @@ const ProjectEditor = () => {
   const [uploadProgress, setUploadProgress] = useState({}); // Object to store progress for each file
   const [tempThumbnails, setTempThumbnails] = useState({}); // Store temporary blurred thumbnails
   const [isContentPanelOpen, setIsContentPanelOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const textSettingsRef = useRef(textSettings);
 
   const canUndo = historyIndex > 0;
@@ -110,6 +111,16 @@ const ProjectEditor = () => {
   const MAX_TIME_SCALE = 250;
   const baseFontSize = 24;
   let timelineSetPlayhead = null;
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+      setIsMobile(mobileRegex.test(navigator.userAgent));
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     textSettingsRef.current = textSettings;
@@ -2709,6 +2720,18 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
           newLayers[audioLayerIndex].push(tempAudioSegment);
         }
         updatedAudioLayers = newLayers;
+
+        // Initialize waveform for temporary ID
+        if (window.initializeWaveform) {
+          console.log('Calling initializeWaveform for temporary audio segment:', tempAudioSegment.id);
+          window.initializeWaveform(tempAudioSegment).then((cleanupFn) => {
+            if (typeof cleanupFn === 'function') {
+              // Store cleanup function if needed
+              console.log(`Waveform initialized for temp ID ${tempAudioSegment.id}`);
+            }
+          });
+        }
+
         return newLayers;
       });
 
@@ -2742,6 +2765,30 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
           return layer;
         });
         updatedAudioLayers = updatedLayers;
+
+        // Transfer WaveSurfer instance from tempSegmentId to sanitizedAudioId
+        if (window.waveSurferInstances && window.waveSurferInstances.current.has(tempSegmentId)) {
+          console.log(`Transferring WaveSurfer instance from ${tempSegmentId} to ${sanitizedAudioId}`);
+          const wavesurfer = window.waveSurferInstances.current.get(tempSegmentId);
+          window.waveSurferInstances.current.set(sanitizedAudioId, wavesurfer);
+          window.waveSurferInstances.current.delete(tempSegmentId);
+          // Update waveform with final segment data
+          if (window.updateWaveform) {
+            console.log('Calling updateWaveform for audio segment with final ID:', sanitizedAudioId);
+            window.updateWaveform({
+              ...tempAudioSegment,
+              id: sanitizedAudioId,
+              waveformJsonPath: audioSegment.waveformJsonPath
+                ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+                : waveformJsonPath,
+              url: audioSegment.extracted
+                ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioSegment.audioPath.split('/').pop())}`
+                : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioSegment.audioPath.split('/').pop())}`,
+              extracted: audioSegment.extracted || false,
+            });
+          }
+        }
+
         return updatedLayers;
       });
     }
@@ -2975,8 +3022,10 @@ const handleTouchEnd = () => {
 };
 
 useEffect(() => {
+  if (isMobile) return; // Skip event listeners for mobile
+
   const handleTouchMove = (e) => {
-    handleMouseMove(e); // Reuse the same logic for touchmove
+    handleMouseMove(e);
   };
 
   document.addEventListener('mousemove', handleMouseMove);
@@ -2990,7 +3039,7 @@ useEffect(() => {
     document.removeEventListener('touchmove', handleTouchMove);
     document.removeEventListener('touchend', handleTouchEnd);
   };
-}, [isDraggingHandle]);
+}, [isDraggingHandle, isMobile]);
 
 const toggleSection = (section) => {
   if (expandedSection === section) {
@@ -4804,7 +4853,7 @@ return (
                       onDragStart={(e) => handleMediaDragStart(e, audio, 'audio')}
                       onClick={() => handleAudioClick(audio)}
                     >
-                      {uploadProgress[audio.displayName] !== undefined && (
+                      {uploadProgress[audio.displayName] !== undefined ? (
                         <div className="upload-progress-overlay">
                           <div className="upload-progress-bar">
                             <div
@@ -4816,12 +4865,19 @@ return (
                             Uploading audio: {uploadProgress[audio.displayName]}%
                           </div>
                         </div>
+                      ) : (
+                        <img
+                          src="/images/audio.jpeg" // Adjust the path based on where you place audio.jpeg
+                          alt={audio.displayName}
+                          className="audio-thumbnail"
+                          style={{
+                            width: '90%',
+                            height: '65px', // Match video/photo thumbnail height
+                            objectFit: 'cover',
+                            borderRadius: '4px',
+                          }}
+                        />
                       )}
-                      <div
-                        className="audio-waveform"
-                        id={`waveform-${audio.id}`}
-                        style={{ width: '100%', height: '50px' }}
-                      ></div>
                       <div className="audio-title">{audio.displayName}</div>
                     </div>
                   ))}
@@ -4993,7 +5049,13 @@ return (
             projectId={projectId}
           />
         </div>
-        <div className={`resize-preview-section ${isDraggingHandle ? 'dragging' : ''}`} onMouseDown={handleMouseDown} onTouchStart={handleTouchStart}></div>
+        {!isMobile && (
+          <div
+            className={`resize-preview-section ${isDraggingHandle ? 'dragging' : ''}`}
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+          ></div>
+        )}
         <div className="controls-panel">
           <button className="control-button" onClick={handleSaveProject} title="Save Project">
             💾

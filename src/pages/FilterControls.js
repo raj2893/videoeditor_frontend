@@ -1,4 +1,5 @@
 import React from 'react';
+import '../CSS/FilterControls.css';
 
 const FilterControls = ({
   selectedSegment,

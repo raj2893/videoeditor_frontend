@@ -10,7 +10,7 @@ const ExportPage = () => {
   const navigate = useNavigate();
   const sessionId = state?.sessionId;
   const [exportStatus, setExportStatus] = useState('ready'); // 'ready', 'exporting', 'success', 'error'
-  const [downloadLink, setDownloadLink] = useState(null);
+  const [downloadUrl, setDownloadUrl] = useState(null); // Changed from downloadLink
   const [errorMessage, setErrorMessage] = useState('');
   const exportLock = useRef(null); // Prevent concurrent exports
   const requestIdRef = useRef(crypto.randomUUID()); // Unique ID for each export attempt
@@ -58,58 +58,36 @@ const ExportPage = () => {
         );
 
         console.log('Export API response:', exportResponse.data, { requestId, timestamp: Date.now() });
-        const exportedFileName = exportResponse.data;
+        const { fileName, downloadUrl } = exportResponse.data; // Extract fields from DTO
 
-        const pollExportLinks = async () => {
-          for (let attempt = 0; attempt < 30; attempt++) {
-            try {
-              const linksResponse = await axios.get(`${API_BASE_URL}/export-links`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
+        if (!downloadUrl) {
+          throw new Error('Download URL not provided in export response');
+        }
 
-              const exportLinks = linksResponse.data;
-              const matchingLink = exportLinks.find(
-                (link) => link.fileName === exportedFileName
-              );
-
-              if (matchingLink && matchingLink.downloadLink) {
-                console.log('Download link found:', matchingLink.downloadLink, { requestId, timestamp: Date.now() });
-                setDownloadLink(matchingLink.downloadLink);
-                setExportStatus('success');
-                return;
-              }
-            } catch (error) {
-              console.error('Error polling export links (attempt', attempt, '):', error);
-            }
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-          }
-          console.error('Export timed out after 30 attempts', { requestId, timestamp: Date.now() });
-          setExportStatus('error');
-          setErrorMessage('Export timed out. Please try again.');
-        };
-
-        await pollExportLinks();
+        console.log('Download URL received:', downloadUrl, { requestId, timestamp: Date.now() });
+        setDownloadUrl(downloadUrl);
+        setExportStatus('success');
       } catch (error) {
         console.error('Export error:', error.response?.data || error.message, { requestId, timestamp: Date.now() });
+        const errorMsg = error.response?.data?.message ||
+                         error.response?.data ||
+                         error.message ||
+                         'Failed to export project. Please try again.';
         setExportStatus('error');
-        setErrorMessage(
-          error.response?.data?.message ||
-            error.message ||
-            'Failed to export project. Please try again.'
-        );
+        setErrorMessage(errorMsg);
+      } finally {
+        console.log('Export lock released', { requestId, timestamp: Date.now() });
+        exportLock.current = null;
       }
-    })().finally(() => {
-      console.log('Export lock released', { requestId, timestamp: Date.now() });
-      exportLock.current = null;
-    });
+    })();
   };
 
   const handleDownload = () => {
-    if (downloadLink) {
-      console.log('Initiating download for link:', downloadLink, { requestId: requestIdRef.current, timestamp: Date.now() });
+    if (downloadUrl) {
+      console.log('Initiating download for URL:', downloadUrl, { requestId: requestIdRef.current, timestamp: Date.now() });
       const link = document.createElement('a');
-      link.href = downloadLink;
-      link.download = '';
+      link.href = downloadUrl;
+      link.download = ''; // Let the browser use the URL's filename
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -131,7 +109,7 @@ const ExportPage = () => {
             <button
               className="export-button"
               onClick={startExport}
-              disabled={exportLock.current}
+              disabled={!!exportLock.current}
             >
               Start Export
             </button>

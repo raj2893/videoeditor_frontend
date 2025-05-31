@@ -689,10 +689,6 @@ const AudioSegmentHandler = ({
         setTotalDuration((prev) =>
           Math.max(prev, newAudioSegment.timelineEndTime)
         );
-        // Preload media again after backend update
-        if (preloadMedia) {
-          preloadMedia();
-        }
 
         saveHistory([], newAudioLayers);
         autoSave([], newAudioLayers);

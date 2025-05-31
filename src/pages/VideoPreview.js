@@ -77,7 +77,7 @@ const VideoPreview = ({
         const fontSize = baseFontSize * segScale;
         const textLines = element.text.split('\n');
         const lineHeight = fontSize * (element.lineSpacing ?? 1.2);
-        const textHeight = textLines.length * lineHeight;
+        const textHeight = textLines.length === 1 ? fontSize : (textLines.length - 1) * lineHeight + fontSize;
         const ctx = document.createElement('canvas').getContext('2d');
         ctx.font = `${fontSize}px ${element.fontFamily || 'Arial'}`;
         const letterSpacing = (element.letterSpacing || 0) * segScale;
@@ -90,8 +90,9 @@ const VideoPreview = ({
           return width;
         });
         const maxTextWidth = Math.max(...textWidths, 1);
-        width = (element.backgroundW === 0 ? maxTextWidth : maxTextWidth + element.backgroundW) + (element.textBorderWidth || 0) * 2;
-        height = textHeight + (element.backgroundH || 0) + (element.textBorderWidth || 0) * 2;
+        const bgWidth = (element.backgroundW || 0) * segScale;
+        width = (element.backgroundW === 0 ? maxTextWidth : maxTextWidth + bgWidth) + (element.textBorderWidth || 0) * 2 * segScale;
+        height = textHeight + (element.backgroundH || 0) * segScale + (element.textBorderWidth || 0) * 2 * segScale;
       } else {
         return false;
       }
@@ -1093,7 +1094,7 @@ const VideoPreview = ({
 
                 const textLines = element.text.split('\n');
                 const lineHeight = fontSize * (element.lineSpacing ?? 1.2); // Use lineSpacing, default to 1.2
-                const textHeight = textLines.length * lineHeight;
+                const textHeight = textLines.length === 1 ? fontSize : (textLines.length - 1) * lineHeight + fontSize;
 
                 // Calculate text width with letterSpacing
                 const ctx = document.createElement('canvas').getContext('2d');

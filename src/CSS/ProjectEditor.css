@@ -429,7 +429,7 @@
 .photo-item:hover,
 .audio-item:hover,
 .element-item:hover {
-  transform: scale(1.05);
+  transform: scale(0.90);
 }
 
 .video-item.selected {
@@ -464,7 +464,7 @@
 .photo-list .photo-item .photo-title,
 .audio-list .audio-item .audio-title,
 .element-list .element-item .element-title {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -1423,6 +1423,32 @@
     max-height: 40px;
   }
 
+  /* Timeline Section */
+  .timeline-section {
+    min-height: 150px;
+    max-height: none; /* Remove max-height constraint to allow growth */
+    flex: 1; /* Allow timeline to grow and fill available space */
+  }
+
+  /* Ensure media-panel closed state adjusts layout */
+  .media-panel.closed + .main-content {
+    height: calc(100vh - 40px - 23px - 28px); /* Account for closed media-panel (40px), controls-panel (23px), and zoom-slider-container (28px) */
+  }  
+
+  .media-panel .panel-content {
+    flex-direction: row;
+    gap: 8px; /* Slightly smaller gap for smaller screens */
+    padding: 8px; /* Adjust padding */
+    flex-wrap: nowrap;
+    overflow-x: auto; /* Enable horizontal scrolling */
+    overflow-y: hidden; /* Prevent vertical scrolling */
+    scrollbar-width: none; /* Hide scrollbar for Firefox */    
+  }  
+
+  .media-panel .panel-content::-webkit-scrollbar {
+    display: none; /* Hide scrollbar for WebKit browsers (Chrome, Safari, Edge) */
+  }  
+
   /* Tools Panel */
   .tools-panel {
     width: 100%;
@@ -1437,7 +1463,17 @@
   .main-content {
     flex: 1;
     width: 100%; /* Full width on mobile */
+    height: calc(100vh - 35vh - 40px); /* Adjust height to account for media-panel (open or closed) and fixed elements */
+    display: flex;
+    flex-direction: column;    
   }
+
+  .content-wrapper {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }  
 
   .content-panel {
     width: 100%;
@@ -1449,7 +1485,7 @@
 
   /* Preview Section */
   .preview-section {
-    min-height: 150px;
+    /* min-height: 150px; */
     background-color: #1a1a1a; /* Lighter background than #0d0d0d */
   }
 
@@ -1457,12 +1493,6 @@
   .controls-panel {
     flex-wrap: wrap;
     height: auto;
-  }
-
-  /* Timeline Section */
-  .timeline-section {
-    min-height: 100px;
-    max-height: 25vh;
   }
 
   /* Toggle Button */
@@ -1566,20 +1596,29 @@
     max-height: 30vh;
   }
 
+  .media-panel .panel-content {
+    flex-direction: row;
+    gap: 6px; /* Adjusted for smaller screens */
+    padding: 6px; /* Adjusted for smaller screens */
+    flex-wrap: nowrap; /* Already present */
+    overflow-x: auto; /* Enable horizontal scrolling */
+    overflow-y: hidden; /* Prevent vertical scrolling */
+    scrollbar-width: none; /* Hide scrollbar for Firefox */
+  }
+
+  .media-panel .panel-content::-webkit-scrollbar {
+    display: none; /* Hide scrollbar for WebKit browsers (Chrome, Safari, Edge) */
+  }  
+
   .content-panel {
     max-height: 30vh;
   }
 
   /* Preview Section */
   .preview-section {
-    min-height: 120px;
+    min-height: 100px;
+    max-height: 30vh;
     background-color: #1a1a1a; /* Lighter background than #0d0d0d */
-  }
-
-  /* Timeline Section */
-  .timeline-section {
-    min-height: 80px;
-    max-height: 20vh;
   }
 
   /* Toggle Button */

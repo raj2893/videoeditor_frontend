@@ -193,12 +193,12 @@ const FilterControls = ({
               </div>
             </div>
             <div className="control-group">
-              <label>Blur (0 to 10)</label>
+              <label>Blur (0 to 1)</label>
               <div className="slider-container">
                 <input
                   type="range"
                   min="0"
-                  max="10"
+                  max="1"
                   step="0.01"
                   value={filterParams.blur !== undefined ? filterParams.blur : 0}
                   onChange={(e) => updateFilterSetting('blur', parseFloat(e.target.value))}

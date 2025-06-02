@@ -4118,48 +4118,6 @@ const updateFilters = async (newFilterParams) => {
   }
 };
 
-const handleRemoveFilter = async (filterName) => {
-  if (!selectedSegment || !sessionId || !projectId) return;
-  try {
-    const token = localStorage.getItem('token');
-    const filterToRemove = appliedFilters.find((f) => f.filterName === filterName);
-    if (!filterToRemove) return;
-    await axios.post(
-      `${API_BASE_URL}/projects/${projectId}/remove-filter`,
-      {
-        segmentId: selectedSegment.id,
-        filterId: filterToRemove.filterId,
-      },
-      { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
-    );
-    const updatedFilters = appliedFilters.filter((f) => f.filterName !== filterName);
-
-    setAppliedFilters(updatedFilters);
-    let updatedVideoLayers = videoLayers;
-    setVideoLayers((prevLayers) => {
-      const newLayers = [...prevLayers];
-      newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
-        item.id === selectedSegment.id ? { ...item, filters: updatedFilters } : item
-      );
-      updatedVideoLayers = newLayers;
-      return newLayers;
-    });
-    setSelectedSegment((prev) => ({ ...prev, filters: updatedFilters }));
-    setFilterParams((prev) => {
-      const newSettings = { ...prev };
-      delete newSettings[filterName];
-      return newSettings;
-    });
-
-    if (filterUpdateTimeoutRef.current) clearTimeout(filterUpdateTimeoutRef.current);
-    filterUpdateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(updatedVideoLayers, audioLayers);
-    }, 1000);
-  } catch (error) {
-    console.error('Error removing filter:', error);
-  }
-};
-
 const updateFilterSetting = (filterName, filterValue) => {
   if (!selectedSegment || !projectId || !sessionId) {
     console.warn('Cannot update filter: Missing selectedSegment, projectId, or sessionId');
@@ -4360,7 +4318,7 @@ const resetFilters = async () => {
   try {
     const token = localStorage.getItem('token');
     // Send a single DELETE request to remove all filters for the segment
-    await axios.delete(`${API_BASE_URL}/projects/${projectId}/remove-filter`, {
+    await axios.delete(`${API_BASE_URL}/projects/${projectId}/remove-all-filters`, {
       params: {
         sessionId,
         segmentId: selectedSegment.id,

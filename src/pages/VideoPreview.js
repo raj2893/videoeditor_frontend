@@ -1,8 +1,70 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import '../CSS/VideoPreview.css';
+import WebFont from 'webfontloader';
 import fx from 'glfx';
 import { CDN_URL } from '../Config';
 const baseFontSize = 24.0;
+
+const googleFonts = [
+  'Alumni Sans Pinstripe',
+  'Amatic SC',
+  'Amatic SC:700',
+  'Arimo',
+  'Arimo:700',
+  'Arimo:700italic',
+  'Arimo:italic',
+  'Barriecito',
+  'Barrio',
+  'Birthstone',
+  'Bungee Hairline',
+  'Butcherman',
+  'Carlito',
+  'Carlito:700',
+  'Carlito:700italic',
+  'Carlito:italic',
+  'Comic Neue',
+  'Comic Neue:700',
+  'Comic Neue:700italic',
+  'Comic Neue:italic',
+  'Courier Prime',
+  'Courier Prime:700',
+  'Courier Prime:700italic',
+  'Courier Prime:italic',
+  'Doto Black',
+  'Doto ExtraBold',
+  'Doto Rounded Bold',
+  'Fascinate Inline',
+  'Freckle Face',
+  'Fredericka the Great',
+  'Gelasio',
+  'Gelasio:700',
+  'Gelasio:700italic',
+  'Gelasio:italic',
+  'Imperial Script',
+  'Kings',
+  'Kirang Haerang',
+  'Lavishly Yours',
+  'Lexend Giga',
+  'Lexend Giga Black',
+  'Lexend Giga Bold',
+  'Montserrat Alternates',
+  'Montserrat Alternates Black',
+  'Montserrat Alternates Medium Italic',
+  'Mountains of Christmas',
+  'Mountains of Christmas:700',
+  'Noto Sans Mono',
+  'Noto Sans Mono:700',
+  'Poiret One',
+  'Rampart One',
+  'Rubik Wet Paint',
+  'Tangerine',
+  'Tangerine:700',
+  'Tinos',
+  'Tinos:700',
+  'Tinos:700italic',
+  'Tinos:italic',
+  'Yesteryear',
+];
 
 const VideoPreview = ({
   videoLayers,
@@ -23,6 +85,7 @@ const VideoPreview = ({
   const [loadingVideos, setLoadingVideos] = useState(new Set());
   const [scale, setScale] = useState(1);
   const [loadedAudioSegments, setLoadedAudioSegments] = useState(new Set());
+  const [loadedFonts, setLoadedFonts] = useState(new Set());
   const previewContainerRef = useRef(null);
   const videoRefs = useRef({});
   const audioRefs = useRef({});
@@ -35,6 +98,54 @@ const VideoPreview = ({
   const [draggedSegment, setDraggedSegment] = useState(null);
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
   const [initialSegmentPos, setInitialSegmentPos] = useState({ positionX: 0, positionY: 0 });
+
+  // Load Google Fonts using WebFontLoader
+  useEffect(() => {
+    WebFont.load({
+      google: {
+        families: googleFonts,
+      },
+      active: () => {
+        console.log('All Google Fonts loaded');
+        setLoadedFonts(new Set(googleFonts));
+      },
+      inactive: () => {
+        console.error('Some Google Fonts failed to load');
+      },
+      fontactive: (familyName) => {
+        console.log(`Font loaded: ${familyName}`);
+        setLoadedFonts((prev) => new Set(prev).add(familyName));
+      },
+      fontinactive: (familyName) => {
+        console.error(`Font failed to load: ${familyName}`);
+      },
+    });
+  }, []);  
+
+  const parseFont = (fontFamily) => {
+    let weight = 'normal';
+    let style = 'normal';
+    let family = fontFamily;
+  
+    if (fontFamily.includes('Bold')) {
+      weight = 'bold';
+      family = fontFamily.replace(' Bold', '');
+    }
+    if (fontFamily.includes('Italic')) {
+      style = 'italic';
+      family = family.replace(' Italic', '');
+    }
+    if (fontFamily.includes('Black')) {
+      weight = '900';
+      family = family.replace(' Black', '');
+    }
+    if (fontFamily.includes('ExtraBold')) {
+      weight = '800';
+      family = family.replace(' ExtraBold', '');
+    }
+  
+    return { family, weight, style };
+  };  
 
     // Convert canvas coordinates to normalized canvas space
     const getCanvasCoordinates = (clientX, clientY) => {
@@ -64,8 +175,8 @@ const VideoPreview = ({
         element.localTime,
         element.scale || 1
       );
-      const rotation = element.rotation || 0; // Use rotation directly, no keyframing
-
+      const rotation = element.rotation || 0;
+  
       let width, height;
       if (element.type === 'video') {
         width = (videoDimensions[element.id]?.width || canvasDimensions.width) * segScale;
@@ -79,9 +190,10 @@ const VideoPreview = ({
         const lineHeight = fontSize * (element.lineSpacing ?? 1.2);
         const textHeight = textLines.length === 1 ? fontSize : (textLines.length - 1) * lineHeight + fontSize;
         const ctx = document.createElement('canvas').getContext('2d');
-        ctx.font = `${fontSize}px ${element.fontFamily || 'Arial'}`;
+        const { family, weight, style } = parseFont(element.fontFamily || 'Arial');
+        ctx.font = `${style} ${weight} ${fontSize}px "${family}"`;
         const letterSpacing = (element.letterSpacing || 0) * segScale;
-        const textWidths = textLines.map(line => {
+        const textWidths = textLines.map((line) => {
           let width = 0;
           for (let char of line) {
             width += ctx.measureText(char).width;
@@ -96,12 +208,10 @@ const VideoPreview = ({
       } else {
         return false;
       }
-
-      // Center the bounds around the segment's position
+  
       const centerX = canvasDimensions.width / 2 + posX;
       const centerY = canvasDimensions.height / 2 + posY;
-
-      // Adjust point coordinates for rotation
+  
       const radians = (rotation * Math.PI) / 180;
       const cosTheta = Math.cos(-radians);
       const sinTheta = Math.sin(-radians);
@@ -109,12 +219,12 @@ const VideoPreview = ({
       const relY = y - centerY;
       const rotatedX = relX * cosTheta - relY * sinTheta;
       const rotatedY = relX * sinTheta + relY * cosTheta;
-
+  
       const left = -width / 2;
       const top = -height / 2;
       const right = width / 2;
       const bottom = height / 2;
-
+  
       return rotatedX >= left && rotatedX <= right && rotatedY >= top && rotatedY <= bottom;
     };
 
@@ -1096,9 +1206,9 @@ const VideoPreview = ({
                 const lineHeight = fontSize * (element.lineSpacing ?? 1.2); // Use lineSpacing, default to 1.2
                 const textHeight = textLines.length === 1 ? fontSize : (textLines.length - 1) * lineHeight + fontSize;
 
-                // Calculate text width with letterSpacing
+                const { family, weight, style } = parseFont(element.fontFamily || 'Arial');
                 const ctx = document.createElement('canvas').getContext('2d');
-                ctx.font = `${fontSize}px ${element.fontFamily || 'Arial'}`;
+                ctx.font = `${style} ${weight} ${fontSize}px "${family}"`;
                 const letterSpacing = (element.letterSpacing || 0) * scaleFactor;
                 const textWidths = textLines.map(line => {
                   let width = 0;
@@ -1203,7 +1313,7 @@ const VideoPreview = ({
 
                         // Prepare font settings
                         ctx.textBaseline = 'middle';
-                        const fontStyle = `${fontSize}px ${element.fontFamily || 'Arial'}`;
+                        const fontStyle = `${style} ${weight} ${fontSize}px "${family}"`;
                         ctx.font = fontStyle;
 
                         // Calculate vertical position

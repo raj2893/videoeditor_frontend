@@ -33,7 +33,8 @@
     "troika-three-text": "^0.52.4",
     "uuid": "^11.1.0",
     "wavesurfer.js": "^7.9.5",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "webfontloader": "^1.6.28"
   },
   "scripts": {
     "start": "react-scripts start",

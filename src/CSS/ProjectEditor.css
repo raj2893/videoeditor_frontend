@@ -1408,6 +1408,32 @@
   pointer-events: auto;
 }
 
+/* Divider Section */
+.divider-section {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 8px 0;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: #2a2a2a;
+  border: none;
+}
+
+.divider-text {
+  font-size: 10px;
+  font-weight: 600;
+  color: #a1a1a1;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   /* Project Editor Layout */
   .project-editor {
@@ -1467,6 +1493,37 @@
     display: flex;
     flex-direction: column;    
   }
+
+  .video-item,
+  .photo-item,
+  .audio-item,
+  .element-item {
+    width: 80px; /* Reduced from 100px */
+  }
+
+  .video-thumbnail,
+  .photo-thumbnail,
+  .audio-waveform,
+  .element-thumbnail {
+    height: 48px; /* Reduced from 60px */
+  }
+
+  .video-thumbnail {
+    height: 80px; /* Reduced from 100px */
+  }
+
+  .video-list .video-item .video-title,
+  .photo-list .photo-item .photo-title,
+  .audio-list .audio-item .audio-title,
+  .element-list .element-item .element-title {
+    font-size: 7px; /* Reduced from 9px */
+  }
+
+  .tool-subpanel .filter-option,
+  .tool-subpanel .filter-item {
+    padding: 6px 8px; /* Reduced from 10px 12px */
+    font-size: 10px; /* Reduced from 12px */
+  }  
 
   .content-wrapper {
     flex: 1;
@@ -1532,23 +1589,24 @@
     height: 6px;
   }
 
+  /* Zoom slider adjustments */
   .zoom-slider-container {
-    padding: 8px; /* Reduced padding from 10px */
-    height: 28px; /* Reduced height for container */
+    padding: 10px 8px 20px; /* Increased bottom padding for more margin */
+    height: 34px; /* Increased from 28px to accommodate larger slider */
   }
 
   .zoom-slider {
-    height: 3.5px; /* Slightly reduced height */
+    height: 5px; /* Increased from 3.5px */
   }
 
   .zoom-slider::-webkit-slider-thumb {
-    width: 11px; /* Slightly smaller thumb */
-    height: 11px; /* Slightly smaller thumb */
+    width: 14px; /* Increased from 11px */
+    height: 14px; /* Increased from 11px */
   }
 
   .zoom-slider::-moz-range-thumb {
-    width: 11px; /* Slightly smaller thumb */
-    height: 11px; /* Slightly smaller thumb */
+    width: 14px; /* Increased from 11px */
+    height: 14px; /* Increased from 11px */
   }
 
   .zoom-slider-container span {
@@ -1562,22 +1620,21 @@
 
   .control-button,
   .delete-button {
-    padding: 2.5px 7px; /* Reduced from 5px 14px (half) */
-    margin: 0 2.5px; /* Reduced from 0 5px (half) */
-    font-size: 5.5px; /* Reduced from 11px (half) */
-    border-radius: 2.5px; /* Reduced from 5px (half) */
-    line-height: 6.5px; /* Reduced from 13px (half) */
+    padding: 4px 10px; /* Increased from 2.5px 7px */
+    font-size: 7px; /* Increased from 5.5px */
+    border-radius: 3px; /* Increased from 2.5px */
+    line-height: 8px; /* Increased from 6.5px */
   }
 
   .control-button::after,
   .delete-button::after {
-    bottom: 0.5px; /* Adjusted from 1px (half) */
-    height: 0.6px; /* Reduced from 1.2px (half) */
+    bottom: 0.7px; /* Adjusted from 1px (half) */
+    height: 0.8px; /* Reduced from 1.2px (half) */
   }
 
   .panel-header {
-    height: 23px; /* Reduced from 46px (half) */
-    padding: 3px; /* Reduced from 6px (half) */
+    height: 28px; /* Reduced from 46px (half) */
+    padding: 4px; /* Reduced from 6px (half) */
   }
 
   .toggle-button {
@@ -1586,6 +1643,10 @@
     height: 23px; /* Reduced from 46px (half) */
     line-height: 23px; /* Reduced from 46px (half) */
     border-radius: 2.5px; /* Reduced from 5px (half) */
+  }
+
+  .divider-section {
+    display: none;
   }
 }
 
@@ -1608,6 +1669,37 @@
 
   .media-panel .panel-content::-webkit-scrollbar {
     display: none; /* Hide scrollbar for WebKit browsers (Chrome, Safari, Edge) */
+  }  
+
+  .video-item,
+  .photo-item,
+  .audio-item,
+  .element-item {
+    width: 70px; /* Reduced from 80px */
+  }
+
+  .video-thumbnail,
+  .photo-thumbnail,
+  .audio-waveform,
+  .element-thumbnail {
+    height: 40px; /* Reduced from 48px */
+  }
+
+  .video-thumbnail {
+    height: 70px; /* Reduced from 80px */
+  }
+
+  .video-list .video-item .video-title,
+  .photo-list .photo-item .photo-title,
+  .audio-list .audio-item .audio-title,
+  .element-list .element-item .element-title {
+    font-size: 6px; /* Reduced from 7px */
+  }
+
+  .tool-subpanel .filter-option,
+  .tool-subpanel .filter-item {
+    padding: 5px 7px; /* Reduced from 6px 8px */
+    font-size: 9px; /* Reduced from 10px */
   }  
 
   .content-panel {
@@ -1659,22 +1751,22 @@
   }
 
   .zoom-slider-container {
-    padding: 6px; /* Further reduced padding */
-    height: 15px; /* Further reduced height */
+    padding: 8px 6px 16px; /* Increased bottom padding */
+    height: 20px; /* Increased from 15px */
   }
 
   .zoom-slider {
-    height: 3px; /* Further reduced height */
+    height: 4px; /* Increased from 3px */
   }
 
   .zoom-slider::-webkit-slider-thumb {
-    width: 7px; /* Smaller thumb */
-    height: 7px; /* Smaller thumb */
+    width: 10px; /* Increased from 7px */
+    height: 10px; /* Increased from 7px */
   }
 
   .zoom-slider::-moz-range-thumb {
-    width: 10px; /* Smaller thumb */
-    height: 10px; /* Smaller thumb */
+    width: 12px; /* Increased from 10px */
+    height: 12px; /* Increased from 10px */
   }
 
   .zoom-slider-container span {
@@ -1712,5 +1804,9 @@
     height: 18px; /* Reduced from 36px (half) */
     line-height: 18px; /* Reduced from 36px (half) */
     border-radius: 2px; /* Reduced from 4px (half) */
+  }
+
+  .divider-section {
+    display: none;
   }
 }

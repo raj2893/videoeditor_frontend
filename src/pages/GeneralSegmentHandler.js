@@ -71,14 +71,15 @@ const GeneralSegmentHandler = ({
 
   const handleDragOver = (e) => {
     if (isSplitMode) return;
-    e.preventDefault();
+    if (e.preventDefault) e.preventDefault(); // Safely call preventDefault
     if (!draggingItem || !timelineRef.current) return;
-
+  
     const timelineRect = timelineRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - timelineRect.left;
+    const clientX = e.type === 'touchmove' || e.type === 'dragover' ? (e.touches ? e.touches[0].clientX : e.clientX) : e.clientX;
+    const mouseX = clientX - timelineRect.left;
     let potentialStartTime = (mouseX / timeScale) - dragOffset;
     potentialStartTime = Math.max(0, potentialStartTime);
-
+  
     const newSnapIndicators = [];
     const snapPoints = [];
     const isAudioLayer = draggingItem.layer < 0;
@@ -237,9 +238,11 @@ const GeneralSegmentHandler = ({
   const handleResizeMove = useCallback(
     throttle((e) => {
       if (!resizingItem || !timelineRef.current) return;
-
+  
       const timelineRect = timelineRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - timelineRect.left;
+      // Support both mouse and touch events
+      const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+      const mouseX = clientX - timelineRect.left;
       let newTime = Math.max(0, mouseX / timeScale);
       const isAudioLayer = resizingItem.layer < 0;
       const layerIndex = isAudioLayer ? Math.abs(resizingItem.layer) - 1 : resizingItem.layerIndex;
@@ -251,7 +254,7 @@ const GeneralSegmentHandler = ({
         return;
       }
       const item = { ...layer[itemIndex] };
-
+  
       const originalStartTime = item.startTime ?? resizingItem.startTime ?? 0;
       const originalStartWithin = item.type === 'video'
         ? (item.startTimeWithinVideo ?? 0)
@@ -259,13 +262,13 @@ const GeneralSegmentHandler = ({
       const originalEndWithin = item.type === 'video'
         ? (item.endTimeWithinVideo ?? item.duration)
         : (item.endTimeWithinAudio ?? item.duration);
-      const speed = item.type === 'video' ? (item.speed ?? 1.0) : 1.0; // Get speed for video segments
-
+      const speed = item.type === 'video' ? (item.speed ?? 1.0) : 1.0;
+  
       let newStartTime = originalStartTime;
       let newDuration = item.duration;
       let newStartWithin = originalStartWithin;
       let newEndWithin = originalEndWithin;
-
+  
       const snapPoints = [];
       [...videoLayers, ...audioLayers].forEach((layer, layerIdx) => {
         const isAudio = layerIdx >= videoLayers.length;
@@ -280,11 +283,11 @@ const GeneralSegmentHandler = ({
       if (currentTime !== undefined && !isNaN(currentTime)) {
         snapPoints.push({ time: currentTime, layerIdx: resizingItem.layer, type: 'playhead' });
       }
-
+  
       const otherItems = layer.filter((i) => i.id !== resizingItem.id);
       let maxLeftBound = -Infinity;
       let minRightBound = Infinity;
-
+  
       otherItems.forEach((otherItem) => {
         const otherStart = otherItem.startTime;
         const otherEnd = otherItem.startTime + otherItem.duration;
@@ -295,46 +298,43 @@ const GeneralSegmentHandler = ({
           minRightBound = otherStart;
         }
       });
-
+  
       let sourceDuration = durationCache.current.get(item.filePath || item.fileName);
       if (sourceDuration === undefined) {
-          if (item.type === 'video') {
-              fetchVideoDuration(item.filePath).then((duration) => {
-                  if (duration !== null) {
-                      durationCache.current.set(item.filePath, duration);
-                      console.log(`Cached video duration for ${item.filePath}: ${duration}`);
-                  }
-              });
-              sourceDuration = (item.endTimeWithinVideo - item.startTimeWithinVideo) / speed;
-          } else if (item.type === 'audio') {
-              fetchAudioDuration(item.fileName).then((duration) => {
-                  if (duration !== null) {
-                      const roundedDuration = roundToThreeDecimals(duration);
-                      durationCache.current.set(item.fileName, roundedDuration);
-                      console.log(`Cached audio duration for ${item.fileName}: ${duration} -> ${roundedDuration}`);
-                  } else {
-                      console.warn(`Failed to fetch duration for ${item.fileName}`);
-                  }
-              });
-              sourceDuration = roundToThreeDecimals(Math.min(
-                  item.endTimeWithinAudio - item.startTimeWithinAudio,
-                  item.maxDuration || 3600
-              ));
-              console.log(`Using fallback duration for ${item.fileName}: ${sourceDuration}`);
-          }
+        if (item.type === 'video') {
+          fetchVideoDuration(item.filePath).then((duration) => {
+            if (duration !== null) {
+              durationCache.current.set(item.filePath, duration);
+              console.log(`Cached video duration for ${item.filePath}: ${duration}`);
+            }
+          });
+          sourceDuration = (item.endTimeWithinVideo - item.startTimeWithinVideo) / speed;
+        } else if (item.type === 'audio') {
+          fetchAudioDuration(item.fileName).then((duration) => {
+            if (duration !== null) {
+              const roundedDuration = roundToThreeDecimals(duration);
+              durationCache.current.set(item.fileName, roundedDuration);
+              console.log(`Cached audio duration for ${item.fileName}: ${duration} -> ${roundedDuration}`);
+            }
+          });
+          sourceDuration = roundToThreeDecimals(Math.min(
+            item.endTimeWithinAudio - item.startTimeWithinAudio,
+            item.maxDuration || 3600
+          ));
+        }
       }
-
+  
       let closestSnapPoint = null;
       let minDistance = SNAP_THRESHOLD;
       let isSnapping = false;
-
+  
       if (resizeEdge === 'left') {
         const originalEndTime = originalStartTime + item.duration;
         newStartTime = Math.min(newTime, originalEndTime - 0.1);
         if (maxLeftBound !== -Infinity) {
           newStartTime = Math.max(newStartTime, maxLeftBound);
         }
-
+  
         snapPoints.forEach((point) => {
           const distance = Math.abs(point.time - newStartTime);
           const currentThreshold = point.type === 'timelineStart' || point.type === 'playhead' ? SNAP_THRESHOLD * 2 : SNAP_THRESHOLD;
@@ -343,7 +343,7 @@ const GeneralSegmentHandler = ({
             closestSnapPoint = { time: point.time, layerIdx: point.layerIdx, type: point.type, edge: 'start' };
           }
         });
-
+  
         if (closestSnapPoint) {
           newStartTime = Math.max(maxLeftBound, closestSnapPoint.time);
           isSnapping = true;
@@ -356,10 +356,10 @@ const GeneralSegmentHandler = ({
         } else {
           setSnapIndicators([]);
         }
-
+  
         newDuration = originalEndTime - newStartTime;
         if (item.type === 'video') {
-          const timeShift = (newStartTime - originalStartTime) * speed; // Adjust shift by speed
+          const timeShift = (newStartTime - originalStartTime) * speed;
           newStartWithin = originalStartWithin + timeShift;
           if (newStartWithin < 0) {
             newStartWithin = 0;
@@ -367,7 +367,6 @@ const GeneralSegmentHandler = ({
             newDuration = originalEndTime - newStartTime;
           }
           newEndWithin = originalEndWithin;
-          // Ensure newStartWithin doesn't exceed source duration
           if (newStartWithin > sourceDuration - (0.1 * speed)) {
             newStartWithin = sourceDuration - (0.1 * speed);
             newStartTime = originalStartTime + ((newStartWithin - originalStartWithin) / speed);
@@ -384,78 +383,70 @@ const GeneralSegmentHandler = ({
           newEndWithin = originalEndWithin;
         }
       } else if (resizeEdge === 'right') {
-          const newEndTime = Math.max(newTime, originalStartTime + 0.1);
-          let clampedEndTime = newEndTime;
-          if (minRightBound !== Infinity) {
-              clampedEndTime = Math.min(newEndTime, minRightBound);
+        const newEndTime = Math.max(newTime, originalStartTime + 0.1);
+        let clampedEndTime = newEndTime;
+        if (minRightBound !== Infinity) {
+          clampedEndTime = Math.min(newEndTime, minRightBound);
+        }
+  
+        snapPoints.forEach((point) => {
+          const distance = Math.abs(point.time - clampedEndTime);
+          const currentThreshold = point.type === 'timelineStart' || point.type === 'playhead' ? SNAP_THRESHOLD * 2 : SNAP_THRESHOLD;
+          if (distance < currentThreshold && distance < minDistance) {
+            minDistance = distance;
+            closestSnapPoint = { time: point.time, layerIdx: point.layerIdx, type: point.type, edge: 'end' };
           }
-
-          snapPoints.forEach((point) => {
-              const distance = Math.abs(point.time - clampedEndTime);
-              const currentThreshold = point.type === 'timelineStart' || point.type === 'playhead' ? SNAP_THRESHOLD * 2 : SNAP_THRESHOLD;
-              if (distance < currentThreshold && distance < minDistance) {
-                  minDistance = distance;
-                  closestSnapPoint = { time: point.time, layerIdx: point.layerIdx, type: point.type, edge: 'end' };
-              }
-          });
-
-          if (closestSnapPoint) {
-              clampedEndTime = Math.min(minRightBound, closestSnapPoint.time);
-              isSnapping = true;
-              setSnapIndicators([{
-                  time: clampedEndTime,
-                  layerIdx: resizingItem.layer,
-                  edge: 'end',
-                  type: closestSnapPoint.type,
-              }]);
-          } else {
-              setSnapIndicators([]);
+        });
+  
+        if (closestSnapPoint) {
+          clampedEndTime = Math.min(minRightBound, closestSnapPoint.time);
+          isSnapping = true;
+          setSnapIndicators([{
+            time: clampedEndTime,
+            layerIdx: resizingItem.layer,
+            edge: 'end',
+            type: closestSnapPoint.type,
+          }]);
+        } else {
+          setSnapIndicators([]);
+        }
+  
+        newDuration = clampedEndTime - originalStartTime;
+        if (item.type === 'video') {
+          newStartWithin = originalStartWithin;
+          newEndWithin = originalStartWithin + (newDuration * speed);
+          if (sourceDuration && newEndWithin > sourceDuration) {
+            newEndWithin = sourceDuration;
+            newDuration = (newEndWithin - originalStartWithin) / speed;
+            clampedEndTime = originalStartTime + newDuration;
           }
-
-          newDuration = clampedEndTime - originalStartTime;
-          if (item.type === 'video') {
-              newStartWithin = originalStartWithin;
-              newEndWithin = originalStartWithin + (newDuration * speed);
-              if (sourceDuration && newEndWithin > sourceDuration) {
-                  newEndWithin = sourceDuration;
-                  newDuration = (newEndWithin - originalStartWithin) / speed;
-                  clampedEndTime = originalStartTime + newDuration;
-              }
-          } else if (item.type === 'audio') {
-              newStartWithin = originalStartWithin;
-              newEndWithin = originalStartWithin + newDuration;
-              console.log(`Audio resize: fileName=${item.fileName}, newEndWithin=${newEndWithin}, sourceDuration=${sourceDuration}`);
-              // Strictly clamp to source duration, aligning with backend's two-decimal precision
-              if (sourceDuration && newEndWithin > sourceDuration) {
-                  const backendSafeDuration = Math.floor(sourceDuration * 100) / 100; // Truncate to two decimals
-                  newEndWithin = roundToThreeDecimals(backendSafeDuration); // Round to three decimals for frontend
-                  newDuration = newEndWithin - originalStartWithin;
-                  clampedEndTime = originalStartTime + newDuration;
-                  console.log(`Clamped audio duration: newEndWithin=${newEndWithin}, newDuration=${newDuration}, sourceDuration=${sourceDuration}, backendSafeDuration=${backendSafeDuration}`);
-              }
-              // Prevent negative or zero duration
-              if (newDuration <= 0.1) {
-                  newDuration = 0.1;
-                  newEndWithin = originalStartWithin + newDuration;
-                  clampedEndTime = originalStartTime + newDuration;
-                  console.log(`Enforced minimum duration: newDuration=${newDuration}, newEndWithin=${newEndWithin}`);
-              }
+        } else if (item.type === 'audio') {
+          newStartWithin = originalStartWithin;
+          newEndWithin = originalStartWithin + newDuration;
+          if (sourceDuration && newEndWithin > sourceDuration) {
+            const backendSafeDuration = Math.floor(sourceDuration * 100) / 100;
+            newEndWithin = roundToThreeDecimals(backendSafeDuration);
+            newDuration = newEndWithin - newStartWithin;
+            clampedEndTime = originalStartTime + newDuration;
           }
+          if (newDuration <= 0.1) {
+            newDuration = 0.1;
+            newEndWithin = originalStartWithin + newDuration;
+            clampedEndTime = originalStartTime + newDuration;
+          }
+        }
       }
-
-      // Update DOM directly
+  
       const resizingElement = document.querySelector(`.timeline-item[data-id="${resizingItem.id}"]`);
       if (resizingElement) {
         resizingElementRef.current = resizingElement;
         resizingElement.style.left = `${roundToThreeDecimals(newStartTime) * timeScale}px`;
         resizingElement.style.width = `${roundToThreeDecimals(newDuration) * timeScale}px`;
         resizingElement.classList.toggle('snapping', isSnapping);
-        // Hide waveform during resize to prevent redraw
         const waveform = resizingElement.querySelector('.audio-waveform');
         if (waveform) waveform.style.visibility = 'hidden';
       }
-
-      // Store temporary values
+  
       resizingItem.tempStartTime = roundToThreeDecimals(newStartTime);
       resizingItem.tempDuration = roundToThreeDecimals(newDuration);
       resizingItem.tempStartWithin = roundToThreeDecimals(newStartWithin);
@@ -608,11 +599,24 @@ const GeneralSegmentHandler = ({
 
   useEffect(() => {
     if (resizingItem) {
+      const handleTouchMove = (e) => {
+        e.preventDefault(); // Prevent scrolling
+        handleResizeMove(e);
+      };
+      const handleTouchEnd = () => {
+        handleResizeEnd();
+      };
+  
       document.addEventListener('mousemove', handleResizeMove);
       document.addEventListener('mouseup', handleResizeEnd);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
+  
       return () => {
         document.removeEventListener('mousemove', handleResizeMove);
         document.removeEventListener('mouseup', handleResizeEnd);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       };
     }
   }, [resizingItem, handleResizeMove, handleResizeEnd]);
@@ -623,6 +627,7 @@ const GeneralSegmentHandler = ({
     handleResizeStart,
     handleResizeMove,
     handleResizeEnd,
+    handleDragEnd
   };
 };
 

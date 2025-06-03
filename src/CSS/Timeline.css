@@ -139,7 +139,20 @@
   min-width: max-content;
   width: 100%; /* Ensure it matches the full timeline width */
   z-index: 1000;
-  touch-action: none;
+}
+
+.timeline-item.video-segment {
+  background-color: #4A919E; /* Default for videos if not set */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background-size: cover;
+  background-position: center;
+}
+
+.timeline-item.image-segment {
+  background-color: #FF5722; /* Default for images if not set */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background-size: cover;
+  background-position: center;
 }
 
 .playhead {

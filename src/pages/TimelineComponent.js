@@ -277,7 +277,7 @@ const TimelineComponent = ({
       });
       waveSurferInstances.current.clear();
     };
-  }, [audioLayers, initializeWaveform]);
+  }, [audioLayers, initializeWaveform]); 
 
   // Expose updateWaveform globally
   useEffect(() => {
@@ -397,94 +397,13 @@ const TimelineComponent = ({
     }
   }, [setPlayheadFromParent, onTimeUpdate]);
 
-  const generateVideoThumbnail = async (videoPath) => {
-  const fileName = videoPath.split('/').pop();
-  const fullVideoPath = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fileName)}`;
-  return new Promise((resolve) => {
-    const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
-    video.src = fullVideoPath;
-    video.muted = true;
-
-    video.onloadeddata = () => {
-      video.currentTime = 1;
-    };
-
-    video.onseeked = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const maxWidth = 120;
-      const maxHeight = 80;
-      let width = video.videoWidth;
-      let height = video.videoHeight;
-
-      if (width > height) {
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-      } else {
-        if (height > maxHeight) {
-          width = (width * maxHeight) / height;
-          height = maxHeight;
-        }
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      ctx.drawImage(video, 0, 0, width, height);
-      const thumbnail = canvas.toDataURL('image/jpeg');
-      resolve(thumbnail);
-    };
-
-    video.onerror = () => {
-      console.error(`Failed to load video for thumbnail: ${fullVideoPath}`);
-      resolve(null);
-    };
-  });
+const generateVideoThumbnail = async (videoPath) => {
+  return '#4A919E'; // Return fixed color for video segments
 };
 
-  const generateImageThumbnail = async (imagePath, isElement = false) => {
-    const filename = imagePath.split('/').pop();
-    const fullImagePath = isElement
-      ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
-      : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = fullImagePath;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const maxWidth = 120;
-        const maxHeight = 80;
-        let width = img.width;
-        let height = img.height;
-  
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-  
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
-        const thumbnail = canvas.toDataURL('image/jpeg');
-        resolve(thumbnail);
-      };
-      img.onerror = () => {
-        console.error(`Failed to load image for thumbnail: ${fullImagePath}`);
-        resolve(null);
-      };
-    });
-  };
+const generateImageThumbnail = async (imagePath, isElement = false) => {
+  return '#FF5722'; // Return fixed color for image segments
+};
 
   const loadProjectTimeline = async () => {
     if (!projectId || !sessionId) return;
@@ -815,6 +734,184 @@ const TimelineComponent = ({
     setIsResizing, // Add setIsResizing
   });
 
+  // Add touch event handlers within TimelineComponent
+const handleTouchStart = (e, item, layerIndex) => {
+  if (isSplitMode) return;
+  e.stopPropagation();
+  const touch = e.touches[0];
+  const itemWithOriginal = {
+    ...item,
+    originalStartTime: item.startTime,
+    originalLayer: item.layer, // Store original layer
+    isValidPosition: true,
+  };
+  setDraggingItem(itemWithOriginal);
+  setDragLayer(item.layer);
+  const rect = e.currentTarget.getBoundingClientRect();
+  const offsetX = touch.clientX - rect.left;
+  setDragOffset(offsetX / timeScale);
+  e.currentTarget.classList.add('dragging');
+  // Store touch data for drag detection
+  const touchData = {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    isDragging: false,
+    startTime: Date.now(),
+    originalLayer: item.layer, // Include layer in touch data
+  };
+  e.currentTarget.setAttribute('data-touch', JSON.stringify(touchData));
+  // Simulate dragstart event
+  const dragEvent = new Event('dragstart', { bubbles: true });
+  e.currentTarget.dispatchEvent(dragEvent);
+};
+  
+const handleTouchMove = (e) => {
+  if (isSplitMode || !draggingItem) return;
+  e.preventDefault(); // Prevent scrolling
+  const touch = e.touches[0];
+  const target = document.querySelector('.timeline-item.dragging');
+  if (target) {
+    const touchData = JSON.parse(target.getAttribute('data-touch') || '{}');
+    const dx = Math.abs(touch.clientX - touchData.clientX);
+    const dy = Math.abs(touch.clientY - touchData.clientY);
+    const dragThreshold = 5;
+    const timeElapsed = Date.now() - touchData.startTime;
+    if (!touchData.isDragging && (dx > dragThreshold || dy > dragThreshold) && timeElapsed > 100) {
+      touchData.isDragging = true;
+      target.setAttribute('data-touch', JSON.stringify(touchData));
+    }
+    if (touchData.isDragging) {
+      // Calculate target layer
+      const timelineRect = timelineRef.current.getBoundingClientRect();
+      const relativeMouseY = touch.clientY - timelineRect.top;
+      const layerHeight = 40;
+      const totalVideoLayers = videoLayers.length;
+      const totalAudioLayers = audioLayers.length;
+      const reversedIndex = Math.floor(relativeMouseY / layerHeight);
+      let targetLayer;
+      let isAudioLayer = false;
+      if (reversedIndex <= totalVideoLayers) {
+        targetLayer = totalVideoLayers - reversedIndex;
+      } else if (reversedIndex >= totalVideoLayers + 1 && reversedIndex < totalVideoLayers + totalAudioLayers + 1) {
+        targetLayer = reversedIndex - (totalVideoLayers + 1);
+        isAudioLayer = true;
+      } else {
+        targetLayer = isAudioLayer ? audioLayers.length : videoLayers.length;
+      }
+      targetLayer = Math.max(0, targetLayer);
+      // Update dragLayer for audio layers
+      if (isAudioLayer && draggingItem.type === 'audio') {
+        setDragLayer(-(targetLayer + 1)); // Audio layers use negative indices
+      } else if (!isAudioLayer && draggingItem.type !== 'audio') {
+        setDragLayer(targetLayer);
+      }
+      // Simulate dragover event
+      const simulatedEvent = {
+        ...e,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        type: 'dragover',
+        preventDefault: () => e.preventDefault(),
+        stopPropagation: () => e.stopPropagation(),
+      };
+      generalHandler.handleDragOver(simulatedEvent);
+    }
+  }
+};
+  
+const handleTouchEnd = (e) => {
+  if (isSplitMode || !draggingItem) return;
+  e.stopPropagation();
+  const target = document.querySelector('.timeline-item.dragging');
+  let isDragging = false;
+  let touchData = {};
+  if (target) {
+    touchData = JSON.parse(target.getAttribute('data-touch') || '{}');
+    isDragging = touchData.isDragging || false;
+    target.removeAttribute('data-touch');
+    target.classList.remove('dragging', 'invalid');
+  }
+  // Clean up drag state
+  try {
+    generalHandler.handleDragEnd();
+  } catch (error) {
+    console.error('Error in handleDragEnd:', error);
+    setSnapIndicators([]);
+    if (timelineRef.current) {
+      timelineRef.current.classList.remove('showing-new-layer');
+    }
+    setDraggingItem(null);
+    setDragLayer(null);
+    setDragOffset(0);
+  }
+  // Handle drop
+  if (isDragging) {
+    const touch = e.changedTouches[0];
+    // Calculate target layer for drop
+    const timelineRect = timelineRef.current.getBoundingClientRect();
+    const relativeMouseY = touch.clientY - timelineRect.top;
+    const layerHeight = 40;
+    const totalVideoLayers = videoLayers.length;
+    const totalAudioLayers = audioLayers.length;
+    const reversedIndex = Math.floor(relativeMouseY / layerHeight);
+    let targetLayer;
+    let isAudioLayer = false;
+    if (reversedIndex <= totalVideoLayers) {
+      targetLayer = totalVideoLayers - reversedIndex;
+    } else if (reversedIndex >= totalVideoLayers + 1 && reversedIndex < totalVideoLayers + totalAudioLayers + 1) {
+      targetLayer = reversedIndex - (totalVideoLayers + 1);
+      isAudioLayer = true;
+    } else {
+      targetLayer = isAudioLayer ? audioLayers.length : videoLayers.length;
+    }
+    targetLayer = Math.max(0, targetLayer);
+    const finalLayer = isAudioLayer && draggingItem.type === 'audio' ? -(targetLayer + 1) : targetLayer;
+    setDragLayer(finalLayer); // Update dragLayer before drop
+    const simulatedDropEvent = {
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      preventDefault: () => e.preventDefault(),
+      stopPropagation: () => e.stopPropagation(),
+      touchEvent: true,
+      dataTransfer: {
+        getData: () => JSON.stringify({ type: draggingItem.type, id: draggingItem.id }),
+      },
+    };
+    handleDrop(simulatedDropEvent);
+    // Simulate dragend event
+    const dragEndEvent = new Event('dragend', { bubbles: true });
+    document.dispatchEvent(dragEndEvent);
+  }
+};
+  
+  const handleResizeTouchStart = (e, item, layerIndex, edge) => {
+    if (isSplitMode) return;
+    const touch = e.touches[0];
+    generalHandler.handleResizeStart(
+      e,
+      item,
+      layerIndex,
+      edge,
+      touch.clientX
+    );
+  };
+  
+  useEffect(() => {
+    if (!timelineRef.current) return;
+    const timelineEl = timelineRef.current;
+  
+    const handleTouchMoveWrapper = (e) => handleTouchMove(e);
+    const handleTouchEndWrapper = (e) => handleTouchEnd(e);
+  
+    timelineEl.addEventListener('touchmove', handleTouchMoveWrapper, { passive: false });
+    timelineEl.addEventListener('touchend', handleTouchEndWrapper);
+  
+    return () => {
+      timelineEl.removeEventListener('touchmove', handleTouchMoveWrapper);
+      timelineEl.removeEventListener('touchend', handleTouchEndWrapper);
+    };
+  }, [draggingItem, isSplitMode, timeScale, generalHandler, handleTouchMove, handleTouchEnd]);  
+
   useEffect(() => {
     const calculateDuration = () => {
       let maxDuration = 0;
@@ -887,17 +984,24 @@ const TimelineComponent = ({
     setDragOffset(0);
     setSnapIndicators([]);
   
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
+    const mouseX = e.touchEvent ? e.clientX : e.clientX;
+    const mouseY = e.touchEvent ? e.clientY : e.clientY;
   
-    const dataString = e.dataTransfer.getData('application/json');
     let dragData = null;
-    if (dataString) {
-      try {
-        dragData = JSON.parse(dataString);
-      } catch (error) {
-        console.error('Error parsing drag data:', error);
+    if (!e.touchEvent) {
+      const dataString = e.dataTransfer.getData('application/json');
+      if (dataString) {
+        try {
+          dragData = JSON.parse(dataString);
+        } catch (error) {
+          console.error('Error parsing drag data:', error);
+        }
       }
+    }
+  
+    // Handle draggingItem for touch-based drag
+    if (draggingItem && !dragData) {
+      dragData = { type: draggingItem.type };
     }
   
     if (dragData?.type === 'transition') {
@@ -1193,9 +1297,15 @@ const TimelineComponent = ({
 
   const handleTimelineClick = async (e) => {
     if (!timelineRef.current) return;
+    const isTouchEvent = e.type === 'touchstart' || e.type === 'touchend';
+    if (isTouchEvent) {
+      e.preventDefault(); // Prevent default touch behavior
+    }    
     const rect = timelineRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+    const clientX = isTouchEvent ? e.changedTouches[0].clientX : e.clientX;
+    const clientY = isTouchEvent ? e.changedTouches[0].clientY : e.clientY;
+    const clickX = clientX - rect.left;
+    const clickY = clientY - rect.top;
     let clickTime = clickX / timeScale;
 
     // Apply magnetic snapping to playhead in split mode
@@ -1566,7 +1676,9 @@ const TimelineComponent = ({
                   layerIndex={layerIndex}
                   timeScale={timeScale}
                   handleDragStart={generalHandler.handleDragStart}
+                  handleTouchStart={handleTouchStart} // Add touch start handler
                   handleResizeStart={generalHandler.handleResizeStart}
+                  handleResizeTouchStart={handleResizeTouchStart} // Add touch resize handler
                   playingVideoId={playingVideoId}
                   handleVideoSelect={handleVideoSelect}
                   handleEditTextSegment={(item) => {
@@ -1593,7 +1705,9 @@ const TimelineComponent = ({
                 layerIndex={index}
                 timeScale={timeScale}
                 handleDragStart={generalHandler.handleDragStart}
+                handleTouchStart={handleTouchStart} // Add touch start handler
                 handleResizeStart={generalHandler.handleResizeStart}
+                handleResizeTouchStart={handleResizeTouchStart} // Add touch resize handler
                 playingVideoId={playingVideoId}
                 handleVideoSelect={handleVideoSelect}
                 handleEditTextSegment={() => {}}

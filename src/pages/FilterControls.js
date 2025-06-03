@@ -17,7 +17,6 @@ const FilterControls = ({
   return (
     <div className="filters-panel" style={{ maxHeight: '400px', overflowY: 'auto' }}>
       <h3>
-        Filters
         {selectedSegment && (selectedSegment.type === 'video' || selectedSegment.type === 'image') && (
           <button
             onClick={resetFilters}

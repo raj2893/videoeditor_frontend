@@ -6,7 +6,9 @@ const TimelineLayer = ({
   layerIndex,
   timeScale,
   handleDragStart,
+  handleTouchStart, // Add touch start prop
   handleResizeStart,
+  handleResizeTouchStart, // Add touch resize prop
   playingVideoId,
   handleVideoSelect,
   handleEditTextSegment,
@@ -42,22 +44,15 @@ const TimelineLayer = ({
           const style = {
             left: `${item.startTime * timeScale}px`,
             width: `${item.duration * timeScale}px`,
-            backgroundImage:
-              item.thumbnail
-                ? `url(${item.thumbnail})`
-                : item.type === 'image' && item.filePath
-                ? `url(${item.filePath})`
-                : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundColor: item.backgroundColor || (item.type === 'video' ? '#4A919E' : item.type === 'image' ? '#FF5722' : 'transparent'),
             top: '5px',
           };
           const isSelected = item.id === selectedSegmentId;
-        
+
           const itemTransitions = transitions.filter(
             (t) => t.segmentId === item.id && t.layer === layerIndex
           );
-        
+
           return (
             <div
               key={item.id}
@@ -71,8 +66,9 @@ const TimelineLayer = ({
                   ? 'audio-segment'
                   : 'video-segment'
               } ${item.id === playingVideoId ? 'playing' : ''} ${isSelected ? 'selected' : ''}`}
-              draggable
+              draggable={!isSplitMode} // Disable dragging in split mode
               onDragStart={(e) => handleDragStart(e, item, layerIndex)}
+              onTouchStart={(e) => handleTouchStart(e, item, layerIndex)} // Add touch start handler
               style={item.type === 'audio' ? { ...style, backgroundImage: 'none' } : style}
               onClick={(e) => {
                 e.stopPropagation();
@@ -88,13 +84,17 @@ const TimelineLayer = ({
                 }
               }}
             >
-              {isSelected && (
+              {isSelected && !isSplitMode && ( // Disable resize handles in split mode
                 <div
                   className="resize-handle resize-left"
                   onMouseDown={(e) => {
                     e.stopPropagation();
                     handleResizeStart(e, item, layerIndex, 'left');
                   }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    handleResizeTouchStart(e, item, layerIndex, 'left');
+                  }} // Add touch resize handler
                 />
               )}
               {item.type === 'text' && (
@@ -134,13 +134,17 @@ const TimelineLayer = ({
                     : item.displayName || item.fileName || 'Unnamed Image'}
                 </div>
               )}
-              {isSelected && (
+              {isSelected && !isSplitMode && ( // Disable resize handles in split mode
                 <div
                   className="resize-handle resize-right"
                   onMouseDown={(e) => {
                     e.stopPropagation();
                     handleResizeStart(e, item, layerIndex, 'right');
                   }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    handleResizeTouchStart(e, item, layerIndex, 'right');
+                  }} // Add touch resize handler
                 />
               )}
               {itemTransitions.map((transition) => {

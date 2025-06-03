@@ -2158,7 +2158,8 @@ const generateVideoThumbnail = async (video) => {
 
   const generateImageThumbnail = async (imagePath, isElement = false) => {
     const filename = imagePath.split('/').pop();
-    const fullImagePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
+    const fullImagePath = isElement ? `${CDN_URL}/elements/${encodeURIComponent(filename)}` 
+    : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -4579,17 +4580,11 @@ return (
               Text Styles
             </button>
           </div>
-          <div className="media-section">
-            <button
-              className="section-button coming-soon"
-              data-section="aiSubtitles"
-              disabled
-              aria-disabled="true"
-            >
-              <span>AI Subtitles</span>
-            </button>
+          <div className="divider-section">
+            <hr className="divider-line" />
+            <span className="divider-text">Edit Section</span>
+            <hr className="divider-line" />
           </div>
-          {/* Tool Sections */}
           <div className="media-section">
             <button
               className={`section-button ${expandedSection === 'transform' ? 'active' : ''}`}
@@ -4598,7 +4593,17 @@ return (
             >
               Transform
             </button>
-          </div>
+          </div>                   
+          <div className="media-section">
+            <button
+              className={`section-button ${expandedSection === 'text' ? 'active' : ''}`}
+              data-section="text"
+              onClick={toggleTextTool}
+              disabled={!selectedSegment || selectedSegment.type !== 'text'}
+            >
+              Text
+            </button>
+          </div>          
           <div className="media-section">
             <button
               className={`section-button ${expandedSection === 'filters' ? 'active' : ''}`}
@@ -4610,16 +4615,6 @@ return (
           </div>
           <div className="media-section">
             <button
-              className={`section-button ${expandedSection === 'text' ? 'active' : ''}`}
-              data-section="text"
-              onClick={toggleTextTool}
-              disabled={!selectedSegment || selectedSegment.type !== 'text'}
-            >
-              Text
-            </button>
-          </div>
-          <div className="media-section">
-            <button
               className={`section-button ${expandedSection === 'transitions' ? 'active' : ''}`}
               data-section="transitions"
               onClick={toggleTransitionsPanel}
@@ -4627,6 +4622,16 @@ return (
               Transitions
             </button>
           </div>
+          <div className="media-section">
+            <button
+              className="section-button coming-soon"
+              data-section="aiSubtitles"
+              disabled
+              aria-disabled="true"
+            >
+              <span>AI Subtitles</span>
+            </button>
+          </div>          
         </div>
       )}
     </aside>

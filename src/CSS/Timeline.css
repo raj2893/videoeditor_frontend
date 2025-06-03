@@ -206,6 +206,10 @@
   touch-action: none;
 }
 
+.timeline-item, .resize-handle {
+  touch-action: none;
+}
+
 .timeline-item.video-segment,
 .timeline-item.image-segment,
 .timeline-item.audio-segment {

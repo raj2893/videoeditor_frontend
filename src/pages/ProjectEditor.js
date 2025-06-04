@@ -91,6 +91,9 @@ const ProjectEditor = () => {
   const [tempThumbnails, setTempThumbnails] = useState({}); // Store temporary blurred thumbnails
   const [isContentPanelOpen, setIsContentPanelOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Add to existing state declarations at the top of ProjectEditor
+  const [pendingUploads, setPendingUploads] = useState(new Set()); // Track pending uploads
   const textSettingsRef = useRef(textSettings);
 
   const canUndo = historyIndex > 0;
@@ -1939,10 +1942,8 @@ const handleVideoUpload = async (event) => {
 
   try {
     setUploading(true);
-    // Initialize progress for all files
-    setUploadProgress(
-      files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {})
-    );
+    setPendingUploads(new Set(files.map((file) => file.name))); // Track pending uploads
+    setUploadProgress(files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {}));
 
     const token = localStorage.getItem('token');
     const response = await axios.post(
@@ -1951,16 +1952,12 @@ const handleVideoUpload = async (event) => {
       {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        // Ensure progress events are captured
         onUploadProgress: (progressEvent) => {
           const total = progressEvent.total || 1;
           const loaded = progressEvent.loaded;
           const percentCompleted = Math.round((loaded * 100) / total);
-          console.log(`Upload progress: ${percentCompleted}%`); // Debug log
-
-          // Update progress for all files
           setUploadProgress((prev) => {
             const updatedProgress = { ...prev };
             files.forEach((file) => {
@@ -1993,7 +1990,18 @@ const handleVideoUpload = async (event) => {
         };
       });
       setVideos((prev) => [...prev, ...updatedVideos]);
-      await Promise.all(updatedVideos.map((video) => generateVideoThumbnail(video)));
+
+      // Generate thumbnails and remove from pendingUploads when done
+      await Promise.all(
+        updatedVideos.map(async (video) => {
+          await generateVideoThumbnail(video);
+          setPendingUploads((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(video.displayName);
+            return newSet;
+          });
+        })
+      );
       setThumbnailsGenerated(true);
     }
 
@@ -2005,6 +2013,7 @@ const handleVideoUpload = async (event) => {
   } finally {
     setUploading(false);
     setUploadProgress({}); // Clear progress
+    setPendingUploads(new Set()); // Clear pending uploads on error
   }
 };
 
@@ -2053,71 +2062,78 @@ const handleVideoUpload = async (event) => {
       }
     };
 
-  const handleAudioUpload = async (event) => {
-    const files = Array.from(event.target.files);
-    if (files.length === 0) return;
+const handleAudioUpload = async (event) => {
+  const files = Array.from(event.target.files);
+  if (files.length === 0) return;
 
-    const formData = new FormData();
-    files.forEach((file) => {
-      formData.append('audio', file);
-      formData.append('audioFileNames', file.name);
-    });
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('audio', file);
+    formData.append('audioFileNames', file.name);
+  });
 
-    try {
-      setUploading(true);
-      setUploadProgress((prev) => ({
-        ...prev,
-        ...files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {}),
-      }));
+  try {
+    setUploading(true);
+    setPendingUploads(new Set(files.map((file) => file.name))); // Track pending uploads
+    setUploadProgress(files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {}));
 
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/projects/${projectId}/upload-audio`,
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
-          onUploadProgress: (progressEvent) => {
-            const total = progressEvent.total || 1;
-            const loaded = progressEvent.loaded;
-            const percentCompleted = Math.round((loaded * 100) / total);
-            files.forEach((file) => {
-              setUploadProgress((prev) => ({
-                ...prev,
-                [file.name]: percentCompleted,
-              }));
-            });
-          },
-        }
-      );
-      const { project, audioFiles } = response.data;
-
-      if (audioFiles && Array.isArray(audioFiles)) {
-        const updatedAudios = audioFiles.map((audio) => {
-          const fullFileName = audio.audioFileName.split('/').pop();
-          const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
-          const sanitizedId = `audio-${fullFileName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
-          return {
-            id: sanitizedId,
-            fileName: fullFileName,
-            displayName: originalFileName,
-            audioPath: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(fullFileName)}`,
-            waveformJsonPath: audio.waveformJsonPath
-              ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
-              : null,
-          };
-        });
-        setAudios(updatedAudios);
+    const token = localStorage.getItem('token');
+    const response = await axios.post(
+      `${API_BASE_URL}/projects/${projectId}/upload-audio`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
+        onUploadProgress: (progressEvent) => {
+          const total = progressEvent.total || 1;
+          const loaded = progressEvent.loaded;
+          const percentCompleted = Math.round((loaded * 100) / total);
+          files.forEach((file) => {
+            setUploadProgress((prev) => ({
+              ...prev,
+              [file.name]: percentCompleted,
+            }));
+          });
+        },
       }
+    );
+    const { project, audioFiles } = response.data;
 
-      if (project) await fetchAudios();
-    } catch (error) {
-      console.error('Error uploading audio files:', error);
-      alert('Failed to upload one or more audio files. Please try again.');
-    } finally {
-      setUploading(false);
-      setUploadProgress({}); // Clear progress
+    if (audioFiles && Array.isArray(audioFiles)) {
+      const updatedAudios = audioFiles.map((audio) => {
+        const fullFileName = audio.audioFileName.split('/').pop();
+        const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
+        const sanitizedId = `audio-${fullFileName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
+        return {
+          id: sanitizedId,
+          fileName: fullFileName,
+          displayName: originalFileName,
+          audioPath: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(fullFileName)}`,
+          waveformJsonPath: audio.waveformJsonPath
+            ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audio.waveformJsonPath.split('/').pop())}`
+            : null,
+        };
+      });
+      setAudios(updatedAudios);
+      // Remove from pendingUploads since audio uses a static thumbnail
+      updatedAudios.forEach((audio) => {
+        setPendingUploads((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(audio.displayName);
+          return newSet;
+        });
+      });
     }
-  };
+
+    if (project) await fetchAudios();
+  } catch (error) {
+    console.error('Error uploading audio files:', error);
+    alert('Failed to upload one or more audio files. Please try again.');
+  } finally {
+    setUploading(false);
+    setUploadProgress({}); // Clear progress
+    setPendingUploads(new Set()); // Clear pending uploads on error
+  }
+};
 
 const generateVideoThumbnail = async (video) => {
   if (!video || !video.fileName) return;
@@ -3957,10 +3973,8 @@ const handlePhotoUpload = async (event) => {
 
   try {
     setUploading(true);
-    setUploadProgress((prev) => ({
-      ...prev,
-      ...files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {}),
-    }));
+    setPendingUploads(new Set(files.map((file) => file.name))); // Track pending uploads
+    setUploadProgress(files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {}));
 
     const token = localStorage.getItem('token');
     const response = await axios.post(
@@ -3982,13 +3996,30 @@ const handlePhotoUpload = async (event) => {
       }
     );
     const updatedProject = response.data;
-    if (updatedProject) await fetchPhotos();
+    if (updatedProject) {
+      await fetchPhotos();
+      // Wait for thumbnails to be generated
+      const updatedPhotos = photos.filter((photo) => files.some((file) => file.name === photo.displayName));
+      await Promise.all(
+        updatedPhotos.map(async (photo) => {
+          const thumbnail = await generateImageThumbnail(photo.fileName, false);
+          if (thumbnail) {
+            setPendingUploads((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(photo.displayName);
+              return newSet;
+            });
+          }
+        })
+      );
+    }
   } catch (error) {
     console.error('Error uploading images:', error);
     alert('Failed to upload one or more images. Please try again.');
   } finally {
     setUploading(false);
     setUploadProgress({}); // Clear progress
+    setPendingUploads(new Set()); // Clear pending uploads on error
   }
 };
 
@@ -4547,6 +4578,24 @@ const filteredElements = elements.filter((element) =>
 
 return (
   <div className="project-editor">
+    {(loading || uploading || pendingUploads.size > 0) && (
+      <div className="loading-container">
+        <div className="branding-container">
+          <h1>
+            <span className="letter">S</span>
+            <span className="letter">C</span>
+            <span className="letter">E</span>
+            <span className="letter">N</span>
+            <span className="letter">I</span>
+            <span className="letter">T</span>
+            <span className="letter">H</span>
+          </h1>
+          <div className="logo-element"></div>
+        </div>
+      </div>
+    )}
+    {!(loading || uploading || pendingUploads.size > 0) && (
+      <>      
     <aside className={`media-panel ${isMediaPanelOpen ? 'open' : 'closed'}`}>
       <div className="panel-header">
         <button className="toggle-button" onClick={toggleMediaPanel}>
@@ -5113,6 +5162,8 @@ return (
         </div>
       </div>
     </div>
+    </>
+    )}
   </div>
 );
 };

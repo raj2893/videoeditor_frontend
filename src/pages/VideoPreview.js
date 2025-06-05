@@ -773,8 +773,7 @@ const VideoPreview = ({
       if (element.type === 'video') {
         const videoRef = videoRefs.current[element.id];
         if (videoRef) {
-          const filename = element.fileName || element.filePath.split('/').pop();
-          const videoUrl = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(filename)}`;
+          const videoUrl = element.filePath; // Use pre-encoded filePath
   
           if (!videoRef.src) {
             videoRef.src = videoUrl;
@@ -1039,6 +1038,7 @@ const VideoPreview = ({
                     }}
                   >
                       <video
+                        key={element.filePath} 
                         ref={(el) => (videoRefs.current[element.id] = el)}
                         className="preview-video"
                         muted={true}

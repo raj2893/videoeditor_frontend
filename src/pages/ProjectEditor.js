@@ -5104,6 +5104,13 @@ return (
           ></div>
         )}
         <div className="controls-panel">
+          <button
+            className="control-button dashboard-button"
+            onClick={() => navigate('/dashboard')}
+            title="Back to Dashboard"
+          >
+            ← DASHBOARD
+          </button>          
           <button className="control-button" onClick={handleSaveProject} title="Save Project">
             💾
           </button>

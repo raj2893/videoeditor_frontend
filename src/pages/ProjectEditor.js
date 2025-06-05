@@ -94,6 +94,9 @@ const ProjectEditor = () => {
 
   // Add to existing state declarations at the top of ProjectEditor
   const [pendingUploads, setPendingUploads] = useState(new Set()); // Track pending uploads
+  const [isAddingToTimeline, setIsAddingToTimeline] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const textSettingsRef = useRef(textSettings);
 
   const canUndo = historyIndex > 0;
@@ -639,6 +642,7 @@ const ProjectEditor = () => {
 const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
   if (uploading || isDragEvent) return;
   try {
+    setIsAddingToTimeline(true); // Set loading state
     const token = localStorage.getItem('token');
     if (!sessionId || !projectId || !token) {
       throw new Error('Missing sessionId, projectId, or token');
@@ -840,6 +844,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
     });
     setTotalDuration(maxEndTime);
     alert('Failed to add audio to timeline. Please try again.');
+  } finally {
+    setIsAddingToTimeline(false); // Clear loading state
   }
 }, 300);
 
@@ -1223,6 +1229,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
   const openTextTool = async () => {
     if (!sessionId || !projectId) return;
     try {
+      setIsAddingToTimeline(true);
       const token = localStorage.getItem('token');
       let startTime = currentTime;
       if (videoLayers[0].length > 0) {
@@ -1378,6 +1385,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
     } catch (error) {
       console.error('Error adding text to timeline:', error);
       alert('Failed to add text to timeline. Please try again.');
+    } finally {
+      setIsAddingToTimeline(false); // Clear loading state
     }
   };
 
@@ -2216,16 +2225,17 @@ const generateVideoThumbnail = async (video) => {
   const handleSaveProject = async () => {
     if (!projectId || !sessionId) return;
     try {
+      setIsSaving(true);
       const token = localStorage.getItem('token');
       await axios.post(
         `${API_BASE_URL}/projects/${projectId}/save`,
         {},
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
-      alert('Project saved successfully!');
     } catch (error) {
       console.error('Error saving project:', error);
-      alert('Failed to save project. Please try again.');
+    } finally{
+      setIsSaving(false);
     }
   };
 
@@ -2290,6 +2300,7 @@ const generateVideoThumbnail = async (video) => {
   const handleTextStyleClick = async (style) => {
     if (!sessionId || !projectId || uploading) return;
     try {
+      setIsAddingToTimeline(true);
       const token = localStorage.getItem('token');
       let startTime = roundToThreeDecimals(currentTime);
       let maxEndTime = 0;
@@ -2450,6 +2461,8 @@ const generateVideoThumbnail = async (video) => {
     } catch (error) {
       console.error('Error adding text style to timeline:', error);
       alert('Failed to add text style to timeline. Please try again.');
+    } finally {
+      setIsAddingToTimeline(false); // Clear loading state
     }
   };
 
@@ -2539,6 +2552,7 @@ const generateVideoThumbnail = async (video) => {
 
   const addImageToTimeline = async (imageFileName, layer, timelineStartTime, timelineEndTime, isElement = false) => {
     try {
+      setIsAddingToTimeline(true); // Set loading state
       const token = localStorage.getItem('token');
       const response = await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-project-image-to-timeline`,
@@ -2614,11 +2628,14 @@ const generateVideoThumbnail = async (video) => {
     } catch (error) {
       console.error('Error adding image to timeline:', error);
       throw error;
+    } finally {
+      setIsAddingToTimeline(false); // Clear loading state
     }
   };
 
 const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineEndTime, startTimeWithinVideo, endTimeWithinVideo) => {
   try {
+    setIsAddingToTimeline(true); // Set loading state
     if (!videoPath) {
       throw new Error('videoPath is undefined or null');
     }
@@ -2820,6 +2837,8 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
   } catch (error) {
     console.error('Error adding video to timeline:', error.response?.data || error.message);
     throw error;
+  } finally {
+    setIsAddingToTimeline(false); // Clear loading state
   }
 };
 
@@ -2835,6 +2854,7 @@ const handleDeleteSegment = async () => {
   if (!selectedSegment || !sessionId || !projectId) return;
 
   try {
+    setIsDeleting(true);
     const token = localStorage.getItem('token');
     let endpoint = '';
     switch (selectedSegment.type) {
@@ -2928,6 +2948,8 @@ const handleDeleteSegment = async () => {
   } catch (error) {
     console.error('Error deleting segment:', error);
     alert('Failed to delete segment. Please try again.');
+  } finally {
+    setIsDeleting(false); // Add this line to hide loading screen
   }
 };
 
@@ -4578,7 +4600,7 @@ const filteredElements = elements.filter((element) =>
 
 return (
   <div className="project-editor">
-    {(loading || uploading || pendingUploads.size > 0) && (
+    {(loading || uploading || pendingUploads.size > 0 || isAddingToTimeline || isDeleting || isSaving) && (
       <div className="loading-container">
         <div className="branding-container">
           <h1>
@@ -5126,6 +5148,8 @@ return (
               onTimelineClick={() => setIsTimelineSelected(true)}
               MIN_TIME_SCALE={MIN_TIME_SCALE}
               MAX_TIME_SCALE={MAX_TIME_SCALE}
+              isAddingToTimeline={isAddingToTimeline} // Add this prop
+              setIsAddingToTimeline={setIsAddingToTimeline} // Add this prop              
             />
           ) : (
             <div className="loading-container">

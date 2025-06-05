@@ -20,14 +20,14 @@ const VerifyEmail = () => {
       }
 
       if (isRequestSent.current) {
-        console.log('Request already in progress, skipping...');
+        // console.log('Request already in progress, skipping...');
         return;
       }
 
       isRequestSent.current = true;
 
       try {
-        console.log('Sending verification request for token:', verificationToken);
+        // console.log('Sending verification request for token:', verificationToken);
         const response = await axios.get(
           `${API_BASE_URL}/auth/verify-email?token=${verificationToken}`,
           {
@@ -37,7 +37,7 @@ const VerifyEmail = () => {
           }
         );
 
-        console.log('Backend response:', response.data);
+        // console.log('Backend response:', response.data);
         const { token, email, name, message, isVerified } = response.data;
 
         if (response.status === 200 && isVerified) {
@@ -55,7 +55,7 @@ const VerifyEmail = () => {
         }
       } catch (error) {
         console.error('Verification error:', error);
-        console.log('Error response:', error.response?.data);
+        // console.log('Error response:', error.response?.data);
         const errorMessage = error.response?.data?.message || 'Email verification failed.';
 
         if (errorMessage.includes('Invalid or unknown verification token') || errorMessage.includes('Verification token has expired')) {

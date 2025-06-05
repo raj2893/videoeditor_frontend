@@ -20,13 +20,13 @@ const ImageSegmentHandler = ({
     const fullImagePath = isElement
       ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
       : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
-    console.log(`Generating thumbnail for: ${fullImagePath}`);
+    // console.log(`Generating thumbnail for: ${fullImagePath}`);
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.src = fullImagePath;
       img.onload = () => {
-        console.log(`Image loaded successfully: ${fullImagePath}`);
+        // console.log(`Image loaded successfully: ${fullImagePath}`);
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         const maxWidth = 120;
@@ -50,7 +50,7 @@ const ImageSegmentHandler = ({
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
         const thumbnail = canvas.toDataURL('image/jpeg');
-        console.log(`Thumbnail generated: ${thumbnail.substring(0, 50)}...`);
+        // console.log(`Thumbnail generated: ${thumbnail.substring(0, 50)}...`);
         resolve(thumbnail);
       };
       img.onerror = () => {
@@ -70,7 +70,7 @@ const ImageSegmentHandler = ({
       const token = localStorage.getItem('token');
       const roundedStartTime = roundToThreeDecimals(timelineStartTime);
       const roundedEndTime = roundToThreeDecimals(timelineEndTime);
-      console.log('Adding image to timeline:', { imageFileName, layer, timelineStartTime: roundedStartTime, timelineEndTime: roundedEndTime, isElement });
+      // console.log('Adding image to timeline:', { imageFileName, layer, timelineStartTime: roundedStartTime, timelineEndTime: roundedEndTime, isElement });
       const response = await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-project-image-to-timeline`,
         {
@@ -90,7 +90,7 @@ const ImageSegmentHandler = ({
         }
       );
       const segment = response.data;
-      console.log('addImageToTimeline response:', JSON.stringify(segment, null, 2));
+      // console.log('addImageToTimeline response:', JSON.stringify(segment, null, 2));
 
       const effectiveIsElement = segment.element !== undefined ? segment.element : isElement;
       const thumbnail = await generateImageThumbnail(imageFileName, effectiveIsElement);
@@ -223,7 +223,7 @@ const ImageSegmentHandler = ({
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      console.log(`Updated image segment ${segmentId}`);
+      // console.log(`Updated image segment ${segmentId}`);
     } catch (error) {
       console.error('Error updating image segment:', error.response?.data || error.message);
       await loadProjectTimeline();
@@ -290,12 +290,12 @@ const ImageSegmentHandler = ({
           }
 
           const imageFileName = item.fileName;
-          console.log('Dropping new item:', {
-            imageFileName,
-            targetLayer,
-            adjustedStartTime,
-            isElement: isElementDrop,
-          });
+          // console.log('Dropping new item:', {
+          //   imageFileName,
+          //   targetLayer,
+          //   adjustedStartTime,
+          //   isElement: isElementDrop,
+          // });
           await addImageToTimeline(
             imageFileName,
             targetLayer,
@@ -311,7 +311,7 @@ const ImageSegmentHandler = ({
     }
 
     if (draggingItem.type !== 'image') {
-      console.log('Only image segments can be moved');
+      // console.log('Only image segments can be moved');
       return;
     }
 
@@ -333,7 +333,7 @@ const ImageSegmentHandler = ({
     });
 
     if (hasOverlap) {
-      console.log('Cannot move image: Overlap detected in target layer');
+      // console.log('Cannot move image: Overlap detected in target layer');
       return;
     }
 
@@ -376,8 +376,8 @@ const ImageSegmentHandler = ({
   };
 
   const handleImageSplit = async (item, clickTime, layerIndex) => {
-    console.log('handleImageSplit item:', JSON.stringify(item, null, 2));
-    console.log('videoLayers state:', JSON.stringify(videoLayers, null, 2));
+    // console.log('handleImageSplit item:', JSON.stringify(item, null, 2));
+    // console.log('videoLayers state:', JSON.stringify(videoLayers, null, 2));
   
     const splitTime = clickTime - item.startTime;
     if (splitTime <= 0.1 || splitTime >= item.duration - 0.1) {
@@ -391,15 +391,15 @@ const ImageSegmentHandler = ({
     const isElement = item.isElement !== undefined
       ? item.isElement
       : item.filePath.includes('elements/');
-    console.log('Splitting item:', {
-      imageFileName: item.fileName,
-      isElement,
-      startTime: item.startTime,
-      splitTime,
-      firstPartDuration,
-      secondPartDuration,
-      itemId: item.id,
-    });
+    // console.log('Splitting item:', {
+    //   imageFileName: item.fileName,
+    //   isElement,
+    //   startTime: item.startTime,
+    //   splitTime,
+    //   firstPartDuration,
+    //   secondPartDuration,
+    //   itemId: item.id,
+    // });
   
     let newVideoLayers = [...videoLayers];
     const layer = newVideoLayers[layerIndex];
@@ -464,7 +464,7 @@ const ImageSegmentHandler = ({
         effectiveHeight: item.effectiveHeight,
         maintainAspectRatio: item.maintainAspectRatio,
       });
-      console.log(`Successfully updated first part: ${item.id}`);
+      // console.log(`Successfully updated first part: ${item.id}`);
   
       setVideoLayers((prev) => {
         const newLayers = [...prev];
@@ -479,7 +479,7 @@ const ImageSegmentHandler = ({
         roundToThreeDecimals(secondPart.startTime + secondPartDuration),
         isElement
       );
-      console.log('Successfully added second part to timeline:', newSegment);
+      // console.log('Successfully added second part to timeline:', newSegment);
   
       saveHistory(videoLayers, []);
     } catch (error) {

@@ -115,12 +115,12 @@ const AudioSegmentHandler = ({
         requestBody.volume = 1.0;
       }
 
-      console.log('Sending updateAudioSegment request:', {
-        url: `${API_BASE_URL}/projects/${projectId}/update-audio`,
-        requestBody,
-        sessionId,
-        token: token.substring(0, 10) + '...',
-      });
+      // console.log('Sending updateAudioSegment request:', {
+      //   url: `${API_BASE_URL}/projects/${projectId}/update-audio`,
+      //   requestBody,
+      //   sessionId,
+      //   token: token.substring(0, 10) + '...',
+      // });
 
       const response = await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-audio`,
@@ -149,9 +149,9 @@ const AudioSegmentHandler = ({
         return newLayers;
       });
 
-      console.log(
-        `Updated audio segment ${audioSegmentId} to start at ${requestBody.timelineStartTime}s, end at ${requestBody.timelineEndTime}s, layer ${newLayer}, startTimeWithinAudio at ${requestBody.startTime}s, endTimeWithinAudio at ${requestBody.endTime}s`
-      );
+      // console.log(
+      //   `Updated audio segment ${audioSegmentId} to start at ${requestBody.timelineStartTime}s, end at ${requestBody.timelineEndTime}s, layer ${newLayer}, startTimeWithinAudio at ${requestBody.startTime}s, endTimeWithinAudio at ${requestBody.endTime}s`
+      // );
 
       return response.data;
     } catch (error) {
@@ -192,7 +192,7 @@ const AudioSegmentHandler = ({
   
     let targetLayerIndex;
     if (reversedIndex < audioLayerStartIndex) {
-      console.log('Cannot drop audio in video layers or top drop area');
+      // console.log('Cannot drop audio in video layers or top drop area');
       return undefined;
     } else if (reversedIndex >= audioLayerStartIndex && reversedIndex < audioLayerEndIndex) {
       targetLayerIndex = reversedIndex - audioLayerStartIndex;
@@ -423,7 +423,7 @@ const AudioSegmentHandler = ({
     });
   
     if (hasOverlap) {
-      console.log('Overlap detected. Cannot move audio here.');
+      // console.log('Overlap detected. Cannot move audio here.');
       return undefined;
     }
   
@@ -476,18 +476,18 @@ const AudioSegmentHandler = ({
   };
 
   const handleAudioSplit = async (item, clickTime, layerIndex) => {
-    console.log('handleAudioSplit: item=', item, 'clickTime=', clickTime, 'layerIndex=', layerIndex);
+    // console.log('handleAudioSplit: item=', item, 'clickTime=', clickTime, 'layerIndex=', layerIndex);
     const splitTime = clickTime - item.startTime;
-    console.log(
-      'Calculated splitTime=',
-      splitTime,
-      'item.startTime=',
-      item.startTime,
-      'item.duration=',
-      item.duration
-    );
+    // console.log(
+    //   'Calculated splitTime=',
+    //   splitTime,
+    //   'item.startTime=',
+    //   item.startTime,
+    //   'item.duration=',
+    //   item.duration
+    // );
     if (splitTime <= 0.1 || splitTime >= item.duration - 0.1) {
-      console.log('Split time too close to start or end: splitTime=', splitTime);
+      // console.log('Split time too close to start or end: splitTime=', splitTime);
       return;
     }
   
@@ -510,7 +510,7 @@ const AudioSegmentHandler = ({
             ? JSON.parse(projectData.extractedAudioJson)
             : projectData.extractedAudioJson
           : [];
-        console.log('Extracted audios:', extractedAudios);
+        // console.log('Extracted audios:', extractedAudios);
   
         const basename = item.fileName.split('/').pop();
         const audioEntry = extractedAudios.find(
@@ -530,20 +530,20 @@ const AudioSegmentHandler = ({
           throw new Error('Extracted audio not found in project');
         }
         audioFileName = audioEntry.audioFileName;
-        console.log('Using audioFileName for extracted audio:', audioFileName);
+        // console.log('Using audioFileName for extracted audio:', audioFileName);
       }
   
       const firstPartDuration = splitTime;
       const secondPartDuration = item.duration - splitTime;
       const startWithinAudio = item.startTimeWithinAudio || 0;
-      console.log(
-        'firstPartDuration=',
-        firstPartDuration,
-        'secondPartDuration=',
-        secondPartDuration,
-        'startWithinAudio=',
-        startWithinAudio
-      );
+      // console.log(
+      //   'firstPartDuration=',
+      //   firstPartDuration,
+      //   'secondPartDuration=',
+      //   secondPartDuration,
+      //   'startWithinAudio=',
+      //   startWithinAudio
+      // );
   
       const firstPart = {
         ...item,
@@ -581,8 +581,8 @@ const AudioSegmentHandler = ({
           : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioFileName)}`,
         extracted: item.extracted || false,
       };
-      console.log('firstPart=', firstPart);
-      console.log('secondPart=', secondPart);
+      // console.log('firstPart=', firstPart);
+      // console.log('secondPart=', secondPart);
   
       let newAudioLayers = [...audioLayers];
       let layer = [...newAudioLayers[layerIndex]];
@@ -679,7 +679,7 @@ const AudioSegmentHandler = ({
   
         saveHistory([], newAudioLayers);
         autoSave([], newAudioLayers);
-        console.log('Successfully split audio');
+        // console.log('Successfully split audio');
       } catch (error) {
         console.error('Failed to add second segment:', error.response?.data || error.message);
         setAudioLayers((prevLayers) => {

@@ -418,7 +418,7 @@ const handleResizeStart = (e, item, layerIndex, edge) => {
               fetchVideoDuration(item.filePath).then((duration) => {
                   if (duration !== null) {
                       durationCache.current.set(item.filePath, duration);
-                      console.log(`Cached video duration for ${item.filePath}: ${duration}`);
+                      // // console.log(`Cached video duration for ${item.filePath}: ${duration}`);
                   }
               });
               sourceDuration = (item.endTimeWithinVideo - item.startTimeWithinVideo) / speed;
@@ -427,7 +427,7 @@ const handleResizeStart = (e, item, layerIndex, edge) => {
                   if (duration !== null) {
                       const roundedDuration = roundToThreeDecimals(duration);
                       durationCache.current.set(item.fileName, roundedDuration);
-                      console.log(`Cached audio duration for ${item.fileName}: ${duration} -> ${roundedDuration}`);
+                      // // console.log(`Cached audio duration for ${item.fileName}: ${duration} -> ${roundedDuration}`);
                   } else {
                       console.warn(`Failed to fetch duration for ${item.fileName}`);
                   }
@@ -436,7 +436,7 @@ const handleResizeStart = (e, item, layerIndex, edge) => {
                   item.endTimeWithinAudio - item.startTimeWithinAudio,
                   item.maxDuration || 3600
               ));
-              console.log(`Using fallback duration for ${item.fileName}: ${sourceDuration}`);
+              // // console.log(`Using fallback duration for ${item.fileName}: ${sourceDuration}`);
           }
       }
 
@@ -540,21 +540,21 @@ const handleResizeStart = (e, item, layerIndex, edge) => {
           } else if (item.type === 'audio') {
               newStartWithin = originalStartWithin;
               newEndWithin = originalStartWithin + newDuration;
-              console.log(`Audio resize: fileName=${item.fileName}, newEndWithin=${newEndWithin}, sourceDuration=${sourceDuration}`);
+              // // console.log(`Audio resize: fileName=${item.fileName}, newEndWithin=${newEndWithin}, sourceDuration=${sourceDuration}`);
               // Strictly clamp to source duration, aligning with backend's two-decimal precision
               if (sourceDuration && newEndWithin > sourceDuration) {
                   const backendSafeDuration = Math.floor(sourceDuration * 100) / 100; // Truncate to two decimals
                   newEndWithin = roundToThreeDecimals(backendSafeDuration); // Round to three decimals for frontend
                   newDuration = newEndWithin - originalStartWithin;
                   clampedEndTime = originalStartTime + newDuration;
-                  console.log(`Clamped audio duration: newEndWithin=${newEndWithin}, newDuration=${newDuration}, sourceDuration=${sourceDuration}, backendSafeDuration=${backendSafeDuration}`);
+                  // // console.log(`Clamped audio duration: newEndWithin=${newEndWithin}, newDuration=${newDuration}, sourceDuration=${sourceDuration}, backendSafeDuration=${backendSafeDuration}`);
               }
               // Prevent negative or zero duration
               if (newDuration <= 0.1) {
                   newDuration = 0.1;
                   newEndWithin = originalStartWithin + newDuration;
                   clampedEndTime = originalStartTime + newDuration;
-                  console.log(`Enforced minimum duration: newDuration=${newDuration}, newEndWithin=${newEndWithin}`);
+                  // // console.log(`Enforced minimum duration: newDuration=${newDuration}, newEndWithin=${newEndWithin}`);
               }
           }
       }
@@ -665,18 +665,18 @@ const handleResizeStart = (e, item, layerIndex, edge) => {
           let newDuration = resizingItem.tempDuration;
           let newStartWithin = resizingItem.tempStartWithin;
 
-          console.log(`handleResizeEnd: fileName=${item.fileName}, sourceDuration=${sourceDuration}, tempEndWithin=${newEndWithin}, tempDuration=${newDuration}`);
+          // // console.log(`handleResizeEnd: fileName=${item.fileName}, sourceDuration=${sourceDuration}, tempEndWithin=${newEndWithin}, tempDuration=${newDuration}`);
 
           // Clamp to source duration, aligning with backend's two-decimal precision
           if (sourceDuration && newEndWithin > sourceDuration) {
               const backendSafeDuration = Math.floor(sourceDuration * 100) / 100; // Truncate to two decimals
               newEndWithin = roundToThreeDecimals(backendSafeDuration); // Round to three decimals for frontend
               newDuration = newEndWithin - newStartWithin;
-              console.log(`Clamped in handleResizeEnd: newEndWithin=${newEndWithin}, newDuration=${newDuration}, sourceDuration=${sourceDuration}, backendSafeDuration=${backendSafeDuration}`);
+              // // console.log(`Clamped in handleResizeEnd: newEndWithin=${newEndWithin}, newDuration=${newDuration}, sourceDuration=${sourceDuration}, backendSafeDuration=${backendSafeDuration}`);
               if (newDuration < 0.1) {
                   newDuration = 0.1;
                   newEndWithin = newStartWithin + newDuration;
-                  console.log(`Enforced minimum duration in handleResizeEnd: newEndWithin=${newEndWithin}, newDuration=${newDuration}`);
+                  // // console.log(`Enforced minimum duration in handleResizeEnd: newEndWithin=${newEndWithin}, newDuration=${newDuration}`);
               }
           }
 
@@ -696,7 +696,7 @@ const handleResizeStart = (e, item, layerIndex, edge) => {
               return;
           }
 
-          console.log(`Sending to updateAudioSegment: id=${item.id}, endTimeWithinAudio=${item.endTimeWithinAudio}, duration=${item.duration}`);
+          // // console.log(`Sending to updateAudioSegment: id=${item.id}, endTimeWithinAudio=${item.endTimeWithinAudio}, duration=${item.duration}`);
           await updateAudioSegment(
               item.id,
               item.startTime,

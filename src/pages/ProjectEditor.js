@@ -170,7 +170,7 @@ const ProjectEditor = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          console.log('No token found, assuming BASIC role');
+          // console.log('No token found, assuming BASIC role');
           setUserRole('BASIC');
           return;
         }
@@ -391,7 +391,7 @@ const ProjectEditor = () => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        console.log('Undo/Redo state saved successfully');
+        // console.log('Undo/Redo state saved successfully');
         return;
       } catch (error) {
         console.error(`Error during undo/redo auto-save (attempt ${attempt}):`, error);
@@ -406,7 +406,7 @@ const ProjectEditor = () => {
 
   const handleUndo = async () => {
     if (!canUndo) {
-      console.log('Cannot undo: No previous state');
+      // console.log('Cannot undo: No previous state');
       return;
     }
     try {
@@ -425,7 +425,7 @@ const ProjectEditor = () => {
       setHistoryIndex(newIndex);
 
       await autoSaveUndoRedo(previousState);
-      console.log('Undo performed and state saved successfully');
+      // console.log('Undo performed and state saved successfully');
     } catch (error) {
       console.error('Failed to perform undo:', error);
       alert('Failed to perform undo. Please try again.');
@@ -434,7 +434,7 @@ const ProjectEditor = () => {
 
   const handleRedo = async () => {
     if (!canRedo) {
-      console.log('Cannot redo: No next state');
+      // console.log('Cannot redo: No next state');
       return;
     }
     try {
@@ -453,7 +453,7 @@ const ProjectEditor = () => {
       setHistoryIndex(newIndex);
 
       await autoSaveUndoRedo(nextState);
-      console.log('Redo performed and state saved successfully');
+      // console.log('Redo performed and state saved successfully');
     } catch (error) {
       console.error('Failed to perform redo:', error);
       alert('Failed to perform redo. Please try again.');
@@ -566,7 +566,7 @@ const ProjectEditor = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      console.log('Project auto-saved successfully');
+      // console.log('Project auto-saved successfully');
     } catch (error) {
       console.error('Error during auto-save:', error);
     }
@@ -959,7 +959,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         if (transitionSaveTimeoutRef.current) clearTimeout(transitionSaveTimeoutRef.current);
         transitionSaveTimeoutRef.current = setTimeout(() => {
           autoSaveProject(videoLayers, audioLayers);
-          console.log('Auto-saved project after transition delete:', selectedTransition.id);
+          // console.log('Auto-saved project after transition delete:', selectedTransition.id);
         }, 1000);
       } catch (error) {
         console.error('Error deleting transition:', error);
@@ -1218,7 +1218,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
         autoSaveProject(updatedVideoLayers, audioLayers);
-        console.log('Auto-saved project after text segment save:', editingTextSegment.id);
+        // console.log('Auto-saved project after text segment save:', editingTextSegment.id);
       }, 1000);
     } catch (error) {
       console.error('Error saving text segment:', error);
@@ -1442,7 +1442,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         }
       } catch (error) {
         console.error('Error initializing project:', error);
-        console.log('Error response:', error.response?.status, error.response?.data);
+        // console.log('Error response:', error.response?.status, error.response?.data);
         if (error.response?.status === 401) {
           localStorage.removeItem('token');
           localStorage.removeItem('userProfile');
@@ -1699,7 +1699,7 @@ const fetchAudios = async () => {
       if (transitionSaveTimeoutRef.current) clearTimeout(transitionSaveTimeoutRef.current);
       transitionSaveTimeoutRef.current = setTimeout(() => {
         autoSaveProject(videoLayers, audioLayers);
-        console.log('Auto-saved project after transition drop:', newTransition);
+        // console.log('Auto-saved project after transition drop:', newTransition);
       }, 1000);
 
     } catch (error) {
@@ -2039,7 +2039,7 @@ const handleVideoUpload = async (event) => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        console.log('Global elements response:', response.data); // Debug response
+        // console.log('Global elements response:', response.data); // Debug response
 
         const updatedElements = response.data
           .filter((element) => element.fileName && typeof element.fileName === 'string') // Filter valid elements
@@ -2766,10 +2766,10 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
         updatedAudioLayers = newLayers;
 
         if (window.initializeWaveform) {
-          console.log('Calling initializeWaveform for temporary audio segment:', tempAudioSegment.id);
+          // console.log('Calling initializeWaveform for temporary audio segment:', tempAudioSegment.id);
           window.initializeWaveform(tempAudioSegment).then((cleanupFn) => {
             if (typeof cleanupFn === 'function') {
-              console.log(`Waveform initialized for temp ID ${tempAudioSegment.id}`);
+              // console.log(`Waveform initialized for temp ID ${tempAudioSegment.id}`);
             }
           });
         }
@@ -2809,12 +2809,12 @@ const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineE
         updatedAudioLayers = updatedLayers;
 
         if (window.waveSurferInstances && window.waveSurferInstances.current.has(tempSegmentId)) {
-          console.log(`Transferring WaveSurfer instance from ${tempSegmentId} to ${sanitizedAudioId}`);
+          // console.log(`Transferring WaveSurfer instance from ${tempSegmentId} to ${sanitizedAudioId}`);
           const wavesurfer = window.waveSurferInstances.current.get(tempSegmentId);
           window.waveSurferInstances.current.set(sanitizedAudioId, wavesurfer);
           window.waveSurferInstances.current.delete(tempSegmentId);
           if (window.updateWaveform) {
-            console.log('Calling updateWaveform for audio segment with final ID:', sanitizedAudioId);
+            // console.log('Calling updateWaveform for audio segment with final ID:', sanitizedAudioId);
             window.updateWaveform({
               ...tempAudioSegment,
               id: sanitizedAudioId,
@@ -3164,7 +3164,7 @@ const handleSegmentSelect = async (segment) => {
     // Fetch keyframes and ensure they're set correctly
     const segmentData = await fetchKeyframes(segment.id, segment.type);
     const keyframesData = segmentData?.keyframes || {};
-    console.log(`Setting keyframes for ${segment.type} ${segment.id}:`, keyframesData);
+    // console.log(`Setting keyframes for ${segment.type} ${segment.id}:`, keyframesData);
 
     // Calculate relative time
     const relativeTime = currentTime - segment.startTime;
@@ -3181,7 +3181,7 @@ const handleSegmentSelect = async (segment) => {
       }
     });
 
-    console.log('Initial tempSegmentValues:', initialValues);
+    // console.log('Initial tempSegmentValues:', initialValues);
     setTempSegmentValues(initialValues);
 
     // Update layers with keyframes
@@ -3191,7 +3191,7 @@ const handleSegmentSelect = async (segment) => {
         newLayers[segment.layer] = newLayers[segment.layer].map((item) =>
           item.id === segment.id ? { ...item, keyframes: keyframesData } : item
         );
-        console.log(`Updated videoLayers[${segment.layer}] for ${segment.id}:`, newLayers[segment.layer]);
+        // console.log(`Updated videoLayers[${segment.layer}] for ${segment.id}:`, newLayers[segment.layer]);
         return newLayers;
       });
     } else {
@@ -3364,7 +3364,7 @@ const fetchKeyframes = async (segmentId, segmentType) => {
         throw new Error('Invalid segment type');
     }
     const segmentData = response.data;
-    console.log(`Fetched keyframes for ${segmentType} segment ${segmentId}:`, segmentData.keyframes);
+    // console.log(`Fetched keyframes for ${segmentType} segment ${segmentId}:`, segmentData.keyframes);
     const keyframesData = segmentData?.keyframes || {};
     setKeyframes(keyframesData);
     return segmentData;
@@ -3616,7 +3616,7 @@ const navigateKeyframes = (property, direction) => {
     // Update tempSegmentValues
     setTempSegmentValues((prev) => {
       const newValues = { ...prev, [property]: value };
-      console.log(`Updating ${property} to ${value}, new tempSegmentValues:`, newValues);
+      // console.log(`Updating ${property} to ${value}, new tempSegmentValues:`, newValues);
       return newValues;
     });
 
@@ -3645,7 +3645,7 @@ const navigateKeyframes = (property, direction) => {
     // Schedule save only for valid updates
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     updateTimeoutRef.current = setTimeout(() => {
-      console.log(`Scheduling saveSegmentChanges for ${property}: ${value}`);
+      // console.log(`Scheduling saveSegmentChanges for ${property}: ${value}`);
       saveSegmentChanges(keyframes, { ...tempSegmentValues, [property]: value });
     }, 500);
   };
@@ -3660,7 +3660,7 @@ const navigateKeyframes = (property, direction) => {
       return;
     }
 
-    console.log('Saving segment changes with tempValues:', tempValues);
+    // console.log('Saving segment changes with tempValues:', tempValues);
 
     // Validate crop values before proceeding
     if (selectedSegment.type === 'video' || selectedSegment.type === 'image') {
@@ -3701,7 +3701,7 @@ const navigateKeyframes = (property, direction) => {
             rotation: tempValues.rotation !== undefined ? Number(tempValues.rotation) : 0, // Add rotation
           };
 
-          console.log('Normalized temp values for video:', normalizedTempValues);
+          // console.log('Normalized temp values for video:', normalizedTempValues);
 
           const videoPayload = {
             segmentId: selectedSegment.id || '',
@@ -3723,14 +3723,14 @@ const navigateKeyframes = (property, direction) => {
             keyframes: updatedKeyframes || {},
           };
 
-          console.log('Video segment payload:', JSON.stringify(videoPayload, null, 2));
+          // console.log('Video segment payload:', JSON.stringify(videoPayload, null, 2));
 
           const videoResponse = await axios.put(
             `${API_BASE_URL}/projects/${projectId}/update-segment`,
             videoPayload,
             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
           );
-          console.log('Server response for video segment update:', videoResponse.data);
+          // console.log('Server response for video segment update:', videoResponse.data);
 
           // Fetch updated segment data to get the latest timelineEndTime and other properties
           const segmentResponse = await axios.get(
@@ -3824,14 +3824,14 @@ const navigateKeyframes = (property, direction) => {
             filtersToRemove: [],
           };
 
-          console.log('Image segment payload:', JSON.stringify(payload, null, 2));
+          // console.log('Image segment payload:', JSON.stringify(payload, null, 2));
 
           const imageResponse = await axios.put(
             `${API_BASE_URL}/projects/${projectId}/update-image`,
             payload,
             { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
           );
-          console.log('Server response for image segment update:', imageResponse.data);
+          // console.log('Server response for image segment update:', imageResponse.data);
 
           // Update videoLayers
           setVideoLayers((prev) => {
@@ -3889,7 +3889,7 @@ const navigateKeyframes = (property, direction) => {
             keyframes: updatedKeyframes,
           };
 
-          console.log('Text segment payload:', JSON.stringify(textPayload, null, 2));
+          // console.log('Text segment payload:', JSON.stringify(textPayload, null, 2));
 
           await axios.put(
             `${API_BASE_URL}/projects/${projectId}/update-text`,
@@ -3941,7 +3941,7 @@ const navigateKeyframes = (property, direction) => {
             keyframes: updatedKeyframes,
           };
 
-          console.log('Audio segment payload:', JSON.stringify(audioPayload, null, 2));
+          // console.log('Audio segment payload:', JSON.stringify(audioPayload, null, 2));
 
           await axios.put(
             `${API_BASE_URL}/projects/${projectId}/update-audio`,
@@ -3981,10 +3981,10 @@ const navigateKeyframes = (property, direction) => {
       // Trigger auto-save of the project with updated layers
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
-        console.log('Triggering auto-save for project with updated layers:', {
-          updatedVideoLayers,
-          updatedAudioLayers,
-        });
+        // console.log('Triggering auto-save for project with updated layers:', {
+        //   updatedVideoLayers,
+        //   updatedAudioLayers,
+        // });
         autoSaveProject(updatedVideoLayers, updatedAudioLayers);
       }, 1000);
     } catch (error) {
@@ -4191,7 +4191,7 @@ const updateFilterSetting = (filterName, filterValue) => {
     return;
   }
 
-  console.log(`updateFilterSetting: filterName=${filterName}, filterValue=${filterValue} (type: ${typeof filterValue})`);
+  // console.log(`updateFilterSetting: filterName=${filterName}, filterValue=${filterValue} (type: ${typeof filterValue})`);
 
   // Update filterParams for the UI
   setFilterParams((prev) => ({
@@ -4249,7 +4249,7 @@ const updateFilterSetting = (filterName, filterValue) => {
               ) {
                 // Remove the filter
                 newFilters = currentFilters.filter((f) => f.filterName !== filterName);
-                console.log(`Removed filter ${filterName} from segment ${segmentId}. New filters:`, newFilters);
+                // console.log(`Removed filter ${filterName} from segment ${segmentId}. New filters:`, newFilters);
               } else {
                 // Update or add the filter
                 const existingFilter = currentFilters.find((f) => f.filterName === filterName);
@@ -4258,7 +4258,7 @@ const updateFilterSetting = (filterName, filterValue) => {
                   ...currentFilters.filter((f) => f.filterName !== filterName),
                   { filterId, filterName, filterValue: filterValue.toString(), segmentId },
                 ];
-                console.log(`Added/Updated filter ${filterName}=${filterValue} for segment ${segmentId}. New filters:`, newFilters);
+                // console.log(`Added/Updated filter ${filterName}=${filterValue} for segment ${segmentId}. New filters:`, newFilters);
               }
 
               return {
@@ -4291,7 +4291,7 @@ const updateFilterSetting = (filterName, filterValue) => {
       ) {
         const filterToRemove = latestFilters.find((f) => f.filterName === filterName);
         if (filterToRemove) {
-          console.log(`Sending DELETE request to remove filter ${filterName} (filterId: ${filterToRemove.filterId}) for segment ${segmentId}`);
+          // console.log(`Sending DELETE request to remove filter ${filterName} (filterId: ${filterToRemove.filterId}) for segment ${segmentId}`);
           await axios.delete(`${API_BASE_URL}/projects/${projectId}/remove-filter`, {
             params: {
               sessionId,
@@ -4300,9 +4300,9 @@ const updateFilterSetting = (filterName, filterValue) => {
             },
             headers: { Authorization: `Bearer ${token}` },
           });
-          console.log(`Successfully removed filter ${filterName} from backend`);
+          // console.log(`Successfully removed filter ${filterName} from backend`);
         } else {
-          console.log(`Filter ${filterName} not found in backend data, skipping DELETE request`);
+          // console.log(`Filter ${filterName} not found in backend data, skipping DELETE request`);
         }
       } else {
         const existingFilter = latestFilters.find((f) => f.filterName === filterName);
@@ -4313,7 +4313,7 @@ const updateFilterSetting = (filterName, filterValue) => {
           filterName,
           filterValue: filterValue.toString(),
         };
-        console.log(`Sending POST request to apply filter ${filterName}=${filterValue} (filterId: ${filterId}) for segment ${segmentId}`);
+        // console.log(`Sending POST request to apply filter ${filterName}=${filterValue} (filterId: ${filterId}) for segment ${segmentId}`);
         const response = await axios.post(
           `${API_BASE_URL}/projects/${projectId}/apply-filter`,
           requestBody,
@@ -4327,7 +4327,7 @@ const updateFilterSetting = (filterName, filterValue) => {
           ...prev.filter((f) => f.filterName !== filterName),
           response.data,
         ]);
-        console.log(`Successfully applied filter ${filterName} to backend`);
+        // console.log(`Successfully applied filter ${filterName} to backend`);
       }
 
       // Trigger auto-save
@@ -4339,7 +4339,7 @@ const updateFilterSetting = (filterName, filterValue) => {
     } catch (error) {
       console.error('Error saving filter to backend:', error.response?.data || error.message);
       if (error.response?.status === 404 && error.response?.data?.includes('Filter not found')) {
-        console.log(`Filter ${filterName} not found on backend, syncing frontend state`);
+        // console.log(`Filter ${filterName} not found on backend, syncing frontend state`);
         // Remove the filter from appliedFilters to prevent further errors
         setAppliedFilters((prev) => prev.filter((f) => f.filterName !== filterName));
         setVideoLayers((prevLayers) => {
@@ -4932,7 +4932,7 @@ return (
           )}
           {expandedSection === 'elements' && (
             <div className="section-content">
-              <input
+              {/* <input
                 type="text"
                 placeholder="Search elements..."
                 value={elementSearchQuery}
@@ -4971,7 +4971,9 @@ return (
                     </div>
                   ))}
                 </div>
-              )}
+              )} */}
+
+              <div className="empty-state">Coming soon...</div>
             </div>
           )}
           {expandedSection === 'textStyles' && (

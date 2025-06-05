@@ -106,14 +106,14 @@ const VideoPreview = ({
         families: googleFonts,
       },
       active: () => {
-        console.log('All Google Fonts loaded');
+        // console.log('All Google Fonts loaded');
         setLoadedFonts(new Set(googleFonts));
       },
       inactive: () => {
         console.error('Some Google Fonts failed to load');
       },
       fontactive: (familyName) => {
-        console.log(`Font loaded: ${familyName}`);
+        // console.log(`Font loaded: ${familyName}`);
         setLoadedFonts((prev) => new Set(prev).add(familyName));
       },
       fontinactive: (familyName) => {
@@ -353,24 +353,24 @@ const VideoPreview = ({
 
   // Initialize audio elements with Web Audio API
   useEffect(() => {
-  console.log('Audio initialization useEffect triggered with audioLayers:', audioLayers);
+  // console.log('Audio initialization useEffect triggered with audioLayers:', audioLayers);
 
   const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
   const promises = audioLayers.flat().map((segment) => {
-    console.log(`Processing audio segment ${segment.id}:`, segment);
+    // console.log(`Processing audio segment ${segment.id}:`, segment);
     if (!segment.url) {
       console.warn(`No URL for audio segment ${segment.id}:`, segment);
       return Promise.resolve();
     }
 
     if (audioRefs.current[segment.id]) {
-      console.log(`Audio element for ${segment.id} already exists`);
+      // console.log(`Audio element for ${segment.id} already exists`);
       setLoadedAudioSegments((prev) => new Set(prev).add(segment.id));
       return Promise.resolve();
     }
 
-    console.log(`Creating audio element for segment ${segment.id}: ${segment.url}`);
+    // console.log(`Creating audio element for segment ${segment.id}: ${segment.url}`);
     const audio = new Audio();
     audio.crossOrigin = 'anonymous';
     audio.playbackRate = 1.0;
@@ -395,7 +395,7 @@ const VideoPreview = ({
       let hasLoaded = false;
 
       audio.addEventListener('loadeddata', () => {
-        console.log(`Audio ${segment.id} loadeddata event fired, readyState: ${audio.readyState}`);
+        // console.log(`Audio ${segment.id} loadeddata event fired, readyState: ${audio.readyState}`);
         hasLoaded = true;
         if (!hasErrored) {
           audioRefs.current[segment.id] = audio;
@@ -415,7 +415,7 @@ const VideoPreview = ({
                   throw new Error(`Fetch failed: ${response.status} ${response.statusText} - ${text}`);
                 });
               }
-              console.log(`Manual fetch succeeded for ${audioUrl}`);
+              // console.log(`Manual fetch succeeded for ${audioUrl}`);
               return response.blob();
             })
             .catch((fetchError) => {
@@ -428,11 +428,11 @@ const VideoPreview = ({
   });
 
   Promise.all(promises).then(() => {
-    console.log('Updated audioRefs:', Object.keys(audioRefs.current));
+    // console.log('Updated audioRefs:', Object.keys(audioRefs.current));
   });
 
   return () => {
-    console.log('Cleaning up audio elements and Web Audio API');
+    // console.log('Cleaning up audio elements and Web Audio API');
     Object.entries(audioRefs.current).forEach(([id, audio]) => {
       audio.pause();
       if (audio.src) {
@@ -464,7 +464,7 @@ const VideoPreview = ({
 
   // Synchronize audio playback
   useEffect(() => {
-    console.log(`Playback state: isPlaying=${isPlaying}, currentTime=${currentTime}, loadedAudioSegments=`, Array.from(loadedAudioSegments));
+    // console.log(`Playback state: isPlaying=${isPlaying}, currentTime=${currentTime}, loadedAudioSegments=`, Array.from(loadedAudioSegments));
 
     // Resume AudioContext if suspended
     Object.values(audioContextRefs.current).forEach(({ audioContext }) => {
@@ -478,7 +478,7 @@ const VideoPreview = ({
       Object.values(audioRefs.current).forEach((audio) => {
         if (!audio.paused) {
           audio.pause();
-          console.log(`Paused audio ${audio.src}`);
+          // console.log(`Paused audio ${audio.src}`);
         }
       });
       return;
@@ -488,7 +488,7 @@ const VideoPreview = ({
     audioLayers.forEach((layer) => {
       layer.forEach((segment) => {
         if (!loadedAudioSegments.has(segment.id)) {
-          console.log(`Audio ${segment.id} not yet loaded, skipping playback`);
+          // console.log(`Audio ${segment.id} not yet loaded, skipping playback`);
           return;
         }
 
@@ -509,23 +509,22 @@ const VideoPreview = ({
         const startWithinAudio = segment.startTimeWithinAudio || 0;
         const relativeTime = currentTime - startTime + startWithinAudio;
 
-        console.log(
-          `Audio ${segment.id}: start=${startTime}, end=${endTime}, relativeTime=${relativeTime}, duration=${segment.duration}, readyState=${audio.readyState}`
-        );
+        // console.log(
+          // `Audio ${segment.id}: start=${startTime}, end=${endTime}, relativeTime=${relativeTime}, duration=${segment.duration}, readyState=${audio.readyState}`
+        // );
 
         if (currentTime >= startTime && currentTime < endTime) {
           // Only update currentTime if significantly out of sync (increased threshold to 0.5s)
           if (Math.abs(audio.currentTime - relativeTime) > 0.5) {
             audio.currentTime = relativeTime;
-            console.log(`Set audio ${segment.id} time to ${relativeTime}`);
+            // console.log(`Set audio ${segment.id} time to ${relativeTime}`);
           }
 
           // Attempt to play audio if paused and ready
           if (audio.paused && audio.readyState >= 4) {
-            console.log(`Attempting to play audio ${segment.id}`);
+            // console.log(`Attempting to play audio ${segment.id}`);
             audio
               .play()
-              .then(() => console.log(`Audio ${segment.id} started playing`))
               .catch((e) => {
                 console.error(`Error playing audio ${segment.id}:`, e);
                 if (e.name === 'NotAllowedError') {
@@ -538,7 +537,7 @@ const VideoPreview = ({
           // Pause audio if outside its playback window
           if (!audio.paused) {
             audio.pause();
-            console.log(`Paused audio ${segment.id}`);
+            // console.log(`Paused audio ${segment.id}`);
           }
         }
 
@@ -547,7 +546,7 @@ const VideoPreview = ({
           ? getKeyframeValue(segment.keyframes.volume, relativeTime - startWithinAudio, segment.volume || 1.0)
           : segment.volume || 1.0;
         gainNode.gain.setValueAtTime(Math.max(0, rawVolume), audioContextData.audioContext.currentTime);
-        console.log(`Set audio ${segment.id} gain to ${rawVolume}`);
+        // console.log(`Set audio ${segment.id} gain to ${rawVolume}`);
       });
     });
   }, [currentTime, isPlaying, audioLayers, loadedAudioSegments, setIsPlaying, getKeyframeValue]);
@@ -706,11 +705,11 @@ const VideoPreview = ({
         return blurRadius > 0 ? `blur(${blurRadius}px)` : '';
       },
       rotate: () => {
-        console.log('Rotate filter applied via transform, not CSS filter.');
+        // console.log('Rotate filter applied via transform, not CSS filter.');
         return '';
       },
       flip: () => {
-        console.log('Flip filter applied via transform, not CSS filter.');
+        // console.log('Flip filter applied via transform, not CSS filter.');
         return '';
       },
       vignette: (value) => {
@@ -728,7 +727,7 @@ const VideoPreview = ({
         const style = cssFilterMap[filterName](filterValue);
         if (style) cssStyles.push(style);
       } else {
-        console.log(`Filter "${filterName}" is not supported in preview and will be ignored.`);
+        // console.log(`Filter "${filterName}" is not supported in preview and will be ignored.`);
       }
     });
 
@@ -796,7 +795,7 @@ const VideoPreview = ({
             const targetTime = startTimeWithinVideo + adjustedLocalTime;
             if (Math.abs(videoRef.currentTime - targetTime) > 0.05) {
               videoRef.currentTime = targetTime;
-              console.log(`Set video ${element.id} time to ${targetTime} (speed: ${speed})`);
+              // console.log(`Set video ${element.id} time to ${targetTime} (speed: ${speed})`);
             }
           };
           setVideoTimeFunctions.set(element.id, setVideoTime);
@@ -932,7 +931,7 @@ const VideoPreview = ({
                 element.opacity || 1
               );
 
-              console.log(`Rendering ${element.type} ${element.id}: localTime=${element.localTime}, positionX=${positionX}, positionY=${positionY}, scale=${scaleFactor}, opacity=${opacity}`);
+              // console.log(`Rendering ${element.type} ${element.id}: localTime=${element.localTime}, positionX=${positionX}, positionY=${positionY}, scale=${scaleFactor}, opacity=${opacity}`);
 
               const transitionEffects = computeTransitionEffects(element, element.localTime);
               if (transitionEffects.opacity !== null) {
@@ -1052,7 +1051,7 @@ const VideoPreview = ({
                         }}
                         onError={(e) => console.error(`Error loading video ${element.filePath}:`, e)}
                         onLoadedData={() => {
-                          console.log(`Video ${element.filePath} loaded`);
+                          // console.log(`Video ${element.filePath} loaded`);
                           if (videoRefs.current[element.id] && !videoDimensions[element.id]) {
                             setVideoDimensions((prev) => ({
                               ...prev,
@@ -1352,13 +1351,13 @@ const VideoPreview = ({
                           let x;
                           if (alignment === 'left') {
                             x = textBorderWidth + borderWidth;
-                            console.log(`left: ${x}`)
+                            // console.log(`left: ${x}`)
                           } else if (alignment === 'center') {
                             x = textBorderWidth + borderWidth + (effectiveContentWidth - lineWidth) / 2;
-                            console.log(`center: ${x}`)
+                            // console.log(`center: ${x}`)
                           } else { // right
                             x = textBorderWidth + borderWidth + effectiveContentWidth - lineWidth;
-                            console.log(`right: ${x}`)
+                            // console.log(`right: ${x}`)
                           }
                           let currentX = x;
                           for (let i = 0; i < line.length; i++) {

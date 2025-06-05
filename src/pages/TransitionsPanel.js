@@ -30,7 +30,6 @@ const TransitionsPanel = ({
 
   return (
     <div className="transitions-panel">
-      <h3>Transitions</h3>
       <div className="transitions-list">
         {availableTransitions.map((transition) => (
           <div

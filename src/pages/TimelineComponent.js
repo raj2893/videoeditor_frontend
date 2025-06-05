@@ -1208,16 +1208,15 @@ useEffect(() => {
   const handleTimelineClick = async (e) => {
     if (!timelineRef.current) return;
     const rect = timelineRef.current.getBoundingClientRect();
-    let clickX, clickY;
   
-    if (e.type === 'touchstart') {
-      const touch = e.touches[0];
-      clickX = touch.clientX - rect.left;
-      clickY = touch.clientY - rect.top;
-    } else {
-      clickX = e.clientX - rect.left;
-      clickY = e.clientY - rect.top;
+    const isTouchEvent = e.type === 'touchstart' || e.type === 'touchend';
+    if (isTouchEvent) {
+      e.preventDefault(); // Prevent default touch behavior
     }
+    const clientX = isTouchEvent ? e.changedTouches[0].clientX : e.clientX;
+    const clientY = isTouchEvent ? e.changedTouches[0].clientY : e.clientY;
+    const clickX = clientX - rect.left;
+    const clickY = clientY - rect.top;
   
     let clickTime = clickX / timeScale;
   

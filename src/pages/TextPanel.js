@@ -70,8 +70,6 @@ const TextPanel = ({ textSettings, updateTextSettings, isTextEmpty }) => {
       google: {
         families: googleFonts,
       },
-      active: () => console.log('Google Fonts loaded for TextPanel'),
-      inactive: () => console.error('Some Google Fonts failed to load in TextPanel'),
     });
   }, []);
 

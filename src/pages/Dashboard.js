@@ -70,7 +70,7 @@ const Dashboard = () => {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    console.log('Dashboard mounted, location state:', location.state);
+    // console.log('Dashboard mounted, location state:', location.state);
     const loadData = async () => {
       const token = localStorage.getItem('token');
       if (token) {
@@ -125,8 +125,8 @@ const Dashboard = () => {
     const logScrollInfo = () => {
       const documentHeight = document.documentElement.scrollHeight;
       const viewportHeight = window.innerHeight;
-      console.log(`Document height: ${documentHeight}px, Viewport height: ${viewportHeight}px`);
-      console.log(`Scrollable area: ${documentHeight - viewportHeight}px`);
+      // console.log(`Document height: ${documentHeight}px, Viewport height: ${viewportHeight}px`);
+      // console.log(`Scrollable area: ${documentHeight - viewportHeight}px`);
     };
 
     logScrollInfo();
@@ -142,16 +142,16 @@ const Dashboard = () => {
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Fetching user profile with token:', token);
+      // console.log('Fetching user profile with token:', token);
       if (!token) {
-        console.log('No token found, redirecting to login');
+        // console.log('No token found, redirecting to login');
         navigate('/login');
         return;
       }
       const response = await axios.get(`${API_BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('User profile response:', response.data);
+      // console.log('User profile response:', response.data);
 
       const fullName = response.data.name || '';
       const nameParts = fullName.trim().split(' ');
@@ -176,12 +176,12 @@ const Dashboard = () => {
       }));
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      console.log('Error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-      });
+      // console.log('Error details:', {
+      //   status: error.response?.status,
+      //   data: error.response?.data,
+      // });
       if (error.response?.status === 401) {
-        console.log('401 Unauthorized, redirecting to login');
+        // console.log('401 Unauthorized, redirecting to login');
         localStorage.removeItem('token');
         localStorage.removeItem('userProfile');
         navigate('/login', { state: { error: 'Session expired. Please log in again.' } });
@@ -201,7 +201,7 @@ const Dashboard = () => {
   const fetchProjects = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Fetching projects with token:', token);
+      // console.log('Fetching projects with token:', token);
       if (!token) {
         console.error('No token found, redirecting to login');
         navigate('/login');
@@ -211,7 +211,7 @@ const Dashboard = () => {
       const response = await axios.get(`${API_BASE_URL}/projects`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Projects response:', response.data);
+      // console.log('Projects response:', response.data);
       const projectList = response.data || [];
 
       const projectsWithThumbnails = await Promise.all(
@@ -247,12 +247,12 @@ const Dashboard = () => {
       setProjects(projectsWithThumbnails);
     } catch (error) {
       console.error('Error fetching projects:', error);
-      console.log('Error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-      });
+      // console.log('Error details:', {
+      //   status: error.response?.status,
+      //   data: error.response?.data,
+      // });
       if (error.response?.status === 401) {
-        console.log('401 Unauthorized, redirecting to login');
+        // console.log('401 Unauthorized, redirecting to login');
         localStorage.removeItem('token');
         localStorage.removeItem('userProfile');
         navigate('/login', { state: { error: 'Session expired. Please log in again.' } });
@@ -405,7 +405,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error creating project:', error);
       if (error.response?.status === 401) {
-        console.log('401 Unauthorized, redirecting to login');
+        // console.log('401 Unauthorized, redirecting to login');
         localStorage.removeItem('token');
         localStorage.removeItem('userProfile');
         navigate('/login', { state: { error: 'Session expired. Please log in again.' } });
@@ -460,7 +460,7 @@ const Dashboard = () => {
       setShowModal(false);
       setProjectToDelete(null);
       if (error.response?.status === 401) {
-        console.log('401 Unauthorized, redirecting to login');
+        // console.log('401 Unauthorized, redirecting to login');
         localStorage.removeItem('token');
         localStorage.removeItem('userProfile');
         navigate('/login', { state: { error: 'Session expired. Please log in again.' } });
@@ -566,7 +566,7 @@ const Dashboard = () => {
   };
 
   const scrollToSection = (sectionId) => {
-    console.log(`Attempting to scroll to section: ${sectionId}`);
+    // console.log(`Attempting to scroll to section: ${sectionId}`);
 
     setTimeout(() => {
       const section = document.getElementById(sectionId);
@@ -580,7 +580,7 @@ const Dashboard = () => {
 
       const offsetPosition = section.offsetTop - navHeight - 20;
 
-      console.log(`Scrolling to ${sectionId} at position: ${offsetPosition}px`);
+      // console.log(`Scrolling to ${sectionId} at position: ${offsetPosition}px`);
 
       window.scrollTo({
         top: offsetPosition,
@@ -598,7 +598,7 @@ const Dashboard = () => {
       if (!element) {
         console.error(`WARNING: Section with ID "${id}" not found in DOM`);
       } else {
-        console.log(`Found section: ${id} at position ${element.offsetTop}px`);
+        // console.log(`Found section: ${id} at position ${element.offsetTop}px`);
       }
     });
   }, [isDataLoaded]);
@@ -1005,7 +1005,7 @@ const Dashboard = () => {
           <div className="contact-us-info">
             <div className="contact-us-card">
               <h3 className="contact-us-subtitle">Get in Touch</h3>
-              <p>Email: scenith.videoeditor@gmail.com</p>
+              <p>Email: scenith.spprt@gmail.com</p>
               <p>Follow us on social media for updates and tips!</p>
               <div className="social-links">
                 <a href="https://x.com/scenith_1902/" target="_blank" rel="noopener noreferrer" className="social-link">

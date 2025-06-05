@@ -174,7 +174,7 @@ const TextSegmentHandler = ({
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      console.log(`Updated text segment ${segmentId}`);
+      // console.log(`Updated text segment ${segmentId}`);
     } catch (error) {
       console.error('Error updating text segment:', error);
     }
@@ -237,7 +237,7 @@ const TextSegmentHandler = ({
     });
 
     if (hasOverlap) {
-      console.log('Overlap detected. Cannot place item here.');
+      // console.log('Overlap detected. Cannot place item here.');
       return null;
     }
 
@@ -380,14 +380,14 @@ const TextSegmentHandler = ({
     const firstPartDuration = splitTime;
     const secondPartDuration = item.duration - splitTime;
 
-    console.log('Splitting text segment:', {
-      text: item.text,
-      startTime: item.startTime,
-      splitTime,
-      firstPartDuration,
-      secondPartDuration,
-      itemId: item.id,
-    });
+    // console.log('Splitting text segment:', {
+    //   text: item.text,
+    //   startTime: item.startTime,
+    //   splitTime,
+    //   firstPartDuration,
+    //   secondPartDuration,
+    //   itemId: item.id,
+    // });
 
     // Create first part (update original segment)
     const firstPart = {
@@ -458,7 +458,7 @@ const TextSegmentHandler = ({
     try {
       // Update the first part in the backend
       await updateTextSegment(item.id, firstPart, item.startTime, layerIndex);
-      console.log(`Successfully updated first part: ${item.id}`);
+      // console.log(`Successfully updated first part: ${item.id}`);
 
       // Remove temporary second part from state
       setVideoLayers((prev) => {
@@ -496,7 +496,7 @@ const TextSegmentHandler = ({
         throw new Error('Failed to add second part to timeline');
       }
 
-      console.log('Successfully added second part to timeline:', newSegment);
+      // console.log('Successfully added second part to timeline:', newSegment);
       saveHistory(videoLayers, []);
       autoSave(videoLayers, []);
     } catch (error) {

@@ -68,9 +68,9 @@ const VideoSegmentHandler = ({
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      console.log(
-        `Updated segment ${segmentId} to start at ${requestBody.timelineStartTime}s, end at ${requestBody.timelineEndTime}s, layer ${newLayer}, startTimeWithinVideo: ${requestBody.startTime}, endTimeWithinVideo: ${requestBody.endTime}, speed: ${requestBody.speed}`
-      );
+      // console.log(
+      //   `Updated segment ${segmentId} to start at ${requestBody.timelineStartTime}s, end at ${requestBody.timelineEndTime}s, layer ${newLayer}, startTimeWithinVideo: ${requestBody.startTime}, endTimeWithinVideo: ${requestBody.endTime}, speed: ${requestBody.speed}`
+      // );
     } catch (error) {
       console.error('Error updating segment position:', error);
     }
@@ -101,7 +101,7 @@ const VideoSegmentHandler = ({
     if (reversedIndex <= totalVideoLayers) {
       targetLayer = totalVideoLayers - reversedIndex;
     } else {
-      console.log('Cannot drop video in audio layers');
+      // console.log('Cannot drop video in audio layers');
       return;
     }
 
@@ -198,7 +198,7 @@ const VideoSegmentHandler = ({
     });
 
     if (hasOverlap) {
-      console.log('Overlap detected. Cannot place item here.');
+      // console.log('Overlap detected. Cannot place item here.');
       return;
     }
 
@@ -241,8 +241,8 @@ const VideoSegmentHandler = ({
   };
 
   const handleVideoSplit = async (item, clickTime, layerIndex) => {
-    console.log('handleVideoSplit: item=', JSON.stringify(item, null, 2));
-    console.log('videoLayers state:', JSON.stringify(videoLayers, null, 2));
+    // console.log('handleVideoSplit: item=', JSON.stringify(item, null, 2));
+    // console.log('videoLayers state:', JSON.stringify(videoLayers, null, 2));
 
     // Calculate split time relative to the segment's start
     const splitTime = clickTime - item.startTime;
@@ -351,7 +351,7 @@ const VideoSegmentHandler = ({
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      console.log(`Successfully updated first part: ${item.id}`);
+      // console.log(`Successfully updated first part: ${item.id}`);
 
       const filename = item.filePath.split('/').pop();
       const addResponse = await axios.post(

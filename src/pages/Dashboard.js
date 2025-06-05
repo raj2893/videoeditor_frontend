@@ -372,13 +372,13 @@ const Dashboard = () => {
 
     // Restriction for Basic users
     if (userProfile.role === 'BASIC') {
-      if (fps > 30) {
-        setErrorMessage('Basic users cannot create projects with more than 30 FPS. Upgrade to Creator or Studio for higher FPS.');
+      if (fps > 60) {
+        setErrorMessage('Basic users cannot create projects with more than 60 FPS. Upgrade to Creator or Studio for higher FPS.');
         setTimeout(() => setErrorMessage(''), 5000);
         return;
       }
-      if (projects.length >= 3) {
-        setErrorMessage('Basic users can only create up to 3 projects. Upgrade to Creator or Studio for unlimited projects.');
+      if (projects.length >= 5) {
+        setErrorMessage('Basic users can only create up to 5 projects. Upgrade to Creator or Studio for unlimited projects.');
         setTimeout(() => setErrorMessage(''), 5000);
         return;
       }

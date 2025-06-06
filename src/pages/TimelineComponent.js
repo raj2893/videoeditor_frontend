@@ -1398,8 +1398,11 @@ useEffect(() => {
   const togglePlayback = () => {
     setIsPlaying((prev) => {
       const newIsPlaying = !prev;
-      if (newIsPlaying && onTimeUpdate) {
+      if (newIsPlaying) {
         // Ensure playback starts from the current playhead position
+        onTimeUpdate(currentTime);
+      } else {
+        // Explicitly update parent with current time when pausing
         onTimeUpdate(currentTime);
       }
       return newIsPlaying;

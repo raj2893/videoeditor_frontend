@@ -14,6 +14,7 @@ const TimelineControls = ({
   onAddTextClick,
   toggleSplitMode,
   isSplitMode,
+  stopPropagationForControls
 }) => {
   return (
     <div className="timeline-controls">
@@ -21,17 +22,17 @@ const TimelineControls = ({
         <span className="button-icon">{isPlaying ? '⏸️' : '▶️'}</span>
         <span className="button-text">{isPlaying ? 'Pause' : 'Play'}</span>
       </button>
-      <span className="time-display">
+      <span className="time-display" onClick={(e) => { stopPropagationForControls(e); }}>
         {formatTime(currentTime)} / {formatTime(totalDuration)}
       </span>
       <div className="add-text-control">
-        <button onClick={onAddTextClick}>
+        <button onClick={(e) => { stopPropagationForControls(e); onAddTextClick(); }}>
           <span className="button-text">Add Text</span>
         </button>
       </div>
       <div className="split-control">
         <button
-          onClick={toggleSplitMode}
+          onClick={(e) => { stopPropagationForControls(e); toggleSplitMode(); }}
           className={isSplitMode ? 'active' : ''}
           title="Split Segment"
         >

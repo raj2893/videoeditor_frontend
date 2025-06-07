@@ -1580,6 +1580,7 @@ useEffect(() => {
         onAddTextClick={openTextTool}
         toggleSplitMode={toggleSplitMode}
         isSplitMode={isSplitMode}
+        stopPropagationForControls={(e) => e.stopPropagation()} // Add this prop
       />
       <div className="timeline-scroll-container">
         <TimelineRuler totalDuration={totalDuration} timeScale={timeScale} formatTime={formatTime} />

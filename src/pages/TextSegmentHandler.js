@@ -12,6 +12,7 @@ const TextSegmentHandler = ({
   API_BASE_URL,
   timelineRef,
   roundToThreeDecimals, // Destructure roundToThreeDecimals
+  setIsLoading,
 }) => {
   const addTextToTimeline = async (targetLayer = 0, startTime = 0, updatedTextSettings) => {
     if (!sessionId || !projectId) {
@@ -166,6 +167,7 @@ const TextSegmentHandler = ({
         requestBody.timelineEndTime = roundToThreeDecimals(newStartTime + duration);
       }
       if (newLayer !== null) requestBody.layer = newLayer;
+      setIsLoading(true);
       await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-text`,
         requestBody,
@@ -177,6 +179,8 @@ const TextSegmentHandler = ({
       // console.log(`Updated text segment ${segmentId}`);
     } catch (error) {
       console.error('Error updating text segment:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 

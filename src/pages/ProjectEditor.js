@@ -97,6 +97,7 @@ const ProjectEditor = () => {
   const [isAddingToTimeline, setIsAddingToTimeline] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const textSettingsRef = useRef(textSettings);
 
   const canUndo = historyIndex > 0;
@@ -3682,6 +3683,7 @@ const navigateKeyframes = (property, direction) => {
     }
 
     try {
+      setIsLoading(true);
       const token = localStorage.getItem('token');
       let updatedVideoLayers = videoLayers;
       let updatedAudioLayers = audioLayers;
@@ -3993,6 +3995,8 @@ const navigateKeyframes = (property, direction) => {
         console.error('Server error details:', error.response.data);
       }
       // Do not throw the error to avoid red screen
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -4613,7 +4617,7 @@ const filteredElements = elements.filter((element) =>
 
 return (
   <div className="project-editor">
-    {(loading || uploading || pendingUploads.size > 0 || isAddingToTimeline || isDeleting || isSaving) && (
+    {(loading || uploading || pendingUploads.size > 0 || isAddingToTimeline || isDeleting || isSaving || isLoading) && (
       <div className="loading-container">
         <div className="branding-container">
           <h1>
@@ -5171,7 +5175,10 @@ return (
               MIN_TIME_SCALE={MIN_TIME_SCALE}
               MAX_TIME_SCALE={MAX_TIME_SCALE}
               isAddingToTimeline={isAddingToTimeline} // Add this prop
-              setIsAddingToTimeline={setIsAddingToTimeline} // Add this prop              
+              setIsAddingToTimeline={setIsAddingToTimeline} // Add this prop 
+              isSaving={isSaving}
+              setIsSaving={setIsSaving}
+              setIsLoading={setIsLoading}        
             />
           ) : (
             <div className="loading-container">

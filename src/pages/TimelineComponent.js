@@ -43,10 +43,10 @@ const TimelineComponent = ({
   handleRedo,
   canUndo,
   canRedo,
-  currentTime, // Added prop to receive currentTime from ProjectEditor
-  onTimelineClick, // Add this prop
-  isAddingToTimeline, // Add this
-  setIsAddingToTimeline, // Add this  
+  currentTime,
+  onTimelineClick,
+  setIsAddingToTimeline,
+  setIsLoading,
 }) => {
   // Removed local playhead and currentTime states
   const [timelineVideos, setTimelineVideos] = useState([]);
@@ -746,7 +746,8 @@ useEffect(() => {
     API_BASE_URL,
     timelineRef,
     roundToThreeDecimals,
-    setTotalDuration
+    setTotalDuration,
+    setIsLoading,
   });
 
   const textHandler = TextSegmentHandler({
@@ -760,7 +761,8 @@ useEffect(() => {
     API_BASE_URL,
     timelineRef,
     roundToThreeDecimals,
-    setIsAddingToTimeline, // Add this
+    setIsAddingToTimeline,
+    setIsLoading
   });
 
   const imageHandler = ImageSegmentHandler({
@@ -775,7 +777,8 @@ useEffect(() => {
     API_BASE_URL,
     timelineRef,
     roundToThreeDecimals,
-    setIsAddingToTimeline, // Add this    
+    setIsAddingToTimeline,
+    setIsLoading, 
   });
 
   const audioHandler = AudioSegmentHandler({
@@ -789,9 +792,10 @@ useEffect(() => {
     API_BASE_URL,
     timelineRef,
     roundToThreeDecimals,
-    setTotalDuration, // Pass setTotalDuration from props
-    videoLayers, // Ensure videoLayers is passed
-    setIsAddingToTimeline, // Add this  
+    setTotalDuration,
+    videoLayers,
+    setIsAddingToTimeline,
+    setIsLoading
   });
 
   const generalHandler = GeneralSegmentHandler({

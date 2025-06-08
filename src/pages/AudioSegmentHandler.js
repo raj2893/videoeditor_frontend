@@ -18,6 +18,7 @@ const AudioSegmentHandler = ({
   preloadMedia, // Added prop
   videoLayers, // Add videoLayers prop
   setIsAddingToTimeline, // Add this
+  setIsLoading
 }) => {
   const updateAudioSegment = async (
     audioSegmentId,
@@ -122,6 +123,8 @@ const AudioSegmentHandler = ({
       //   token: token.substring(0, 10) + '...',
       // });
 
+      setIsLoading(true); // Show loading screen
+
       const response = await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-audio`,
         requestBody,
@@ -162,7 +165,9 @@ const AudioSegmentHandler = ({
         headers: error.response?.headers,
       });
       throw error;
-    }
+  } finally {
+    setIsLoading(false); // Hide loading screen
+  }
   };
 
   const handleAudioDrop = async (

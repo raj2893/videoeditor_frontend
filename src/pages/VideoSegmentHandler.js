@@ -18,6 +18,7 @@ const VideoSegmentHandler = ({
   timelineRef,
   roundToThreeDecimals, // Destructure roundToThreeDecimals
   setTotalDuration,
+  setIsLoading,
 }) => {
   const updateSegmentPosition = async (
     segmentId,
@@ -30,6 +31,7 @@ const VideoSegmentHandler = ({
   ) => {
     if (!projectId || !sessionId) return;
     try {
+      setIsLoading(true);
       const token = localStorage.getItem('token');
       const layer = layers[newLayer];
       if (!layer) {
@@ -73,6 +75,8 @@ const VideoSegmentHandler = ({
       // );
     } catch (error) {
       console.error('Error updating segment position:', error);
+    } finally {
+      setIsLoading(false); // Hide loading screen
     }
   };
 

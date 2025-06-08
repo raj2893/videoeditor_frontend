@@ -14,6 +14,7 @@ const ImageSegmentHandler = ({
   timelineRef,
   roundToThreeDecimals,
   setIsAddingToTimeline, // Add this
+  setIsLoading
 }) => {
   const generateImageThumbnail = async (imagePath, isElement = false) => {
     const filename = imagePath.split('/').pop();
@@ -215,6 +216,7 @@ const ImageSegmentHandler = ({
         isElement,
         keyframes: updatedSettings.keyframes || item.keyframes || {}, // Add keyframes
       };
+      setIsLoading(true); // Show loading screen
       await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-image`,
         requestBody,
@@ -227,6 +229,8 @@ const ImageSegmentHandler = ({
     } catch (error) {
       console.error('Error updating image segment:', error.response?.data || error.message);
       await loadProjectTimeline();
+    } finally {
+      setIsLoading(false);
     }
   };
 

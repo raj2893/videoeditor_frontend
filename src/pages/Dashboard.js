@@ -261,7 +261,7 @@ const Dashboard = () => {
   };
 
   const generateVideoThumbnail = async (projectId, videoPath) => {
-    const fullVideoPath = `${CDN_URL}/video/projects/${projectId}/${encodeURIComponent(videoPath.split('/').pop())}`;
+    const fullVideoPath = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(videoPath.split('/').pop())}`;
     return new Promise((resolve) => {
       const video = document.createElement('video');
       video.crossOrigin = 'anonymous';

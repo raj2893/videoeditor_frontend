@@ -437,8 +437,9 @@ const VideoSegmentHandler = ({
     try {
       const token = localStorage.getItem('token');
       const filename = filePath.split('/').pop();
+      const decodedFilename = decodeURIComponent(filename);
       const response = await axios.get(
-        `${API_BASE_URL}/projects/${projectId}/video-duration/${encodeURIComponent(filename)}`,
+        `${API_BASE_URL}/projects/${projectId}/video-duration/${encodeURIComponent(decodedFilename)}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

@@ -357,7 +357,7 @@ const VideoSegmentHandler = ({
       );
       // console.log(`Successfully updated first part: ${item.id}`);
 
-      const filename = item.filePath.split('/').pop();
+      const filename = decodeURIComponent(item.filePath.split('/').pop());
       const addResponse = await axios.post(
         `${API_BASE_URL}/projects/${projectId}/add-to-timeline`,
         {

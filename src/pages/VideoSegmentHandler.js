@@ -267,6 +267,7 @@ const VideoSegmentHandler = ({
       const secondPartDuration = item.duration - splitTime;
       const firstPartVideoDuration = firstPartDuration * speed; // Duration in video time
       const originalVideoStartTime = roundToThreeDecimals(item.startTimeWithinVideo || 0);
+      const firstPartKeyframes = item.keyframes || {};
 
       // Create first and second parts
       const firstPart = {
@@ -279,6 +280,7 @@ const VideoSegmentHandler = ({
         scale: item.scale ?? 1, // Add scale
         rotation: item.rotation ?? 0, // Add rotation
         speed: speed,
+        keyframes: firstPartKeyframes
       };
 
       // Generate a unique temporary ID for the second part
@@ -349,6 +351,7 @@ const VideoSegmentHandler = ({
           scale: item.scale ?? 1,
           rotation: item.rotation ?? 0,
           displayName: item.displayName || item.filePath.split('/').pop(),
+          keyframes: firstPartKeyframes,
         },
         {
           params: { sessionId },

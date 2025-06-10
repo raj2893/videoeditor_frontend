@@ -1399,6 +1399,37 @@ useEffect(() => {
     if (!isSplitMode && onVideoSelect) onVideoSelect(clickTime);
   };
 
+  const handleSplitAtCurrent = async () => {
+    if (!selectedSegment) return;
+    const { id, type, startTime, duration, layerIndex } = selectedSegment; // Use layerIndex instead of layer
+    const endTime = startTime + duration;
+  
+    // Check if currentTime is within the segment's range
+    if (currentTime <= startTime || currentTime >= endTime) {
+      console.warn(`Current time ${currentTime} is outside the range of segment ${id} (${startTime} - ${endTime})`);
+      return;
+    }
+  
+    // Call the appropriate split handler based on segment type
+    if (type === 'video') {
+      await videoHandler.handleVideoSplit(selectedSegment, currentTime, layerIndex);
+      saveHistory();
+    } else if (type === 'audio') {
+      await audioHandler.handleAudioSplit(selectedSegment, currentTime, layerIndex);
+      saveHistory();
+    } else if (type === 'text') {
+      await textHandler.handleTextSplit(selectedSegment, currentTime, layerIndex);
+      saveHistory();
+    } else if (type === 'image') {
+      await imageHandler.handleImageSplit(selectedSegment, currentTime, layerIndex);
+      saveHistory();
+    }
+  
+    // Deselect the segment after splitting
+    setSelectedSegment(null);
+    setPlayingVideoId(null);
+  };
+
   const togglePlayback = () => {
     setIsPlaying((prev) => {
       const newIsPlaying = !prev;
@@ -1584,7 +1615,9 @@ useEffect(() => {
         onAddTextClick={openTextTool}
         toggleSplitMode={toggleSplitMode}
         isSplitMode={isSplitMode}
-        stopPropagationForControls={(e) => e.stopPropagation()} // Add this prop
+        stopPropagationForControls={(e) => e.stopPropagation()}
+        selectedSegment={selectedSegment}
+        handleSplitAtCurrent={handleSplitAtCurrent}
       />
       <div className="timeline-scroll-container">
         <TimelineRuler totalDuration={totalDuration} timeScale={timeScale} formatTime={formatTime} />

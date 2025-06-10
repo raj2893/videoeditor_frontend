@@ -57,6 +57,11 @@
   left: 10%;
 }
 
+.timeline-controls .split-at-current-control button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .time-display {
   margin: 0 15px;
   color: #d1d1d1;

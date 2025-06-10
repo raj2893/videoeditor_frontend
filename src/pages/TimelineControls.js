@@ -14,8 +14,15 @@ const TimelineControls = ({
   onAddTextClick,
   toggleSplitMode,
   isSplitMode,
-  stopPropagationForControls
+  stopPropagationForControls,
+  selectedSegment,
+  handleSplitAtCurrent,
 }) => {
+
+  const isSplitAtCurrentEnabled = selectedSegment && 
+    currentTime > selectedSegment.startTime && 
+    currentTime < (selectedSegment.startTime + selectedSegment.duration);
+
   return (
     <div className="timeline-controls">
       <button onClick={togglePlayback}>
@@ -39,6 +46,16 @@ const TimelineControls = ({
           ✂️
         </button>
       </div>
+      <div className="split-at-current-control">
+        <button
+          onClick={(e) => { stopPropagationForControls(e); handleSplitAtCurrent(); }}
+          className={isSplitAtCurrentEnabled ? '' : 'disabled'}
+          disabled={!isSplitAtCurrentEnabled}
+          title="Split at Current Time"
+        >
+          <span className="button-text">Split at Current</span>
+        </button>
+      </div>      
       {isSaving && <span className="saving-indicator">Saving...</span>}
     </div>
   );

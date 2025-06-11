@@ -1932,13 +1932,13 @@ const handleVideoUpload = async (event) => {
 
   // Check user role and video limit for Basic users
   if (userRole === 'BASIC') {
-    if (videos.length >= 5) {
-      setVideoUploadError('Basic users are limited to uploading a maximum of 5 videos. Upgrade to a premium plan to upload more.');
+    if (videos.length >= 15) {
+      setVideoUploadError('Basic users are limited to uploading a maximum of 15 videos. Upgrade to a premium plan to upload more.');
       setTimeout(() => setVideoUploadError(''), 5000);
       return;
     }
-    if (videos.length + files.length > 5) {
-      setVideoUploadError(`Basic users can only upload up to 5 videos. You can upload ${5 - videos.length} more video(s).`);
+    if (videos.length + files.length > 15) {
+      setVideoUploadError(`Basic users can only upload up to 15 videos. You can upload ${15 - videos.length} more video(s).`);
       setTimeout(() => setVideoUploadError(''), 5000);
       return;
     }
@@ -1952,7 +1952,7 @@ const handleVideoUpload = async (event) => {
 
   try {
     setUploading(true);
-    setPendingUploads(new Set(files.map((file) => file.name)));
+    setPendingUploads(new Set(files.map((file) => file.name))); // Track pending uploads
     setUploadProgress(files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {}));
 
     const token = localStorage.getItem('token');
@@ -1983,13 +1983,13 @@ const handleVideoUpload = async (event) => {
     if (videoFiles && Array.isArray(videoFiles)) {
       const updatedVideos = videoFiles.map((video) => {
         const fullFileName = video.videoFileName.split('/').pop();
+        const originalFileName = fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, '');
         const sanitizedId = `video-${fullFileName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
         return {
           id: sanitizedId,
           fileName: fullFileName,
-          displayName: video.originalFileName || fullFileName.replace(`${projectId}_`, '').replace(/^\d+_/, ''),
-          cdnUrl: video.cdnUrl, // New field
-          presignedUrl: video.presignedUrl, // New field
+          displayName: originalFileName,
+          filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fullFileName)}`,
           duration: video.duration || 5,
           audioPath: video.audioPath
             ? `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(video.audioPath.split('/').pop())}`
@@ -2004,7 +2004,7 @@ const handleVideoUpload = async (event) => {
       // Generate thumbnails and remove from pendingUploads when done
       await Promise.all(
         updatedVideos.map(async (video) => {
-          await generateVideoThumbnail({ ...video, filePath: video.cdnUrl }); // Use cdnUrl
+          await generateVideoThumbnail(video);
           setPendingUploads((prev) => {
             const newSet = new Set(prev);
             newSet.delete(video.displayName);
@@ -2022,8 +2022,8 @@ const handleVideoUpload = async (event) => {
     setTimeout(() => setVideoUploadError(''), 5000);
   } finally {
     setUploading(false);
-    setUploadProgress({});
-    setPendingUploads(new Set());
+    setUploadProgress({}); // Clear progress
+    setPendingUploads(new Set()); // Clear pending uploads on error
   }
 };
 

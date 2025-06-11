@@ -1932,13 +1932,13 @@ const handleVideoUpload = async (event) => {
 
   // Check user role and video limit for Basic users
   if (userRole === 'BASIC') {
-    if (videos.length >= 5) {
-      setVideoUploadError('Basic users are limited to uploading a maximum of 5 videos. Upgrade to a premium plan to upload more.');
+    if (videos.length >= 15) {
+      setVideoUploadError('Basic users are limited to uploading a maximum of 15 videos. Upgrade to a premium plan to upload more.');
       setTimeout(() => setVideoUploadError(''), 5000);
       return;
     }
-    if (videos.length + files.length > 5) {
-      setVideoUploadError(`Basic users can only upload up to 5 videos. You can upload ${5 - videos.length} more video(s).`);
+    if (videos.length + files.length > 15) {
+      setVideoUploadError(`Basic users can only upload up to 15 videos. You can upload ${15 - videos.length} more video(s).`);
       setTimeout(() => setVideoUploadError(''), 5000);
       return;
     }

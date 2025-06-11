@@ -377,8 +377,8 @@ const Dashboard = () => {
         setTimeout(() => setErrorMessage(''), 5000);
         return;
       }
-      if (projects.length >= 5) {
-        setErrorMessage('Basic users can only create up to 5 projects. Upgrade to Creator or Studio for unlimited projects.');
+      if (projects.length >= 15) {
+        setErrorMessage('Basic users can only create up to 15 projects. Upgrade to Creator or Studio for unlimited projects.');
         setTimeout(() => setErrorMessage(''), 5000);
         return;
       }

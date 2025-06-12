@@ -235,6 +235,11 @@
   background-color: rgba(255, 0, 255, 0.2);
 }
 
+.timeline-item.text-segment.multi-selected {
+  border: 2px solid #FF00FF; /* Magenta border for multi-selected text segments */
+  background-color: rgba(255, 0, 255, 0.2); /* Match other multi-selected segments */
+}
+
 .resize-handle {
   position: absolute;
   top: 0;

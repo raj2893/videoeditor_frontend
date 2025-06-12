@@ -15,6 +15,7 @@ const TimelineLayer = ({
   onTransitionSelect,
   isSplitMode,
   handleSplit,
+  multiSelectedSegmentIds,
 }) => {
   const isAudioLayer = layer.some((item) => item.type === 'audio');
 
@@ -53,11 +54,12 @@ const TimelineLayer = ({
             top: '5px',
           };
           const isSelected = item.id === selectedSegmentId;
-
+          const isMultiSelected = multiSelectedSegmentIds.includes(item.id); // Check if multi-selected
+        
           const itemTransitions = transitions.filter(
             (t) => t.segmentId === item.id && t.layer === layerIndex
           );
-
+        
           return (
             <div
               key={item.id}
@@ -70,7 +72,9 @@ const TimelineLayer = ({
                   : item.type === 'audio'
                   ? 'audio-segment'
                   : 'video-segment'
-              } ${item.id === playingVideoId ? 'playing' : ''} ${isSelected ? 'selected' : ''}`}
+              } ${item.id === playingVideoId ? 'playing' : ''} ${isSelected ? 'selected' : ''} ${
+                isMultiSelected ? 'multi-selected' : ''
+              }`}
               draggable={!isSplitMode}
               onDragStart={(e) => handleDragStart(e, item, layerIndex)}
               onTouchStart={(e) => {
@@ -86,7 +90,7 @@ const TimelineLayer = ({
                   if (item.type === 'text') {
                     handleEditTextSegment(item, e);
                   } else {
-                    handleVideoSelect(item.id);
+                    handleVideoSelect(item.id, e); // Pass the event
                   }
                 }
               }}
@@ -97,10 +101,12 @@ const TimelineLayer = ({
                   const clickX = e.clientX - rect.left;
                   const clickTime = item.startTime + clickX / timeScale;
                   handleSplit(item, clickTime, layerIndex);
+                } else if (e.shiftKey) {
+                  handleVideoSelect(item.id, e); // Handle multi-selection for Shift+Click
                 } else if (item.type === 'text') {
-                  handleEditTextSegment(item, e);
+                  handleEditTextSegment(item, e); // Single-click edits text
                 } else {
-                  handleVideoSelect(item.id);
+                  handleVideoSelect(item.id, e); // Single-click selects non-text segments
                 }
               }}
               style={item.type === 'audio' ? { ...style, backgroundImage: 'none' } : style}

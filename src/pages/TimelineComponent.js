@@ -13,6 +13,7 @@ import ImageSegmentHandler from './ImageSegmentHandler';
 import AudioSegmentHandler from './AudioSegmentHandler';
 import GeneralSegmentHandler from './GeneralSegmentHandler';
 import { API_BASE_URL, CDN_URL } from "../Config";
+import { every } from 'lodash';
 
 const TimelineComponent = ({
   videos,
@@ -47,6 +48,8 @@ const TimelineComponent = ({
   onTimelineClick,
   setIsAddingToTimeline,
   setIsLoading,
+  multiSelectedSegments,
+  setMultiSelectedSegments
 }) => {
   // Removed local playhead and currentTime states
   const [timelineVideos, setTimelineVideos] = useState([]);
@@ -342,10 +345,52 @@ useEffect(() => {
   };
 }, [isSplitMode, currentTime, timeScale]);
 
-  const handleVideoSelect = (videoId) => {
-    if (isSplitMode) return;
-    setPlayingVideoId(videoId);
-    let selected = null;
+const handleVideoSelect = (videoId, event) => {
+  if (isSplitMode) return;
+  setPlayingVideoId(videoId);
+  let selected = null;
+
+  if (event && event.shiftKey) {
+    let newMultiSelected = [...multiSelectedSegments];
+    for (let i = 0; i < videoLayers.length; i++) {
+      const item = videoLayers[i].find((v) => v.id === videoId);
+      if (item) {
+        selected = { ...item, layerIndex: i };
+        if (newMultiSelected.some((seg) => seg.id === item.id)) {
+          // Deselect if already selected
+          newMultiSelected = newMultiSelected.filter((seg) => seg.id !== item.id);
+        } else {
+          // Add to multi-selection
+          newMultiSelected.push(selected);
+        }
+        break;
+      }
+    }
+    if (!selected) {
+      for (let i = 0; i < audioLayers.length; i++) {
+        const item = audioLayers[i].find((v) => v.id === videoId);
+        if (item) {
+          selected = { ...item, layerIndex: i };
+          if (newMultiSelected.some((seg) => seg.id === item.id)) {
+            newMultiSelected = newMultiSelected.filter((seg) => seg.id !== item.id);
+          } else {
+            newMultiSelected.push(selected);
+          }
+          break;
+        }
+      }
+    }
+    setMultiSelectedSegments(newMultiSelected);
+    if (newMultiSelected.length >= 1) {
+      // Do not call onSegmentSelect to avoid resetting multiSelectedSegments
+      setSelectedSegment(null); // Clear single selection
+    } else {
+      setSelectedSegment(null);
+      if (onSegmentSelect) onSegmentSelect(null);
+    }
+  } else {
+    // Single selection
+    setMultiSelectedSegments([]); // Clear multi-selection
     for (let i = 0; i < videoLayers.length; i++) {
       const item = videoLayers[i].find((v) => v.id === videoId);
       if (item) {
@@ -365,8 +410,9 @@ useEffect(() => {
       }
     }
     if (onSegmentSelect) onSegmentSelect(selected);
-    if (selected && onTimelineClick) onTimelineClick(); // Add this line to select the timeline
-  };
+  }
+  if (selected && onTimelineClick) onTimelineClick();
+};
 
   // Removed localIsPlaying state and sync logic
   const autoSave = useCallback(
@@ -1215,7 +1261,7 @@ useEffect(() => {
   
     const isTouchEvent = e.type === 'touchstart' || e.type === 'touchend';
     if (isTouchEvent) {
-      e.preventDefault(); // Prevent default touch behavior
+      e.preventDefault();
     }
     const clientX = isTouchEvent ? e.changedTouches[0].clientX : e.clientX;
     const clientY = isTouchEvent ? e.changedTouches[0].clientY : e.clientY;
@@ -1224,13 +1270,10 @@ useEffect(() => {
   
     let clickTime = clickX / timeScale;
   
-    // Apply magnetic snapping to playhead in split mode
-    const isMagneticSnap = isSplitMode && Math.abs(clickTime - currentTime) <= MAGNETIC_THRESHOLD;
-    if (isMagneticSnap) {
+    if (isSplitMode && Math.abs(clickTime - currentTime) <= MAGNETIC_THRESHOLD) {
       clickTime = currentTime;
-      // console.log('Magnetic snap: Adjusted clickTime to playhead at:', clickTime);
     }
-
+  
     const layerHeight = 40;
     const totalVideoLayers = videoLayers.length;
     const totalAudioLayers = audioLayers.length;
@@ -1238,25 +1281,19 @@ useEffect(() => {
     const reversedIndex = Math.floor(clickY / layerHeight);
     let clickedLayerIndex;
     let isAudioLayer = false;
-
-    // console.log('handleTimelineClick: isSplitMode=', isSplitMode, 'isMagneticSnap=', isMagneticSnap, 'clickTime=', clickTime, 'reversedIndex=', reversedIndex, 'totalVideoLayers=', totalVideoLayers, 'totalAudioLayers=', totalAudioLayers, 'clickX=', clickX, 'timeScale=', timeScale);
-
-    // Check if the click is on the separator bar (audio-section-label)
+  
     if (reversedIndex === totalVideoLayers + 1) {
-      // console.log('Clicked on audio section separator, ignoring action');
       if (isSplitMode) {
-        // In split mode, do nothing when clicking the separator
         return;
       }
-      // In non-split mode, proceed with time update
       onTimeUpdate(clickTime);
       setPlayingVideoId(null);
       setSelectedSegment(null);
+      setMultiSelectedSegments([]); // Clear multi-selection
       if (onSegmentSelect) onSegmentSelect(null);
       return;
     }
-
-    // Calculate the actual audio layer index that was clicked
+  
     if (reversedIndex > totalVideoLayers && reversedIndex < totalLayers - 1) {
       isAudioLayer = true;
       const audioLayerIndex = reversedIndex - (totalVideoLayers + 1);
@@ -1266,86 +1303,58 @@ useEffect(() => {
     } else {
       clickedLayerIndex = -1;
     }
-
-    // console.log('clickedLayerIndex (corrected)=', clickedLayerIndex, 'isAudioLayer=', isAudioLayer);
-
+  
     let foundItem = null;
     const targetLayers = isAudioLayer ? audioLayers : videoLayers;
-
-    // Check for segment at click position in the clicked layer
+  
     if (isAudioLayer && clickedLayerIndex >= 0 && clickedLayerIndex < audioLayers.length) {
       const layerItems = audioLayers[clickedLayerIndex];
-      // console.log('Checking audio layer', clickedLayerIndex, 'items=', layerItems.map(item => ({
-      //   id: item.id,
-      //   type: item.type,
-      //   startTime: item.startTime,
-      //   duration: item.duration,
-      //   endTime: item.startTime + item.duration,
-      //   fileName: item.fileName
-      // })));
       foundItem = layerItems.find((item) => {
         const itemStart = item.startTime;
         const itemEnd = itemStart + item.duration;
         const tolerance = 0.05;
         return clickTime >= itemStart - tolerance && clickTime <= itemEnd + tolerance;
       });
-      // console.log('foundItem in audio layer', clickedLayerIndex, '=', foundItem ? foundItem.id : 'none');
     } else if (!isAudioLayer && clickedLayerIndex >= 0 && clickedLayerIndex < videoLayers.length) {
       const layerItems = videoLayers[clickedLayerIndex];
-      // console.log('Checking video layer', clickedLayerIndex, 'items=', layerItems.map(item => ({
-      //   id: item.id,
-      //   type: item.type,
-      //   startTime: item.startTime,
-      //   duration: item.duration,
-      //   endTime: item.startTime + item.duration,
-      //   fileName: item.fileName
-      // })));
       foundItem = layerItems.find((item) => {
         const itemStart = item.startTime;
         const itemEnd = itemStart + item.duration;
         const tolerance = 0.05;
         return clickTime >= itemStart - tolerance && clickTime <= itemEnd + tolerance;
       });
-      // console.log('foundItem in video layer', clickedLayerIndex, '=', foundItem ? foundItem.id : 'none');
     }
-
-    // In split mode, prioritize the clicked segment for splitting
+  
     if (isSplitMode && foundItem) {
-      // console.log('Split mode active, splitting segment:', foundItem.id, 'type:', foundItem.type, 'at time:', clickTime);
       if (foundItem.type === 'video') {
-        // console.log('Splitting video:', foundItem.id);
         await videoHandler.handleVideoSplit(foundItem, clickTime, clickedLayerIndex);
         saveHistory();
       } else if (foundItem.type === 'audio') {
-        // console.log('Splitting audio:', foundItem.id, 'extracted=', foundItem.extracted);
         await audioHandler.handleAudioSplit(foundItem, clickTime, clickedLayerIndex);
         saveHistory();
       } else if (foundItem.type === 'text') {
-        // console.log('Splitting text:', foundItem.id);
         await textHandler.handleTextSplit(foundItem, clickTime, clickedLayerIndex);
         saveHistory();
       } else if (foundItem.type === 'image') {
-        // console.log('Splitting image:', foundItem.id);
         await imageHandler.handleImageSplit(foundItem, clickTime, clickedLayerIndex);
         saveHistory();
       }
       setSelectedSegment(null);
+      setMultiSelectedSegments([]); // Clear multi-selection
       setPlayingVideoId(null);
       return;
     }
-
-    // If not in split mode, proceed with normal behavior
+  
     if (!isSplitMode) {
-      onTimeUpdate(clickTime); // Update time in ProjectEditor
+      onTimeUpdate(clickTime);
       setPlayingVideoId(null);
       setSelectedSegment(null);
+      setMultiSelectedSegments([]); // Clear multi-selection
       if (onSegmentSelect) onSegmentSelect(null);
     }
-
-    // Search other layers only if no item was found and not in split mode
+  
     if (!foundItem && !isSplitMode) {
       if (isAudioLayer) {
-        // console.log('No segment in audio layer', clickedLayerIndex, ', searching all audio layers');
         for (let i = 0; i < audioLayers.length; i++) {
           if (i === clickedLayerIndex) continue;
           const layerItems = audioLayers[i];
@@ -1358,12 +1367,10 @@ useEffect(() => {
           if (found) {
             foundItem = found;
             clickedLayerIndex = i;
-            // console.log('Found segment in audioLayers[', i, ']:', found.id);
             break;
           }
         }
       } else {
-        // console.log('No segment in video layer', clickedLayerIndex, ', searching all video layers');
         for (let i = 0; i < videoLayers.length; i++) {
           if (i === clickedLayerIndex) continue;
           const layerItems = videoLayers[i];
@@ -1376,15 +1383,13 @@ useEffect(() => {
           if (found) {
             foundItem = found;
             clickedLayerIndex = i;
-            // console.log('Found segment in videoLayers[', i, ']:', found.id);
             break;
           }
         }
       }
     }
-
+  
     if (foundItem && !isSplitMode) {
-      // console.log('Final foundItem=', foundItem.type, 'id=', foundItem.id, 'fileName=', foundItem.fileName, 'startTime=', foundItem.startTime, 'duration=', foundItem.duration, 'layerIndex=', clickedLayerIndex);
       if (foundItem.type === 'text') {
         handleVideoSelect(foundItem.id);
       } else {
@@ -1392,10 +1397,8 @@ useEffect(() => {
         if (onVideoSelect) onVideoSelect(clickTime, foundItem);
       }
       return;
-    } else {
-      // console.log('No item found at clickTime=', clickTime);
     }
-
+  
     if (!isSplitMode && onVideoSelect) onVideoSelect(clickTime);
   };
 
@@ -1650,6 +1653,7 @@ useEffect(() => {
                     if (onSegmentSelect) onSegmentSelect({ ...item, layerIndex: item.layer });
                   }}
                   selectedSegmentId={selectedSegment ? selectedSegment.id : null}
+                  multiSelectedSegmentIds={multiSelectedSegments.map((seg) => seg.id)}
                   showResizeHandles={(item) => item.id === (selectedSegment ? selectedSegment.id : null)}
                   transitions={transitions.filter((t) => t.layer === layerIndex)}
                   onTransitionSelect={onTransitionSelect}
@@ -1674,6 +1678,7 @@ useEffect(() => {
                 handleVideoSelect={handleVideoSelect}
                 handleEditTextSegment={() => {}}
                 selectedSegmentId={selectedSegment ? selectedSegment.id : null}
+                multiSelectedSegmentIds={multiSelectedSegments.map((seg) => seg.id)}
                 showResizeHandles={(item) => item.id === (selectedSegment ? selectedSegment.id : null)}
                 transitions={[]}
                 onTransitionSelect={onTransitionSelect}

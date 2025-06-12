@@ -98,6 +98,7 @@ const ProjectEditor = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [multiSelectedSegments, setMultiSelectedSegments] = useState([]);
   const textSettingsRef = useRef(textSettings);
 
   const canUndo = historyIndex > 0;
@@ -2967,8 +2968,66 @@ const handleDeleteSegment = async () => {
   }
 };
 
-// Replace the existing useEffect for keydown events
-// In ProjectEditor.js, replace or update the existing keydown useEffect
+const handleDeleteMultipleSegments = async () => {
+  if (multiSelectedSegments.length === 0) return;
+  setIsDeleting(true);
+  try {
+    const token = localStorage.getItem('token');
+    const segmentIds = multiSelectedSegments.map((seg) => seg.id);
+    await axios.delete(`${API_BASE_URL}/projects/${projectId}/remove-segments`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { sessionId },
+      data: { segmentIds },
+    });
+
+    // Update videoLayers and audioLayers
+    let updatedVideoLayers = videoLayers;
+    let updatedAudioLayers = audioLayers;
+    setVideoLayers((prevLayers) => {
+      const newLayers = prevLayers.map((layer) =>
+        layer.filter((seg) => !segmentIds.includes(seg.id))
+      );
+      updatedVideoLayers = newLayers;
+      return newLayers;
+    });
+    setAudioLayers((prevLayers) => {
+      const newLayers = prevLayers.map((layer) =>
+        layer.filter((seg) => !segmentIds.includes(seg.id))
+      );
+      updatedAudioLayers = newLayers;
+      return newLayers;
+    });
+
+    // Update total duration
+    let maxEndTime = 0;
+    [...updatedVideoLayers, ...updatedAudioLayers].forEach((layer) => {
+      layer.forEach((item) => {
+        const endTime = item.startTime + item.duration;
+        if (endTime > maxEndTime) maxEndTime = endTime;
+      });
+    });
+    setTotalDuration(maxEndTime);
+
+    // Clear selections
+    setMultiSelectedSegments([]);
+    setSelectedSegment(null);
+
+    // Save history
+    saveHistory();
+
+    // Trigger auto-save
+    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    updateTimeoutRef.current = setTimeout(() => {
+      autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+    }, 1000);
+  } catch (error) {
+    console.error('Error deleting multiple segments:', error);
+    alert('Failed to delete segments. Please try again.');
+  } finally {
+    setIsDeleting(false);
+  }
+};
+
 useEffect(() => {
   const frameDuration = 1 / projectFps;
   const handleKeyDown = (e) => {
@@ -3114,6 +3173,7 @@ const toggleSection = (section) => {
 
 const handleSegmentSelect = async (segment) => {
   setSelectedSegment(segment);
+  setMultiSelectedSegments([]);
   if (segment) {
     let initialValues = {};
     switch (segment.type) {
@@ -5126,6 +5186,14 @@ return (
           >
             🗑️
           </button>
+          <button
+            className="delete-button"
+            onClick={handleDeleteMultipleSegments}
+            disabled={multiSelectedSegments.length < 2}
+            title="Delete Selected Segments"
+          >
+            🗑️ All
+          </button>          
           <button className="control-button" onClick={handleExportProject} title="Export Project">
             ⬆️
           </button>
@@ -5178,7 +5246,9 @@ return (
               setIsAddingToTimeline={setIsAddingToTimeline} // Add this prop 
               isSaving={isSaving}
               setIsSaving={setIsSaving}
-              setIsLoading={setIsLoading}        
+              setIsLoading={setIsLoading}
+              multiSelectedSegments={multiSelectedSegments}   
+              setMultiSelectedSegments={setMultiSelectedSegments}  
             />
           ) : (
             <div className="loading-container">

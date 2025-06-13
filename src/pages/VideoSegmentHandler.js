@@ -82,35 +82,35 @@ const VideoSegmentHandler = ({
 
   const handleVideoDrop = async (e, draggingItem, dragLayer, mouseX, mouseY, timeScale, dragOffset, snapIndicators) => {
     if (!sessionId || draggingItem?.type === 'text' || draggingItem?.type === 'audio') return;
-
+  
     if (!timelineRef.current) {
       console.error('Timeline ref is not available');
       return;
     }
-
+  
     const timelineRect = timelineRef.current.getBoundingClientRect();
     const layerHeight = 40;
     const relativeMouseY = mouseY - timelineRect.top;
-
+  
     const timelineLayers = timelineRef.current.querySelectorAll('.timeline-layer');
     if (!timelineLayers) {
       console.error('Timeline layers not found');
       return;
     }
-
+  
     const totalVideoLayers = videoLayers.length;
     const reversedIndex = Math.floor(relativeMouseY / layerHeight);
     let targetLayer;
-
+  
     if (reversedIndex <= totalVideoLayers) {
       targetLayer = totalVideoLayers - reversedIndex;
     } else {
       // console.log('Cannot drop video in audio layers');
       return;
     }
-
+  
     targetLayer = Math.max(0, reversedIndex < 0 ? totalVideoLayers : targetLayer);
-
+  
     if (!draggingItem) {
       const dataString = e.dataTransfer.getData('application/json');
       if (dataString) {
@@ -142,49 +142,63 @@ const VideoSegmentHandler = ({
               } else break;
             }
           }
-
-          // Call addVideoToTimeline with rounded startTime
-          // For new video drop
-          const newSegment = await addVideoToTimeline(
-            video.fileName,
-            targetLayer,
-            roundToThreeDecimals(adjustedStartTime),
-            null
-          );
-
-          newVideoLayers[targetLayer].push({
-            ...newSegment,
-            startTime: roundToThreeDecimals(newSegment.startTime),
-            timelineStartTime: roundToThreeDecimals(newSegment.timelineStartTime),
-            timelineEndTime: roundToThreeDecimals(newSegment.timelineEndTime),
-            startTimeWithinVideo: roundToThreeDecimals(newSegment.startTimeWithinVideo || 0),
-            endTimeWithinVideo: roundToThreeDecimals(newSegment.endTimeWithinVideo || newSegment.duration),
-            duration: roundToThreeDecimals((newSegment.endTimeWithinVideo - newSegment.startTimeWithinVideo) / (newSegment.speed ?? 1.0)),
-            filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(video.fileName)}`,
-            positionX: newSegment.positionX ?? 0,
-            positionY: newSegment.positionY ?? 0,
-            scale: newSegment.scale ?? 1,
-            rotation: newSegment.rotation ?? 0,
-            speed: newSegment.speed ?? 1.0,
-          });
-
-          // Update total duration
-          let maxDuration = 0;
-          newVideoLayers.forEach((layer) => {
-            layer.forEach((segment) => {
-              const effectiveDuration = segment.duration;
-              const endTime = segment.startTime + effectiveDuration;
-              if (endTime > maxDuration) maxDuration = endTime;
+  
+          // Check file availability before adding to timeline
+          const token = localStorage.getItem('token');
+          setIsLoading(true); // Show loading indicator
+          try {
+            // Assume r2Path and cdnUrl are available in video object or fetch from backend
+            const r2Path = video.r2Path || `videos/projects/${projectId}/${video.fileName}`;
+            const cdnUrl = video.cdnUrl || `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(video.fileName)}`;
+            await checkFileAvailability(r2Path, cdnUrl, token);
+  
+            // Call addVideoToTimeline with rounded startTime
+            const newSegment = await addVideoToTimeline(
+              video.fileName,
+              targetLayer,
+              roundToThreeDecimals(adjustedStartTime),
+              null
+            );
+  
+            newVideoLayers[targetLayer].push({
+              ...newSegment,
+              startTime: roundToThreeDecimals(newSegment.startTime),
+              timelineStartTime: roundToThreeDecimals(newSegment.timelineStartTime),
+              timelineEndTime: roundToThreeDecimals(newSegment.timelineEndTime),
+              startTimeWithinVideo: roundToThreeDecimals(newSegment.startTimeWithinVideo || 0),
+              endTimeWithinVideo: roundToThreeDecimals(newSegment.endTimeWithinVideo || newSegment.duration),
+              duration: roundToThreeDecimals((newSegment.endTimeWithinVideo - newSegment.startTimeWithinVideo) / (newSegment.speed ?? 1.0)),
+              filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(video.fileName)}`,
+              positionX: newSegment.positionX ?? 0,
+              positionY: newSegment.positionY ?? 0,
+              scale: newSegment.scale ?? 1,
+              rotation: newSegment.rotation ?? 0,
+              speed: newSegment.speed ?? 1.0,
             });
-          });
-          setTotalDuration(maxDuration > 0 ? maxDuration : 0);
+  
+            // Update total duration
+            let maxDuration = 0;
+            newVideoLayers.forEach((layer) => {
+              layer.forEach((segment) => {
+                const effectiveDuration = segment.duration;
+                const endTime = segment.startTime + effectiveDuration;
+                if (endTime > maxDuration) maxDuration = endTime;
+              });
+            });
+            setTotalDuration(maxDuration > 0 ? maxDuration : 0);
+          } catch (error) {
+            console.error('Error adding video to timeline:', error.message);
+            alert(`Failed to add video ${video.fileName} to timeline. Please try again.`);
+          } finally {
+            setIsLoading(false); // Hide loading indicator
+          }
         }
       }
       return;
     }
-
+  
     if (draggingItem.type !== 'video') return;
-
+  
     let actualLayerIndex = targetLayer;
     const newStartTime = snapIndicators.length > 0
       ? snapIndicators[0].time - (snapIndicators[0].edge === 'end' ? draggingItem.duration : 0)
@@ -192,7 +206,7 @@ const VideoSegmentHandler = ({
     const adjustedStartTime = Math.max(0, newStartTime);
     let newVideoLayers = [...videoLayers];
     while (newVideoLayers.length <= actualLayerIndex) newVideoLayers.push([]);
-
+  
     const hasOverlap = newVideoLayers[actualLayerIndex].some((video) => {
       if (draggingItem && video.id === draggingItem.id) return false;
       const videoStart = video.startTime;
@@ -200,12 +214,12 @@ const VideoSegmentHandler = ({
       const newVideoEnd = adjustedStartTime + draggingItem.duration;
       return adjustedStartTime < videoEnd && newVideoEnd > videoStart;
     });
-
+  
     if (hasOverlap) {
       // console.log('Overlap detected. Cannot place item here.');
       return;
     }
-
+  
     if (actualLayerIndex === dragLayer) {
       newVideoLayers[actualLayerIndex] = newVideoLayers[actualLayerIndex].filter((v) => v.id !== draggingItem.id);
     } else {
@@ -221,18 +235,18 @@ const VideoSegmentHandler = ({
       startTimeWithinVideo: roundToThreeDecimals(draggingItem.startTimeWithinVideo),
       endTimeWithinVideo: roundToThreeDecimals(draggingItem.endTimeWithinVideo),
       duration: roundToThreeDecimals((draggingItem.endTimeWithinVideo - draggingItem.startTimeWithinVideo) / (draggingItem.speed ?? 1.0)),
-      positionX: draggingItem.positionX ?? 0, // Add positionX
-      positionY: draggingItem.positionY ?? 0, // Add positionY
-      scale: draggingItem.scale ?? 1, // Add scale
-      rotation: draggingItem.rotation ?? 0, // Add rotation
+      positionX: draggingItem.positionX ?? 0,
+      positionY: draggingItem.positionY ?? 0,
+      scale: draggingItem.scale ?? 1,
+      rotation: draggingItem.rotation ?? 0,
       speed: draggingItem.speed ?? 1.0,
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
-
+  
     setVideoLayers(newVideoLayers);
     saveHistory(newVideoLayers, []);
     autoSave(newVideoLayers, []);
-
+  
     await updateSegmentPosition(
       draggingItem.id,
       roundToThreeDecimals(adjustedStartTime),
@@ -453,6 +467,30 @@ const VideoSegmentHandler = ({
       return null;
     }
   };
+
+const checkFileAvailability = async (r2Path, cdnUrl, token, maxAttempts = 15, interval = 2000) => {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/projects/check-file-availability`,
+        {
+          params: { r2Path, cdnUrl },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const { fileExists, cdnAvailable } = response.data;
+      if (fileExists && cdnAvailable) {
+        console.log(`File available after ${attempt} attempts: ${r2Path}`);
+        return true;
+      }
+      console.warn(`File not available on attempt ${attempt}/${maxAttempts}: fileExists=${fileExists}, cdnAvailable=${cdnAvailable}`);
+    } catch (error) {
+      console.error(`Error checking file availability on attempt ${attempt}:`, error);
+    }
+    await new Promise((resolve) => setTimeout(resolve, interval * Math.pow(1.5, attempt - 1))); // Exponential backoff
+  }
+  throw new Error(`File not available after ${maxAttempts} attempts: ${r2Path}`);
+};  
 
   return { handleVideoDrop, updateSegmentPosition, handleVideoSplit, fetchVideoDuration };
 };

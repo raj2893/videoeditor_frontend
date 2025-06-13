@@ -1998,8 +1998,62 @@ const handleVideoUpload = async (event) => {
           waveformJsonPath: video.waveformJsonPath
             ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(video.waveformJsonPath.split('/').pop())}`
             : null,
+          r2Path: video.videoPath, // Store r2Path for polling
+          cdnUrl: video.cdnUrl, // Store cdnUrl for polling
         };
       });
+
+      // Poll for file availability before adding to timeline
+      for (const video of updatedVideos) {
+        const maxAttempts = 15;
+        const interval = 2000; // Start with 2 seconds
+        let attempt = 1;
+        let fileAvailable = false;
+
+        while (attempt <= maxAttempts && !fileAvailable) {
+          try {
+            const availabilityResponse = await axios.get(
+              `${API_BASE_URL}/projects/check-file-availability`,
+              {
+                params: {
+                  r2Path: video.r2Path,
+                  cdnUrl: video.cdnUrl,
+                },
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+            const { fileExists, cdnAvailable } = availabilityResponse.data;
+            if (fileExists && cdnAvailable) {
+              fileAvailable = true;
+              console.log(`File available after ${attempt} attempts: ${video.fileName}`);
+            } else {
+              console.warn(`File not available on attempt ${attempt}/${maxAttempts}: fileExists=${fileExists}, cdnAvailable=${cdnAvailable}, file=${video.fileName}`);
+            }
+          } catch (error) {
+            console.error(`Error checking file availability on attempt ${attempt} for ${video.fileName}:`, error);
+          }
+
+          if (!fileAvailable) {
+            await new Promise((resolve) => setTimeout(resolve, interval * Math.pow(1.5, attempt - 1))); // Exponential backoff
+            attempt++;
+          }
+        }
+
+        if (!fileAvailable) {
+          throw new Error(`File not available after ${maxAttempts} attempts: ${video.fileName}`);
+        }
+
+        // Add video to timeline after confirming availability
+        await addVideoToTimeline(
+          video.fileName,
+          0, // Default layer
+          0, // Default timeline start time
+          null,
+          0, // Default start time within video
+          null
+        );
+      }
+
       setVideos((prev) => [...prev, ...updatedVideos]);
 
       // Generate thumbnails and remove from pendingUploads when done

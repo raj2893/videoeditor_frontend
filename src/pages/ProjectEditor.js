@@ -4996,7 +4996,7 @@ return (
           )}
           {expandedSection === 'elements' && (
             <div className="section-content">
-              {/* <input
+              <input
                 type="text"
                 placeholder="Search elements..."
                 value={elementSearchQuery}
@@ -5035,9 +5035,9 @@ return (
                     </div>
                   ))}
                 </div>
-              )} */}
+              )}
 
-              <div className="empty-state">Coming soon...</div>
+              {/* <div className="empty-state">Coming soon...</div> */}
             </div>
           )}
           {expandedSection === 'textStyles' && (

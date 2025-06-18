@@ -3607,16 +3607,38 @@ const removeKeyframe = async (property, time) => {
 };
 
 const toggleKeyframe = (property) => {
+  if (!selectedSegment) return;
+
   const currentKeyframes = keyframes[property] || [];
   const keyframeAtTime = currentKeyframes.find((kf) => areTimesEqual(kf.time, currentTimeInSegment));
+
   if (keyframeAtTime) {
+    // If a keyframe exists at the current time, remove it
     removeKeyframe(property, currentTimeInSegment);
   } else {
-    const value = tempSegmentValues[property] !== undefined
-      ? tempSegmentValues[property]
-      : (currentKeyframes.length > 0
-         ? getValueAtTime(currentKeyframes, currentTimeInSegment)
-         : (property === 'scale' || property === 'opacity' ? 1 : 0));
+    let value;
+
+    if (currentKeyframes.length === 0) {
+      // No keyframes exist for this property, use the static value from tempSegmentValues or segment
+      value = tempSegmentValues[property] !== undefined
+        ? tempSegmentValues[property]
+        : selectedSegment[property] !== undefined
+          ? selectedSegment[property]
+          : (property === 'scale' || property === 'opacity' ? 1 : property === 'volume' ? 1 : 0);
+    } else {
+      // Keyframes exist, use the interpolated value at the current time
+      value = getValueAtTime(currentKeyframes, currentTimeInSegment);
+      if (value === null) {
+        // Fallback to static value if interpolation fails
+        value = tempSegmentValues[property] !== undefined
+          ? tempSegmentValues[property]
+          : selectedSegment[property] !== undefined
+            ? selectedSegment[property]
+            : (property === 'scale' || property === 'opacity' ? 1 : property === 'volume' ? 1 : 0);
+      }
+    }
+
+    // Add the new keyframe with the determined value
     addKeyframe(property, value);
   }
 };

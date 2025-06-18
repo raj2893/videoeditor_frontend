@@ -15,7 +15,6 @@ const AudioSegmentHandler = ({
   timelineRef,
   roundToThreeDecimals,
   setTotalDuration, // Added prop
-  preloadMedia, // Added prop
   videoLayers, // Add videoLayers prop
   setIsAddingToTimeline, // Add this
   setIsLoading
@@ -111,8 +110,8 @@ const AudioSegmentHandler = ({
         ...(item.volume !== undefined && { volume: item.volume }),
       };
 
-      if (item.volume !== undefined && (item.volume < 0 || item.volume > 1)) {
-        console.warn(`Invalid volume: ${item.volume}. Clamping to 1.0.`);
+      if (item.volume !== undefined && (item.volume < 0 || item.volume > 15)) {
+        console.warn(`Invalid volume: ${item.volume}. Clamping to 15.0.`);
         requestBody.volume = 1.0;
       }
 
@@ -295,9 +294,6 @@ const AudioSegmentHandler = ({
           setTotalDuration((prev) =>
             Math.max(prev, adjustedStartTime + audio.duration)
           );
-          if (preloadMedia) {
-            preloadMedia();
-          }
   
           try {
             setIsAddingToTimeline(true); // Set loading state
@@ -373,9 +369,6 @@ const AudioSegmentHandler = ({
             setTotalDuration((prev) =>
               Math.max(prev, newAudioSegment.timelineEndTime)
             );
-            if (preloadMedia) {
-              preloadMedia();
-            }
   
             autoSave([], newAudioLayers);
             return { ...tempSegment, id: finalSegmentId };
@@ -464,9 +457,6 @@ const AudioSegmentHandler = ({
     setTotalDuration((prev) =>
       Math.max(prev, newStartTime + draggingItem.duration)
     );
-    if (preloadMedia) {
-      preloadMedia();
-    }
     await updateAudioSegment(
       draggingItem.id,
       roundToThreeDecimals(newStartTime),
@@ -585,6 +575,7 @@ const AudioSegmentHandler = ({
           ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioFileName)}`
           : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioFileName)}`,
         extracted: item.extracted || false,
+        volume: item.volume || 1,
       };
       // console.log('firstPart=', firstPart);
       // console.log('secondPart=', secondPart);
@@ -607,9 +598,6 @@ const AudioSegmentHandler = ({
       saveHistory([], newAudioLayers);
   
       setTotalDuration((prev) => Math.max(prev, secondPart.timelineEndTime));
-      if (preloadMedia) {
-        preloadMedia();
-      }
   
       await updateAudioSegment(
         item.id,

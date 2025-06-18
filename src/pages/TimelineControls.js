@@ -46,14 +46,14 @@ const TimelineControls = ({
           ✂️
         </button>
       </div>
-      <div className="split-at-current-control">
+      <div className="split-control">
         <button
           onClick={(e) => { stopPropagationForControls(e); handleSplitAtCurrent(); }}
           className={isSplitAtCurrentEnabled ? '' : 'disabled'}
           disabled={!isSplitAtCurrentEnabled}
           title="Split at Current Time"
         >
-          <span className="button-text">Split at Current</span>
+          ✂️ CURRENT
         </button>
       </div>      
       {isSaving && <span className="saving-indicator">Saving...</span>}

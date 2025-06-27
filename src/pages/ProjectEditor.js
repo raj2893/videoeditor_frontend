@@ -7,11 +7,10 @@ import VideoPreview from './VideoPreview';
 import KeyframeControls from './KeyframeControls';
 import FilterControls from './FilterControls';
 import TransitionsPanel from './TransitionsPanel';
-import TextPanel from './TextPanel'; // Adjust the path based on your project structure
+import TextPanel from './TextPanel';
 import { v4 as uuidv4 } from 'uuid';
 import { debounce } from 'lodash';
 import { API_BASE_URL, CDN_URL } from '../Config.js';
-
 
 const ProjectEditor = () => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -49,14 +48,14 @@ const ProjectEditor = () => {
     backgroundOpacity: 1.0,
     backgroundBorderWidth: 0,
     backgroundBorderColor: '#000000',
-    backgroundH: 0, // Add this
-    backgroundW: 0, // Add this
+    backgroundH: 0,
+    backgroundW: 0,
     backgroundBorderRadius: 0,
-    textBorderColor: 'transparent', // Added for text border
-    textBorderWidth: 0, // Added for text border
-    textBorderOpacity: 1.0, // Added for text border
-    letterSpacing: 0, // Added
-    lineSpacing: 1.2, // Added
+    textBorderColor: 'transparent',
+    textBorderWidth: 0,
+    textBorderOpacity: 1.0,
+    letterSpacing: 0,
+    lineSpacing: 1.2,
   });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [filterParams, setFilterParams] = useState({});
@@ -76,24 +75,19 @@ const ProjectEditor = () => {
   const [elements, setElements] = useState([]);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [loadedAudioSegments, setLoadedAudioSegments] = useState(new Set()); // Track loaded audio segments
-  // Add this to the existing state declarations at the top of ProjectEditor
+  const [loadedAudioSegments, setLoadedAudioSegments] = useState(new Set()); 
   const [elementSearchQuery, setElementSearchQuery] = useState('');
-  // Add this to the existing state declarations at the top of ProjectEditor
   const [isTimelineSelected, setIsTimelineSelected] = useState(false);
-  const [loading, setLoading] = useState(true); // Add loading state
+  const [loading, setLoading] = useState(true);
   const [isTextEmpty, setIsTextEmpty] = useState(false);
-  const [userRole, setUserRole] = useState('BASIC'); // Default to BASIC
+  const [userRole, setUserRole] = useState('BASIC');
   const [videoUploadError, setVideoUploadError] = useState('');
   const [defaultTextStyles, setDefaultTextStyles] = useState([]);
-  // Add to existing state declarations at the top of ProjectEditor
-  const [uploadProgress, setUploadProgress] = useState({}); // Object to store progress for each file
-  const [tempThumbnails, setTempThumbnails] = useState({}); // Store temporary blurred thumbnails
+  const [uploadProgress, setUploadProgress] = useState({}); 
+  const [tempThumbnails, setTempThumbnails] = useState({});
   const [isContentPanelOpen, setIsContentPanelOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
-  // Add to existing state declarations at the top of ProjectEditor
-  const [pendingUploads, setPendingUploads] = useState(new Set()); // Track pending uploads
+  const [pendingUploads, setPendingUploads] = useState(new Set());
   const [isAddingToTimeline, setIsAddingToTimeline] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -103,17 +97,16 @@ const ProjectEditor = () => {
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
-  // Add this to the top of ProjectEditor with other refs
   const timelineRef = useRef(null);
 
   const navigate = useNavigate();
   const { projectId } = useParams();
-  const location = useLocation(); // Add this line
+  const location = useLocation();
   const updateTimeoutRef = useRef(null);
   const filterUpdateTimeoutRef = useRef(null);
   const animationFrameRef = useRef(null);
   const lastUpdateTimeRef = useRef(performance.now());
-  const transitionSaveTimeoutRef = useRef(null); // New ref for debouncing transition saves
+  const transitionSaveTimeoutRef = useRef(null);
 
   const MIN_TIME_SCALE = 2;
   const MAX_TIME_SCALE = 250;
@@ -134,7 +127,6 @@ const ProjectEditor = () => {
     textSettingsRef.current = textSettings;
   }, [textSettings]);
 
-  // Add this useEffect to handle clicks outside the timeline
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (timelineRef.current && !timelineRef.current.contains(event.target)) {
@@ -151,7 +143,7 @@ const ProjectEditor = () => {
   useEffect(() => {
     const fetchTextStyles = async () => {
       try {
-        const response = await fetch('/data/textStyles.json'); // Adjust path if needed
+        const response = await fetch('/data/textStyles.json');
         if (!response.ok) {
           throw new Error('Failed to fetch text styles');
         }
@@ -159,7 +151,6 @@ const ProjectEditor = () => {
         setDefaultTextStyles(styles);
       } catch (error) {
         console.error('Error fetching text styles:', error);
-        // Fallback to empty array or hardcoded styles if needed
         setDefaultTextStyles([]);
       }
     };
@@ -172,12 +163,10 @@ const ProjectEditor = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          // console.log('No token found, assuming BASIC role');
           setUserRole('BASIC');
           return;
         }
 
-        // Check localStorage first
         const storedProfile = localStorage.getItem('userProfile');
         if (storedProfile) {
           const profile = JSON.parse(storedProfile);
@@ -187,14 +176,12 @@ const ProjectEditor = () => {
           }
         }
 
-        // Fetch from API
         const response = await axios.get(`${API_BASE_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const role = response.data.role || 'BASIC';
         setUserRole(role);
 
-        // Update localStorage
         const updatedProfile = {
           ...JSON.parse(storedProfile || '{}'),
           role,
@@ -202,7 +189,7 @@ const ProjectEditor = () => {
         localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
       } catch (error) {
         console.error('Error fetching user role:', error);
-        setUserRole('BASIC'); // Fallback to BASIC on error
+        setUserRole('BASIC');
         if (error.response?.status === 401) {
           localStorage.removeItem('token');
           localStorage.removeItem('userProfile');
@@ -214,11 +201,10 @@ const ProjectEditor = () => {
     fetchUserRole();
   }, [navigate]);
 
-  // Playback animation
   useEffect(() => {
     if (isPlaying) {
       const updatePlayback = (now) => {
-        const deltaTime = (now - lastUpdateTimeRef.current) / 1000; // Convert to seconds
+        const deltaTime = (now - lastUpdateTimeRef.current) / 1000;
         lastUpdateTimeRef.current = now;
 
         setCurrentTime((prevTime) => {
@@ -244,7 +230,6 @@ const ProjectEditor = () => {
     };
   }, [isPlaying, totalDuration]);
 
-  // Update loaded audio segments
   const handleLoadedAudioSegmentsUpdate = (newLoadedAudioSegments) => {
     setLoadedAudioSegments(newLoadedAudioSegments);
   };
@@ -265,201 +250,6 @@ const ProjectEditor = () => {
     const newHistory = [...history.slice(0, historyIndex + 1), newState];
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-  };
-
-  const autoSaveUndoRedo = async (projectState, retries = 3) => {
-    if (!projectId || !sessionId) {
-      console.warn('Cannot auto-save undo/redo: Missing projectId or sessionId');
-      return;
-    }
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const token = localStorage.getItem('token');
-        const videoLayersToSave = projectState.videoLayers;
-        const audioLayersToSave = projectState.audioLayers;
-        const transitionsToSave = projectState.transitions;
-
-        const seenSegmentIds = new Set();
-        const segments = [];
-
-        videoLayersToSave.forEach((layer, layerIndex) => {
-          if (!Array.isArray(layer)) {
-            console.warn(`Skipping invalid video layer at index ${layerIndex}:`, layer);
-            return;
-          }
-          layer.forEach((item) => {
-            if (seenSegmentIds.has(item.id)) {
-              console.warn(`Duplicate segment ID ${item.id} found in video layer ${layerIndex}`);
-              return;
-            }
-            seenSegmentIds.add(item.id);
-            if (item.type === 'video') {
-              segments.push({
-                id: item.id,
-                type: 'video',
-                sourceVideoPath: item.filePath,
-                layer: item.layer,
-                timelineStartTime: item.startTime,
-                timelineEndTime: item.startTime + item.duration,
-                startTime: item.startTimeWithinVideo || 0,
-                endTime: item.endTimeWithinVideo || item.duration,
-                positionX: item.positionX,
-                positionY: item.positionY,
-                scale: item.scale,
-                opacity: item.opacity,
-                filters: item.filters || [],
-                keyframes: item.keyframes || {},
-              });
-            } else if (item.type === 'image') {
-              segments.push({
-                id: item.id,
-                type: 'image',
-                imagePath: item.fileName,
-                layer: item.layer,
-                timelineStartTime: item.startTime,
-                timelineEndTime: item.startTime + item.duration,
-                positionX: item.positionX,
-                positionY: item.positionY,
-                scale: item.scale,
-                opacity: item.opacity,
-                filters: item.filters || [],
-                keyframes: item.keyframes || {},
-              });
-            } else if (item.type === 'text') {
-              segments.push({
-                id: item.id,
-                type: 'text',
-                text: item.text,
-                layer: item.layer,
-                timelineStartTime: item.startTime,
-                timelineEndTime: item.startTime + item.duration,
-                fontFamily: item.fontFamily,
-                scale: item.scale,
-                fontColor: item.fontColor,
-                backgroundColor: item.backgroundColor,
-                positionX: item.positionX,
-                positionY: item.positionY,
-                opacity: item.opacity,
-                alignment: item.alignment,
-                backgroundOpacity: item.backgroundOpacity,
-                backgroundBorderWidth: item.backgroundBorderWidth,
-                backgroundBorderColor: item.backgroundBorderColor,
-                backgroundPadding: item.backgroundPadding,
-                keyframes: item.keyframes || {},
-              });
-            }
-          });
-        });
-
-        audioLayersToSave.forEach((layer, layerIndex) => {
-          if (!Array.isArray(layer)) {
-            console.warn(`Skipping invalid audio layer at index ${layerIndex}:`, layer);
-            return;
-          }
-          layer.forEach((item) => {
-            if (seenSegmentIds.has(item.id)) {
-              console.warn(`Duplicate segment ID ${item.id} found in audio layer ${layerIndex}`);
-              return;
-            }
-            seenSegmentIds.add(item.id);
-            segments.push({
-              id: item.id,
-              type: 'audio',
-              audioPath: item.fileName,
-              layer: item.layer,
-              timelineStartTime: item.startTime,
-              timelineEndTime: item.startTime + item.duration,
-              startTime: item.startTimeWithinAudio || 0,
-              endTime: item.endTimeWithinAudio || item.duration,
-              volume: item.volume,
-              keyframes: item.keyframes || {},
-            });
-          });
-        });
-
-        const timelineState = {
-          segments,
-          textSegments: segments.filter((s) => s.type === 'text'),
-          imageSegments: segments.filter((s) => s.type === 'image'),
-          audioSegments: segments.filter((s) => s.type === 'audio'),
-          transitions: transitionsToSave || [],
-        };
-
-        await axios.post(
-          `${API_BASE_URL}/projects/${projectId}/saveForUndoRedo`,
-          { timelineState },
-          {
-            params: { sessionId },
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        // console.log('Undo/Redo state saved successfully');
-        return;
-      } catch (error) {
-        console.error(`Error during undo/redo auto-save (attempt ${attempt}):`, error);
-        if (attempt === retries) {
-          alert('Failed to save changes after undo/redo. Please try again.');
-          throw error;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-    }
-  };
-
-  const handleUndo = async () => {
-    if (!canUndo) {
-      // console.log('Cannot undo: No previous state');
-      return;
-    }
-    try {
-      const token = localStorage.getItem('token');
-      const newIndex = historyIndex - 1;
-      const previousState = history[newIndex];
-
-      setVideoLayers(previousState.videoLayers.map((layer) => [...layer]));
-      setAudioLayers(previousState.audioLayers.map((layer) => [...layer]));
-      setTransitions([...previousState.transitions]);
-      setKeyframes({ ...previousState.keyframes });
-      setFilterParams({ ...previousState.filterParams });
-      setAppliedFilters([...previousState.appliedFilters]);
-      setTextSettings({ ...previousState.textSettings });
-      setSelectedSegment(previousState.selectedSegment ? { ...previousState.selectedSegment } : null);
-      setHistoryIndex(newIndex);
-
-      await autoSaveUndoRedo(previousState);
-      // console.log('Undo performed and state saved successfully');
-    } catch (error) {
-      console.error('Failed to perform undo:', error);
-      alert('Failed to perform undo. Please try again.');
-    }
-  };
-
-  const handleRedo = async () => {
-    if (!canRedo) {
-      // console.log('Cannot redo: No next state');
-      return;
-    }
-    try {
-      const token = localStorage.getItem('token');
-      const newIndex = historyIndex + 1;
-      const nextState = history[newIndex];
-
-      setVideoLayers(nextState.videoLayers.map((layer) => [...layer]));
-      setAudioLayers(nextState.audioLayers.map((layer) => [...layer]));
-      setTransitions([...nextState.transitions]);
-      setKeyframes({ ...nextState.keyframes });
-      setFilterParams({ ...nextState.filterParams });
-      setAppliedFilters([...nextState.appliedFilters]);
-      setTextSettings({ ...nextState.textSettings });
-      setSelectedSegment(nextState.selectedSegment ? { ...nextState.selectedSegment } : null);
-      setHistoryIndex(newIndex);
-
-      await autoSaveUndoRedo(nextState);
-      // console.log('Redo performed and state saved successfully');
-    } catch (error) {
-      console.error('Failed to perform redo:', error);
-      alert('Failed to perform redo. Please try again.');
-    }
   };
 
   const autoSaveProject = async (updatedVideoLayers = videoLayers, updatedAudioLayers = audioLayers) => {
@@ -526,11 +316,11 @@ const ProjectEditor = () => {
               backgroundH: item.backgroundH,
               backgroundW: item.backgroundW,
               backgroundBorderRadius: item.backgroundBorderRadius,
-              textBorderColor: item.textBorderColor, // Added
-              textBorderWidth: item.textBorderWidth, // Added
-              textBorderOpacity: item.textBorderOpacity, // Added
+              textBorderColor: item.textBorderColor,
+              textBorderWidth: item.textBorderWidth,
+              textBorderOpacity: item.textBorderOpacity,
               letterSpacing: item.letterSpacing,
-              lineSpacing: item.lineSpacing, // Added
+              lineSpacing: item.lineSpacing,
               keyframes: item.keyframes || {},
             });
           }
@@ -568,7 +358,6 @@ const ProjectEditor = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      // console.log('Project auto-saved successfully');
     } catch (error) {
       console.error('Error during auto-save:', error);
     }
@@ -612,10 +401,9 @@ const ProjectEditor = () => {
         selectedLayer,
         roundToThreeDecimals(timelineStartTime),
         roundToThreeDecimals(timelineStartTime + duration),
-        true // isElement
+        true
       );
 
-      // Explicitly add the segment to videoLayers with isElement: true
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         while (newLayers.length <= selectedLayer) newLayers.push([]);
@@ -644,7 +432,7 @@ const ProjectEditor = () => {
 const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
   if (uploading || isDragEvent) return;
   try {
-    setIsAddingToTimeline(true); // Set loading state
+    setIsAddingToTimeline(true);
     const token = localStorage.getItem('token');
     if (!sessionId || !projectId || !token) {
       throw new Error('Missing sessionId, projectId, or token');
@@ -847,7 +635,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
     setTotalDuration(maxEndTime);
     alert('Failed to add audio to timeline. Please try again.');
   } finally {
-    setIsAddingToTimeline(false); // Clear loading state
+    setIsAddingToTimeline(false);
   }
 }, 300);
 
@@ -957,11 +745,9 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         setSelectedTransition(null);
         saveHistory();
 
-        // Schedule auto-save with updated transitions
         if (transitionSaveTimeoutRef.current) clearTimeout(transitionSaveTimeoutRef.current);
         transitionSaveTimeoutRef.current = setTimeout(() => {
           autoSaveProject(videoLayers, audioLayers);
-          // console.log('Auto-saved project after transition delete:', selectedTransition.id);
         }, 1000);
       } catch (error) {
         console.error('Error deleting transition:', error);
@@ -1054,8 +840,8 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         textBorderColor: segment.textBorderColor || 'transparent',
         textBorderWidth: segment.textBorderWidth ?? 0,
         textBorderOpacity: segment.textBorderOpacity ?? 1.0,
-        letterSpacing: segment.letterSpacing ?? 0, // Added
-        lineSpacing: segment.lineSpacing ?? 1.2, // Added
+        letterSpacing: segment.letterSpacing ?? 0,
+        lineSpacing: segment.lineSpacing ?? 1.2,
       });
       setIsTextEmpty(!text.trim());
       setIsTextToolOpen(true);
@@ -1079,7 +865,6 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
           item.id === editingTextSegment.id
             ? {
                 ...item,
-                // Text-specific properties from newSettings
                 text: newSettings.text,
                 fontFamily: newSettings.fontFamily,
                 fontColor: newSettings.fontColor,
@@ -1096,14 +881,12 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
                 textBorderColor: newSettings.textBorderColor,
                 textBorderWidth: newSettings.textBorderWidth,
                 textBorderOpacity: newSettings.textBorderOpacity,
-                letterSpacing: newSettings.letterSpacing, // Added
+                letterSpacing: newSettings.letterSpacing,
                 lineSpacing: newSettings.lineSpacing,
-                // Preserve transform properties from tempSegmentValues or existing segment
                 positionX: tempSegmentValues.positionX !== undefined ? tempSegmentValues.positionX : item.positionX,
                 positionY: tempSegmentValues.positionY !== undefined ? tempSegmentValues.positionY : item.positionY,
                 scale: tempSegmentValues.scale !== undefined ? tempSegmentValues.scale : item.scale,
                 opacity: tempSegmentValues.opacity !== undefined ? tempSegmentValues.opacity : item.opacity,
-                // Preserve keyframes
                 keyframes: keyframes,
               }
             : item
@@ -1111,7 +894,6 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         return newLayers;
       });
 
-      // Update tempSegmentValues with new scale if provided
       setTempSegmentValues((prev) => ({
         ...prev,
         scale: newSettings.scale !== undefined ? newSettings.scale : prev.scale,
@@ -5256,16 +5038,14 @@ return (
               setIsPlaying={setIsPlaying}
               fps={projectFps}
               saveHistory={saveHistory}
-              handleUndo={handleUndo}
-              handleRedo={handleRedo}
               canUndo={canUndo}
               canRedo={canRedo}
               currentTime={currentTime}
               onTimelineClick={() => setIsTimelineSelected(true)}
               MIN_TIME_SCALE={MIN_TIME_SCALE}
               MAX_TIME_SCALE={MAX_TIME_SCALE}
-              isAddingToTimeline={isAddingToTimeline} // Add this prop
-              setIsAddingToTimeline={setIsAddingToTimeline} // Add this prop 
+              isAddingToTimeline={isAddingToTimeline}
+              setIsAddingToTimeline={setIsAddingToTimeline}
               isSaving={isSaving}
               setIsSaving={setIsSaving}
               setIsLoading={setIsLoading}

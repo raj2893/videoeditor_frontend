@@ -959,6 +959,60 @@
   z-index: 1000;
 }
 
+.copy-control {
+  margin-left: 10px;
+}
+
+.copy-control button {
+  padding: 6px 12px;
+  background: transparent;
+  color: #4CAF50; /* Green for Copy button to distinguish it */
+  border: 1px solid #4CAF50;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.copy-control button::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #4CAF50;
+  transition: all 0.3s ease;
+}
+
+.copy-control button:hover {
+  color: #4CAF50;
+  border-color: #4CAF50;
+  transform: scale(1.02);
+}
+
+.copy-control button:hover::after {
+  width: 80%;
+  left: 10%;
+}
+
+.copy-control button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.timeline-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none; /* Prevent clicks when disabled */
+}
+
 @media (max-width: 768px) {
   /* Timeline Container */
   .timeline-container {
@@ -1177,6 +1231,17 @@
     font-size: 11px; /* Smaller font size */
     border-radius: 6px; /* Smaller border radius */
   }
+
+  .copy-control {
+    margin-left: 6px;
+  }
+
+  .copy-control button {
+    padding: 4px 10px;
+    font-size: 11px;
+    gap: 4px;
+    border-radius: 6px;
+  }  
 }
 
 @media (max-width: 480px) {
@@ -1440,4 +1505,25 @@
     font-size: 10px; /* Smaller font size */
     border-radius: 5px; /* Smaller border radius */
   }
+
+  .copy-control {
+    margin-left: 8px;
+  }
+
+  .copy-control button {
+    padding: 1px 3px;
+    font-size: 8px;
+    border-radius: 3px;
+    line-height: 12px;
+    margin-right: 8px;
+  }
+
+  .copy-control .button-text {
+    display: none; /* Hide text on mobile */
+  }
+
+  .copy-control .button-icon {
+    font-size: 8px;
+    line-height: 12px;
+  }  
 }

@@ -14,11 +14,114 @@ const AudioSegmentHandler = ({
   API_BASE_URL,
   timelineRef,
   roundToThreeDecimals,
-  setTotalDuration, // Added prop
-  videoLayers, // Add videoLayers prop
-  setIsAddingToTimeline, // Add this
+  setTotalDuration,
+  videoLayers,
+  setIsAddingToTimeline,
   setIsLoading
 }) => {
+
+  const addAudioToTimeline = async (audioFileName, layer, timelineStartTime, timelineEndTime, isExtracted = false) => {
+    if (!sessionId || !projectId) {
+      console.error('Missing sessionId or projectId');
+      return;
+    }
+    try {
+      setIsAddingToTimeline(true); // Set loading state
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+  
+      const roundedStartTime = roundToThreeDecimals(timelineStartTime);
+      const roundedEndTime = roundToThreeDecimals(timelineEndTime);
+      const duration = roundedEndTime - roundedStartTime;
+  
+      const response = await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
+        {
+          audioFileName,
+          layer,
+          timelineStartTime: roundedStartTime,
+          timelineEndTime: roundedEndTime,
+          startTime: 0,
+          endTime: duration,
+          volume: 1.0,
+        },
+        {
+          params: { sessionId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+  
+      const segment = response.data;
+      const finalSegmentId = segment.audioSegmentId || segment.id;
+      const waveformJsonPath = segment.waveformJsonPath
+        ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(segment.waveformJsonPath.split('/').pop())}`
+        : null;
+  
+      const newSegment = {
+        id: finalSegmentId,
+        type: 'audio',
+        fileName: audioFileName,
+        url: segment.extracted
+          ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioFileName)}`
+          : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioFileName)}`,
+        displayName: audioFileName.split('/').pop(),
+        waveformJsonPath,
+        startTime: roundedStartTime,
+        duration: duration,
+        timelineStartTime: roundedStartTime,
+        timelineEndTime: roundedEndTime,
+        layer,
+        startTimeWithinAudio: roundToThreeDecimals(segment.startTime || 0),
+        endTimeWithinAudio: roundToThreeDecimals(segment.endTime || duration),
+        volume: segment.volume || 1.0,
+        keyframes: segment.keyframes || {},
+        extracted: segment.extracted || isExtracted,
+      };
+  
+      setAudioLayers((prev) => {
+        const newLayers = [...prev];
+        while (newLayers.length <= Math.abs(layer) - 1) newLayers.push([]);
+  
+        const layerIndex = Math.abs(layer) - 1;
+        const existingSegment = newLayers[layerIndex].find((s) => s.id === newSegment.id);
+        if (existingSegment) {
+          console.warn(`Segment with ID ${newSegment.id} already exists in layer ${layerIndex}. Updating instead.`);
+          newLayers[layerIndex] = newLayers[layerIndex].map((s) =>
+            s.id === newSegment.id ? { ...s, ...newSegment, layer } : s
+          );
+        } else {
+          newLayers[layerIndex].push(newSegment);
+        }
+  
+        return newLayers;
+      });
+  
+      setTotalDuration((prev) => Math.max(prev, roundedEndTime));
+      saveHistory([], audioLayers);
+      autoSave([], audioLayers);
+      return newSegment;
+    } catch (error) {
+      console.error('Error in addAudioToTimeline:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        audioFileName,
+        isExtracted,
+        timelineStartTime,
+        timelineEndTime,
+        layer,
+      });
+      if (error.response?.status >= 500) {
+        await loadProjectTimeline();
+      }
+      throw error;
+    } finally {
+      setIsAddingToTimeline(false); // Clear loading state
+    }
+  };
+  
   const updateAudioSegment = async (
     audioSegmentId,
     newStartTime,
@@ -242,162 +345,14 @@ const AudioSegmentHandler = ({
             }
           }
   
-          let tempSegmentId = `temp-${uuidv4()}`;
-          while (doesIdExist(tempSegmentId)) {
-            tempSegmentId = `temp-${uuidv4()}`;
-          }
-  
-          const tempSegment = {
-            id: tempSegmentId,
-            type: 'audio',
-            fileName: audio.fileName,
-            url: audio.extracted
-              ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audio.fileName)}`
-              : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audio.fileName)}`,
-            displayName: audio.displayName || audio.fileName.split('/').pop(),
-            waveformJsonPath: audio.waveformJsonPath || null,
-            startTime: roundToThreeDecimals(adjustedStartTime),
-            duration: roundToThreeDecimals(audio.duration),
-            timelineStartTime: roundToThreeDecimals(adjustedStartTime),
-            timelineEndTime: roundToThreeDecimals(adjustedStartTime + audio.duration),
-            layer: backendLayer,
-            startTimeWithinAudio: roundToThreeDecimals(0),
-            endTimeWithinAudio: roundToThreeDecimals(audio.duration),
-            volume: 1.0,
-            keyframes: {},
-            extracted: audio.extracted || false,
-          };
-  
-          let existingLayerIndex = -1;
-          let existingSegment = null;
-          for (let i = 0; i < newAudioLayers.length; i++) {
-            const found = newAudioLayers[i].find((s) => s.id === tempSegment.id);
-            if (found) {
-              existingSegment = found;
-              existingLayerIndex = i;
-              break;
-            }
-          }
-  
-          if (existingSegment) {
-            console.warn(`Segment with ID ${tempSegment.id} already exists in layer ${existingLayerIndex}. Updating instead.`);
-            newAudioLayers[existingLayerIndex] = newAudioLayers[existingLayerIndex].map((s) =>
-              s.id === tempSegment.id ? { ...s, ...tempSegment, layer: backendLayer } : s
-            );
-          } else {
-            newAudioLayers[targetLayerIndex].push(tempSegment);
-          }
-  
-          setAudioLayers(newAudioLayers);
-          saveHistory([], newAudioLayers);
-  
-          setTotalDuration((prev) =>
-            Math.max(prev, adjustedStartTime + audio.duration)
+          await addAudioToTimeline(
+            audio.fileName,
+            backendLayer,
+            roundToThreeDecimals(adjustedStartTime),
+            roundToThreeDecimals(adjustedStartTime + audio.duration),
+            audio.extracted || false
           );
-  
-          try {
-            setIsAddingToTimeline(true); // Set loading state
-            const response = await axios.post(
-              `${API_BASE_URL}/projects/${projectId}/add-project-audio-to-timeline`,
-              {
-                audioFileName: audio.fileName,
-                layer: backendLayer,
-                timelineStartTime: roundToThreeDecimals(adjustedStartTime),
-                timelineEndTime: roundToThreeDecimals(adjustedStartTime + audio.duration),
-                startTime: roundToThreeDecimals(0),
-                endTime: roundToThreeDecimals(audio.duration),
-                volume: 1.0,
-              },
-              {
-                params: { sessionId },
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-              }
-            );
-  
-            const newAudioSegment = response.data;
-  
-            let finalSegmentId = newAudioSegment.audioSegmentId || newAudioSegment.id;
-            if (doesIdExist(finalSegmentId)) {
-              console.warn(
-                `Backend returned existing audioSegmentId ${finalSegmentId}. Generating new ID.`
-              );
-              finalSegmentId = `${finalSegmentId}-${uuidv4()}`;
-            }
-  
-            const waveformJsonPath = newAudioSegment.waveformJsonPath
-              ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(
-                  newAudioSegment.waveformJsonPath.split('/').pop()
-                )}`
-              : audio.waveformJsonPath || null;
-  
-            setAudioLayers((prevLayers) => {
-              const updatedLayers = prevLayers.map((layer, index) => {
-                if (index === targetLayerIndex) {
-                  return layer.map((item) =>
-                    item.id === tempSegmentId
-                      ? {
-                          ...item,
-                          id: finalSegmentId,
-                          startTime: roundToThreeDecimals(newAudioSegment.timelineStartTime),
-                          duration: roundToThreeDecimals(
-                            newAudioSegment.timelineEndTime - newAudioSegment.timelineStartTime
-                          ),
-                          timelineStartTime: roundToThreeDecimals(
-                            newAudioSegment.timelineStartTime
-                          ),
-                          timelineEndTime: roundToThreeDecimals(newAudioSegment.timelineEndTime),
-                          startTimeWithinAudio: roundToThreeDecimals(
-                            newAudioSegment.startTime || 0
-                          ),
-                          endTimeWithinAudio: roundToThreeDecimals(
-                            newAudioSegment.endTime || audio.duration
-                          ),
-                          volume: newAudioSegment.volume || 1.0,
-                          keyframes: newAudioSegment.keyframes || {},
-                          waveformJsonPath: waveformJsonPath,
-                          extracted: newAudioSegment.extracted || false,
-                        }
-                      : item
-                  );
-                }
-                return layer;
-              });
-              newAudioLayers = updatedLayers;
-              return updatedLayers;
-            });
-  
-            setTotalDuration((prev) =>
-              Math.max(prev, newAudioSegment.timelineEndTime)
-            );
-  
-            autoSave([], newAudioLayers);
-            return { ...tempSegment, id: finalSegmentId };
-          } catch (error) {
-            console.error('Error adding audio to timeline:', error.response?.data || error.message);
-            setAudioLayers((prevLayers) => {
-              const revertedLayers = prevLayers.map((layer, index) => {
-                if (index === targetLayerIndex) {
-                  return layer.filter((item) => item.id !== tempSegmentId);
-                }
-                return layer;
-              });
-              return revertedLayers;
-            });
-            setTotalDuration((prev) => {
-              let maxEndTime = 0;
-              [...videoLayers, ...audioLayers].forEach((layer) => {
-                layer.forEach((item) => {
-                  const endTime = item.startTime + item.duration;
-                  if (endTime > maxEndTime) maxEndTime = endTime;
-                });
-              });
-              return maxEndTime;
-            });
-            alert('Failed to add audio to timeline. Please try again.');
-            return undefined;
-          } finally {
-            setIsAddingToTimeline(false); // Clear loading state
-          }
+          return undefined;
         }
       }
       return undefined;
@@ -410,8 +365,6 @@ const AudioSegmentHandler = ({
         ? snapIndicators[0].time - (snapIndicators[0].edge === 'end' ? draggingItem.duration : 0)
         : Math.max(0, (mouseX - timelineRect.left) / timeScale - dragOffset);
   
-    while (newAudioLayers.length <= targetLayerIndex) newAudioLayers.push([]);
-  
     const hasOverlap = newAudioLayers[targetLayerIndex].some((audio) => {
       if (audio.id === draggingItem.id) return false;
       const start = audio.startTime;
@@ -421,7 +374,7 @@ const AudioSegmentHandler = ({
     });
   
     if (hasOverlap) {
-      // console.log('Overlap detected. Cannot move audio here.');
+      console.log('Overlap detected. Cannot move audio here.');
       return undefined;
     }
   
@@ -454,9 +407,7 @@ const AudioSegmentHandler = ({
     setAudioLayers(newAudioLayers);
     saveHistory([], newAudioLayers);
     autoSave([], newAudioLayers);
-    setTotalDuration((prev) =>
-      Math.max(prev, newStartTime + draggingItem.duration)
-    );
+    setTotalDuration((prev) => Math.max(prev, newStartTime + draggingItem.duration));
     await updateAudioSegment(
       draggingItem.id,
       roundToThreeDecimals(newStartTime),
@@ -738,7 +689,7 @@ const AudioSegmentHandler = ({
     }
   };
 
-  return { handleAudioDrop, updateAudioSegment, handleAudioSplit, fetchAudioDuration };
+  return { handleAudioDrop, updateAudioSegment, handleAudioSplit, fetchAudioDuration, addAudioToTimeline };
 };
 
 export default AudioSegmentHandler;

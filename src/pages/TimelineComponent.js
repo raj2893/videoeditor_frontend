@@ -22,7 +22,6 @@ const TimelineComponent = ({
   totalDuration,
   setTotalDuration,
   onVideoSelect,
-  addVideoToTimeline,
   onTimeUpdate,
   onSegmentSelect,
   videoLayers,
@@ -49,9 +48,11 @@ const TimelineComponent = ({
   setIsAddingToTimeline,
   setIsLoading,
   multiSelectedSegments,
-  setMultiSelectedSegments
+  setMultiSelectedSegments,
+  setCurrentTime,
+  updateTimeoutRef,
+  autoSaveProject
 }) => {
-  // Removed local playhead and currentTime states
   const [timelineVideos, setTimelineVideos] = useState([]);
   const [draggingItem, setDraggingItem] = useState(null);
   const [dragLayer, setDragLayer] = useState(null);
@@ -251,7 +252,217 @@ const TimelineComponent = ({
       : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(segment.fileName)}`;
     wavesurfer.load(audioUrl, slicedPeaks, sampleRate);
     // console.log(`Waveform updated for segment ${segmentId} with barWidth=${barWidth}, barGap=${barGap}, pixelWidth=${pixelWidth}`);
-  }, [timeScale, projectId]); // Add projectId as a dependency
+  }, [timeScale, projectId]);
+
+const handleCopySegment = async () => {
+  if (!selectedSegment) return;
+
+  const { id, type, startTime, duration, layerIndex } = selectedSegment;
+  const endTime = startTime + duration;
+
+  // Determine target layers based on segment type
+  const targetLayers = type === 'audio' ? audioLayers : videoLayers;
+  let targetLayerIndex = -1;
+
+  // Find an available layer without overlap
+  for (let i = 0; i < targetLayers.length; i++) {
+    const layer = targetLayers[i];
+    const hasOverlap = layer.some(
+      (item) =>
+        (startTime >= item.startTime && startTime < item.startTime + item.duration) ||
+        (endTime > item.startTime && endTime <= item.startTime + item.duration) ||
+        (startTime <= item.startTime && endTime >= item.startTime + item.duration)
+    );
+    if (!hasOverlap) {
+      targetLayerIndex = i;
+      break;
+    }
+  }
+
+  // If no available layer, add a new one
+  if (targetLayerIndex === -1) {
+    targetLayerIndex = targetLayers.length;
+    if (type === 'audio') {
+      setAudioLayers((prev) => [...prev, []]);
+    } else {
+      setVideoLayers((prev) => [...prev, []]);
+    }
+  }
+
+  try {
+    setIsLoading(true);
+    let newSegment = null;
+    const backendLayer = type === 'audio' ? -(targetLayerIndex + 1) : targetLayerIndex;
+
+    // Deep copy the selected segment to avoid reference issues
+    const segmentCopy = JSON.parse(JSON.stringify(selectedSegment));
+
+    if (type === 'text') {
+      newSegment = await textHandler.addTextToTimeline(backendLayer, startTime, {
+        text: segmentCopy.text,
+        fontFamily: segmentCopy.fontFamily || 'Arial',
+        scale: segmentCopy.scale || 1.0,
+        rotation: segmentCopy.rotation || 0,
+        fontColor: segmentCopy.fontColor || '#FFFFFF',
+        backgroundColor: segmentCopy.backgroundColor || 'transparent',
+        positionX: segmentCopy.positionX || 0,
+        positionY: segmentCopy.positionY || 0,
+        alignment: segmentCopy.alignment || 'center',
+        backgroundOpacity: segmentCopy.backgroundOpacity || 1.0,
+        backgroundBorderWidth: segmentCopy.backgroundBorderWidth || 0,
+        backgroundBorderColor: segmentCopy.backgroundBorderColor || '#000000',
+        backgroundH: segmentCopy.backgroundH || 0,
+        backgroundW: segmentCopy.backgroundW || 0,
+        backgroundBorderRadius: segmentCopy.backgroundBorderRadius || 0,
+        textBorderColor: segmentCopy.textBorderColor || 'transparent',
+        textBorderWidth: segmentCopy.textBorderWidth || 0,
+        textBorderOpacity: segmentCopy.textBorderOpacity || 1.0,
+        letterSpacing: segmentCopy.letterSpacing || 0,
+        lineSpacing: segmentCopy.lineSpacing || 1.2,
+        duration,
+        keyframes: segmentCopy.keyframes || {},
+        opacity: segmentCopy.opacity || 1,
+      });
+      setVideoLayers((prev) => {
+        const newLayers = [...prev];
+        while (newLayers.length <= backendLayer) newLayers.push([]);
+        newLayers[backendLayer].push({
+          ...newSegment,
+          layer: backendLayer,
+          startTime: roundToThreeDecimals(startTime),
+          duration: roundToThreeDecimals(duration),
+          type: 'text',
+        });
+        return newLayers;
+      });
+      newSegment = { ...newSegment, layerIndex: targetLayerIndex, type: 'text' };
+    } else if (type === 'image') {
+      newSegment = await imageHandler.addImageToTimeline(
+        segmentCopy.fileName,
+        backendLayer,
+        roundToThreeDecimals(startTime),
+        roundToThreeDecimals(endTime),
+        segmentCopy.isElement || false
+      );
+      setVideoLayers((prev) => {
+        const newLayers = [...prev];
+        while (newLayers.length <= backendLayer) newLayers.push([]);
+        newLayers[backendLayer].push({
+          ...newSegment,
+          thumbnail: segmentCopy.thumbnail,
+          positionX: segmentCopy.positionX || 0,
+          positionY: segmentCopy.positionY || 0,
+          scale: segmentCopy.scale || 1,
+          rotation: segmentCopy.rotation || 0,
+          opacity: segmentCopy.opacity || 1,
+          cropL: segmentCopy.cropL || 0,
+          cropR: segmentCopy.cropR || 0,
+          cropT: segmentCopy.cropT || 0,
+          cropB: segmentCopy.cropB || 0,
+          keyframes: segmentCopy.keyframes || {},
+          filters: segmentCopy.filters || [],
+          type: 'image',
+        });
+        return newLayers;
+      });
+      newSegment = { ...newSegment, layerIndex: targetLayerIndex, type: 'image' };
+    } else if (type === 'video') {
+      newSegment = await videoHandler.addVideoToTimeline(
+        segmentCopy.fileName,
+        backendLayer,
+        roundToThreeDecimals(startTime),
+        roundToThreeDecimals(endTime),
+        roundToThreeDecimals(segmentCopy.startTimeWithinVideo || 0),
+        roundToThreeDecimals(segmentCopy.endTimeWithinVideo || duration),
+        false // Do not create an audio segment for the copied video
+      );
+      setVideoLayers((prev) => {
+        const newLayers = [...prev];
+        while (newLayers.length <= backendLayer) newLayers.push([]);
+        newLayers[backendLayer].push({
+          ...newSegment,
+          thumbnail: segmentCopy.thumbnail,
+          positionX: segmentCopy.positionX || 0,
+          positionY: segmentCopy.positionY || 0,
+          scale: segmentCopy.scale || 1,
+          rotation: segmentCopy.rotation || 0,
+          opacity: segmentCopy.opacity || 1,
+          cropL: segmentCopy.cropL || 0,
+          cropR: segmentCopy.cropR || 0,
+          cropT: segmentCopy.cropT || 0,
+          cropB: segmentCopy.cropB || 0,
+          keyframes: segmentCopy.keyframes || {},
+          filters: segmentCopy.filters || [],
+          speed: segmentCopy.speed || 1.0,
+          startTimeWithinVideo: roundToThreeDecimals(segmentCopy.startTimeWithinVideo || 0),
+          endTimeWithinVideo: roundToThreeDecimals(segmentCopy.endTimeWithinVideo || duration),
+          type: 'video',
+          filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(segmentCopy.fileName)}`,
+        });
+        return newLayers;
+      });
+      newSegment = { ...newSegment, layerIndex: targetLayerIndex, type: 'video' };
+    } else if (type === 'audio') {
+      newSegment = await audioHandler.addAudioToTimeline(
+        segmentCopy.fileName,
+        backendLayer,
+        roundToThreeDecimals(startTime),
+        roundToThreeDecimals(endTime),
+        segmentCopy.extracted || false
+      );
+      setAudioLayers((prev) => {
+        const newLayers = [...prev];
+        while (newLayers.length <= targetLayerIndex) newLayers.push([]);
+        newLayers[targetLayerIndex].push({
+          ...newSegment,
+          startTime: roundToThreeDecimals(startTime),
+          duration: roundToThreeDecimals(duration),
+          timelineStartTime: roundToThreeDecimals(startTime),
+          timelineEndTime: roundToThreeDecimals(endTime),
+          startTimeWithinAudio: roundToThreeDecimals(segmentCopy.startTimeWithinAudio || 0),
+          endTimeWithinAudio: roundToThreeDecimals(segmentCopy.endTimeWithinAudio || duration),
+          volume: segmentCopy.volume || 1.0,
+          keyframes: segmentCopy.keyframes || {},
+          type: 'audio',
+          url: segmentCopy.extracted
+            ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(segmentCopy.fileName)}`
+            : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(segmentCopy.fileName)}`,
+          waveformJsonPath: segmentCopy.waveformJsonPath,
+          extracted: segmentCopy.extracted || false,
+        });
+        return newLayers;
+      });
+      newSegment = { ...newSegment, layerIndex: targetLayerIndex, type: 'audio' };
+    }
+
+    if (!newSegment) {
+      throw new Error(`Failed to create new ${type} segment`);
+    }
+
+    // Update total duration
+    setTotalDuration((prev) => Math.max(prev, endTime));
+
+    // Clear all selection states to prevent overlap
+    setMultiSelectedSegments([]);
+    setSelectedSegment(null);
+    if (onSegmentSelect) onSegmentSelect(null);
+
+    // Auto-save and save history
+    await autoSave(videoLayers, audioLayers);
+    saveHistory();
+
+    // Select the new segment after state updates
+    setTimeout(() => {
+      setSelectedSegment(newSegment);
+      if (onSegmentSelect) onSegmentSelect(newSegment);
+    }, 0);
+  } catch (error) {
+    console.error('Error copying segment:', error);
+    alert(`Failed to copy ${type} segment: ${error.message}`);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Initialize waveforms only on mount or when new segments are added
   useEffect(() => {
@@ -414,7 +625,7 @@ const handleVideoSelect = (videoId, event) => {
   if (selected && onTimelineClick) onTimelineClick();
 };
 
-  // Removed localIsPlaying state and sync logic
+  
   const autoSave = useCallback(
     (newVideoLayers, newAudioLayers) => {
       const autoSaveTimeout = setTimeout(async () => {
@@ -785,7 +996,8 @@ const handleVideoSelect = (videoId, event) => {
     sessionId,
     videoLayers,
     setVideoLayers,
-    addVideoToTimeline,
+    audioLayers,
+    setAudioLayers,
     saveHistory,
     autoSave,
     loadProjectTimeline,
@@ -794,6 +1006,10 @@ const handleVideoSelect = (videoId, event) => {
     roundToThreeDecimals,
     setTotalDuration,
     setIsLoading,
+    setCurrentTime,
+    updateTimeoutRef,
+    videos,
+    autoSaveProject
   });
 
   const textHandler = TextSegmentHandler({
@@ -1607,7 +1823,7 @@ const handleVideoSelect = (videoId, event) => {
       <TimelineControls
         isPlaying={isPlaying}
         togglePlayback={togglePlayback}
-        currentTime={currentTime} // Use currentTime from ProjectEditor
+        currentTime={currentTime}
         totalDuration={totalDuration}
         formatTime={formatTime}
         handleUndo={handleUndo}
@@ -1621,6 +1837,7 @@ const handleVideoSelect = (videoId, event) => {
         stopPropagationForControls={(e) => e.stopPropagation()}
         selectedSegment={selectedSegment}
         handleSplitAtCurrent={handleSplitAtCurrent}
+        handleCopySegment={handleCopySegment}
       />
       <div className="timeline-scroll-container">
         <TimelineRuler totalDuration={totalDuration} timeScale={timeScale} formatTime={formatTime} />

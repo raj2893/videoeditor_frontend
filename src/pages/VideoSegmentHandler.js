@@ -10,16 +10,226 @@ const VideoSegmentHandler = ({
   setVideoLayers,
   audioLayers,
   setAudioLayers,
-  addVideoToTimeline,
   saveHistory,
   autoSave,
   loadProjectTimeline,
   API_BASE_URL,
   timelineRef,
-  roundToThreeDecimals, // Destructure roundToThreeDecimals
+  roundToThreeDecimals,
   setTotalDuration,
   setIsLoading,
+  videos,
+  setCurrentTime,
+  updateTimeoutRef
 }) => {
+
+  const addVideoToTimeline = async (videoPath, layer, timelineStartTime, timelineEndTime, startTimeWithinVideo, endTimeWithinVideo, createAudioSegment = true) => {
+    try {
+      setIsLoading(true); // Set loading state (replacing setIsAddingToTimeline)
+      if (!videoPath) {
+        throw new Error('videoPath is undefined or null');
+      }
+      const token = localStorage.getItem('token');
+      const fileName = videoPath.includes('/') ? videoPath.split('/').pop() : videoPath;
+      const response = await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/add-to-timeline`,
+        {
+          videoPath: fileName,
+          layer: layer || 0,
+          timelineStartTime: timelineStartTime || 0,
+          timelineEndTime: timelineEndTime || null,
+          startTime: startTimeWithinVideo || 0,
+          endTime: endTimeWithinVideo || null,
+          speed: 1.0,
+          createAudioSegment,
+        },
+        { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+      );
+      const { videoSegmentId, audioSegmentId, audioPath, waveformJsonPath } = response.data;
+  
+      const segmentResponse = await axios.get(
+        `${API_BASE_URL}/projects/${projectId}/get-segment`,
+        {
+          params: { sessionId, segmentId: videoSegmentId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const videoSegment = segmentResponse.data.videoSegment;
+      const audioSegment = createAudioSegment && audioSegmentId ? segmentResponse.data.audioSegment : null;
+      if (!videoSegment) {
+        throw new Error(`Newly created video segment ${videoSegmentId} not found`);
+      }
+  
+      const video = videos.find((v) => v.fileName === fileName);
+      if (!video) {
+        throw new Error(`Video with fileName ${fileName} not found in videos list`);
+      }
+  
+      const newSegment = {
+        id: videoSegment.id,
+        type: 'video',
+        startTime: videoSegment.timelineStartTime,
+        duration: videoSegment.timelineEndTime - videoSegment.timelineStartTime,
+        filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fileName)}`,
+        layer: layer || 0,
+        positionX: videoSegment.positionX || 0,
+        positionY: videoSegment.positionY || 0,
+        scale: videoSegment.scale || 1,
+        startTimeWithinVideo: videoSegment.startTime || 0,
+        endTimeWithinVideo: videoSegment.endTime || (videoSegment.timelineEndTime - videoSegment.timelineStartTime),
+        thumbnail: video.thumbnail,
+        filters: videoSegment.filters || [],
+        audioSegmentId: audioSegmentId || null,
+        speed: videoSegment.speed || 1.0,
+        rotation: videoSegment.rotation || 0,
+        displayName: video.displayName || fileName,
+      };
+  
+      let updatedVideoLayers = videoLayers;
+      setVideoLayers((prevLayers) => {
+        const newLayers = [...prevLayers];
+        while (newLayers.length <= layer) newLayers.push([]);
+        newLayers[layer] = [...newLayers[layer], newSegment];
+        updatedVideoLayers = newLayers;
+        return newLayers;
+      });
+  
+      let updatedAudioLayers = audioLayers;
+      if (createAudioSegment && audioSegment && audioSegmentId) {
+        const audioLayerIndex = Math.abs(audioSegment.layer) - 1;
+        const sanitizedAudioId = audioSegment.id.replace(/[^a-zA-Z0-9]/g, '-');
+        let tempSegmentId = `temp-${uuidv4()}`;
+        while (updatedAudioLayers.some((layer) => layer.some((segment) => segment.id === tempSegmentId))) {
+          tempSegmentId = `temp-${uuidv4()}`;
+        }
+  
+        const audioFileName = audioSegment.audioFileName || audioSegment.audioPath?.split('/').pop() || fileName;
+        const tempAudioSegment = {
+          id: tempSegmentId,
+          type: 'audio',
+          fileName: audioFileName,
+          url: `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioFileName)}`,
+          waveformJsonPath: audioSegment.waveformJsonPath
+            ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+            : waveformJsonPath
+            ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(waveformJsonPath.split('/').pop())}`
+            : null,
+          startTime: roundToThreeDecimals(audioSegment.timelineStartTime),
+          duration: roundToThreeDecimals(audioSegment.timelineEndTime - audioSegment.timelineStartTime),
+          timelineStartTime: roundToThreeDecimals(audioSegment.timelineStartTime),
+          timelineEndTime: roundToThreeDecimals(audioSegment.timelineEndTime),
+          startTimeWithinAudio: roundToThreeDecimals(audioSegment.startTime || 0),
+          endTimeWithinAudio: roundToThreeDecimals(audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime)),
+          layer: audioSegment.layer,
+          displayName: audioSegment.audioPath
+            ? audioSegment.audioPath.split('/').pop()
+            : audioFileName,
+          volume: audioSegment.volume || 1.0,
+          keyframes: audioSegment.keyframes || {},
+          extracted: true,
+        };
+  
+        setAudioLayers((prevLayers) => {
+          const newLayers = [...prevLayers];
+          while (newLayers.length <= audioLayerIndex) newLayers.push([]);
+          const existingSegment = newLayers[audioLayerIndex].find((s) => s.id === tempAudioSegment.id);
+          if (existingSegment) {
+            console.warn(`Segment with ID ${tempAudioSegment.id} already exists in layer ${audioLayerIndex}. Updating instead.`);
+            newLayers[audioLayerIndex] = newLayers[audioLayerIndex].map((s) =>
+              s.id === tempAudioSegment.id ? { ...s, ...tempAudioSegment, layer: audioSegment.layer } : s
+            );
+          } else {
+            newLayers[audioLayerIndex].push(tempAudioSegment);
+          }
+          updatedAudioLayers = newLayers;
+  
+          if (window.initializeWaveform) {
+            // console.log('Calling initializeWaveform for temporary audio segment:', tempAudioSegment.id);
+            window.initializeWaveform(tempAudioSegment).then((cleanupFn) => {
+              if (typeof cleanupFn === 'function') {
+                // console.log(`Waveform initialized for temp ID ${tempAudioSegment.id}`);
+              }
+            });
+          }
+  
+          return newLayers;
+        });
+  
+        setAudioLayers((prevLayers) => {
+          const updatedLayers = prevLayers.map((layer, index) => {
+            if (index === audioLayerIndex) {
+              return layer.map((item) =>
+                item.id === tempSegmentId
+                  ? {
+                      ...item,
+                      id: sanitizedAudioId,
+                      startTime: roundToThreeDecimals(audioSegment.timelineStartTime),
+                      duration: roundToThreeDecimals(audioSegment.timelineEndTime - audioSegment.timelineStartTime),
+                      timelineStartTime: roundToThreeDecimals(audioSegment.timelineStartTime),
+                      timelineEndTime: roundToThreeDecimals(audioSegment.timelineEndTime),
+                      startTimeWithinAudio: roundToThreeDecimals(audioSegment.startTime || 0),
+                      endTimeWithinAudio: roundToThreeDecimals(audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime)),
+                      volume: audioSegment.volume || 1.0,
+                      keyframes: audioSegment.keyframes || {},
+                      waveformJsonPath: audioSegment.waveformJsonPath
+                        ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+                        : waveformJsonPath
+                        ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(waveformJsonPath.split('/').pop())}`
+                        : null,
+                      url: `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioFileName)}`,
+                      extracted: true,
+                    }
+                  : item
+              );
+            }
+            return layer;
+          });
+          updatedAudioLayers = updatedLayers;
+  
+          if (window.waveSurferInstances && window.waveSurferInstances.current.has(tempSegmentId)) {
+            // console.log(`Transferring WaveSurfer instance from ${tempSegmentId} to ${sanitizedAudioId}`);
+            const wavesurfer = window.waveSurferInstances.current.get(tempSegmentId);
+            window.waveSurferInstances.current.set(sanitizedAudioId, wavesurfer);
+            window.waveSurferInstances.current.delete(tempSegmentId);
+            if (window.updateWaveform) {
+              // console.log('Calling updateWaveform for audio segment with final ID:', sanitizedAudioId);
+              window.updateWaveform({
+                ...tempAudioSegment,
+                id: sanitizedAudioId,
+                waveformJsonPath: audioSegment.waveformJsonPath
+                  ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+                  : waveformJsonPath
+                  ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(waveformJsonPath.split('/').pop())}`
+                  : null,
+                url: `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(audioFileName)}`,
+                extracted: true,
+              });
+            }
+          }
+  
+          return updatedLayers;
+        });
+      }
+  
+      setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
+  
+      // Force VideoPreview to re-render by micro-updating currentTime
+      setCurrentTime((prev) => prev + 0.0001); // Use a small increment to ensure update
+  
+      setVideoLayers((prev) => [...prev]); // Create a new array reference
+  
+      autoSave(updatedVideoLayers, updatedAudioLayers);
+  
+      saveHistory();
+      return { videoSegment: newSegment, audioSegment };
+    } catch (error) {
+      console.error('Error adding video to timeline:', error.response?.data || error.message);
+      throw error;
+    } finally {
+      setIsLoading(false); // Clear loading state (replacing setIsAddingToTimeline)
+    }
+  };
+
   const updateSegmentPosition = async (
     segmentId,
     newStartTime,
@@ -454,7 +664,7 @@ const VideoSegmentHandler = ({
     }
   };
 
-  return { handleVideoDrop, updateSegmentPosition, handleVideoSplit, fetchVideoDuration };
+  return { handleVideoDrop, updateSegmentPosition, handleVideoSplit, fetchVideoDuration, addVideoToTimeline };
 };
 
 export default VideoSegmentHandler;

@@ -17,6 +17,7 @@ const TimelineControls = ({
   stopPropagationForControls,
   selectedSegment,
   handleSplitAtCurrent,
+  handleCopySegment,
 }) => {
 
   const isSplitAtCurrentEnabled = selectedSegment && 
@@ -54,6 +55,17 @@ const TimelineControls = ({
           title="Split at Current Time"
         >
           ✂️ CURRENT
+        </button>
+      </div>      
+      <div className="copy-control">
+        <button
+          onClick={(e) => { stopPropagationForControls(e); handleCopySegment(); }}
+          className={selectedSegment ? '' : 'disabled'}
+          disabled={!selectedSegment}
+          title="Copy Selected Segment"
+        >
+          <span className="button-icon">📋</span>
+          <span className="button-text">Copy</span>
         </button>
       </div>      
       {isSaving && <span className="saving-indicator">Saving...</span>}

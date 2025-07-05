@@ -420,10 +420,10 @@ const ProjectEditor = () => {
       setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
       saveHistory();
 
-      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-      updateTimeoutRef.current = setTimeout(() => {
-        autoSaveProject(videoLayers, audioLayers);
-      }, 1000);
+      // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      // updateTimeoutRef.current = setTimeout(() => {
+      //   autoSaveProject(videoLayers, audioLayers);
+      // }, 1000);
     } catch (error) {
       console.error('Error adding element to timeline:', error);
       alert('Failed to add element to timeline. Please try again.');
@@ -612,10 +612,10 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
 
     setTotalDuration((prev) => Math.max(prev, newAudioSegment.timelineEndTime));
 
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(videoLayers, updatedAudioLayers);
-    }, 1000);
+    // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    // updateTimeoutRef.current = setTimeout(() => {
+    //   autoSaveProject(videoLayers, updatedAudioLayers);
+    // }, 1000);
 
   } catch (error) {
     console.error('Error adding audio to timeline:', error.response?.data || error.message);
@@ -1027,11 +1027,11 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
   
       await fetchKeyframes(editingTextSegment.id, 'text');
   
-      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-      updateTimeoutRef.current = setTimeout(() => {
-        autoSaveProject(updatedVideoLayers, audioLayers);
-        console.log('Auto-saved project after text segment save:', editingTextSegment.id);
-      }, 1000);
+      // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      // updateTimeoutRef.current = setTimeout(() => {
+      //   autoSaveProject(updatedVideoLayers, audioLayers);
+      //   console.log('Auto-saved project after text segment save:', editingTextSegment.id);
+      // }, 1000);
     } catch (error) {
       console.error('Error saving text segment:', error);
       alert('Failed to save text segment. Please try again.');
@@ -1217,10 +1217,10 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
           navigate('/', { state: { error: 'Please log in to access the project.' } });
           return;
         }
-
-        // Step 1: Verify project ownership
+    
+        // Step 1: Fetch project resources and timeline state
         const project = await fetchProjectResources();
-
+    
         // Step 2: Create session
         const sessionResponse = await axios.post(
           `${API_BASE_URL}/projects/${projectId}/session`,
@@ -1228,10 +1228,10 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setSessionId(sessionResponse.data);
-
-        // Step 3: Fetch other data only after ownership is confirmed
+    
+        // Step 3: Fetch transitions
         await fetchTransitions();
-
+    
         // Step 4: Set project settings
         if (project.width && project.height) {
           setCanvasDimensions({ width: project.width, height: project.height });
@@ -1239,9 +1239,208 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         if (project.fps) {
           setProjectFps(project.fps);
         }
+    
+        // Step 5: Populate video and audio layers from timeline state
+        if (project && project.timelineState) {
+          let timelineState =
+            typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
+          const newVideoLayers = [[], [], []];
+          const newAudioLayers = [[], [], []];
+    
+          const filterMap = {};
+          (timelineState.filters || []).forEach((filter) => {
+            if (!filterMap[filter.segmentId]) {
+              filterMap[filter.segmentId] = [];
+            }
+            filterMap[filter.segmentId].push(filter);
+          });
+    
+          // Process video segments
+          if (timelineState.segments && timelineState.segments.length > 0) {
+            for (const segment of timelineState.segments) {
+              const layerIndex = segment.layer || 0;
+              if (layerIndex < 0) continue;
+              if (layerIndex >= newVideoLayers.length) {
+                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+              }
+              if (segment.sourceVideoPath) {
+                let videoFileName = segment.sourceVideoPath.split('/').pop();
+                let video = videos.find((v) => v.fileName === videoFileName);
+                if (video) {
+                  const thumbnail = await generateVideoThumbnail(video);
+                  const filters = filterMap[segment.id] || [];
+                  newVideoLayers[layerIndex].push({
+                    ...video,
+                    type: 'video',
+                    id: segment.id,
+                    startTime: segment.timelineStartTime || 0,
+                    duration: (segment.timelineEndTime - segment.timelineStartTime) || 0,
+                    layer: layerIndex,
+                    filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(videoFileName)}`,
+                    positionX: segment.positionX ?? 0,
+                    positionY: segment.positionY ?? 0,
+                    scale: segment.scale ?? 1,
+                    rotation: segment.rotation ?? 0,
+                    startTimeWithinVideo: segment.startTime || 0,
+                    endTimeWithinVideo: segment.endTime || 0,
+                    thumbnail,
+                    keyframes: segment.keyframes || {},
+                    filters,
+                    cropL: segment.cropL ?? 0,
+                    cropR: segment.cropR ?? 0,
+                    cropT: segment.cropT ?? 0,
+                    cropB: segment.cropB ?? 0,
+                    opacity: segment.opacity ?? 1,
+                    speed: segment.speed ?? 1.0,
+                  });
+                }
+              }
+            }
+          }
+    
+          // Process image segments
+          if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
+            for (const imageSegment of timelineState.imageSegments) {
+              const layerIndex = imageSegment.layer || 0;
+              if (layerIndex < 0) continue;
+              if (layerIndex >= newVideoLayers.length) {
+                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+              }
+              const filename = imageSegment.imagePath.split('/').pop();
+              const isElement = imageSegment.element || false;
+              const filePath = isElement
+                ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
+                : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
+              const thumbnail = await generateImageThumbnail(imageSegment.imagePath, isElement);
+              const filters = filterMap[imageSegment.id] || [];
+              newVideoLayers[layerIndex].push({
+                id: imageSegment.id,
+                type: 'image',
+                fileName: filename,
+                filePath,
+                thumbnail,
+                startTime: imageSegment.timelineStartTime || 0,
+                duration: (imageSegment.timelineEndTime - imageSegment.timelineStartTime) || 5,
+                layer: layerIndex,
+                positionX: imageSegment.positionX || 0,
+                positionY: imageSegment.positionY || 0,
+                scale: imageSegment.scale || 1,
+                rotation: imageSegment.rotation || 0,
+                opacity: imageSegment.opacity || 1.0,
+                width: imageSegment.width,
+                height: imageSegment.height,
+                effectiveWidth: imageSegment.effectiveWidth,
+                effectiveHeight: imageSegment.effectiveHeight,
+                maintainAspectRatio: imageSegment.maintainAspectRatio,
+                isElement,
+                keyframes: imageSegment.keyframes || {},
+                filters,
+                cropL: imageSegment.cropL ?? 0,
+                cropR: imageSegment.cropR ?? 0,
+                cropT: imageSegment.cropT ?? 0,
+                cropB: imageSegment.cropB ?? 0,
+              });
+            }
+          }
+    
+          // Process text segments
+          if (timelineState.textSegments && timelineState.textSegments.length > 0) {
+            for (const textSegment of timelineState.textSegments) {
+              const layerIndex = textSegment.layer || 0;
+              if (layerIndex < 0) continue;
+              if (layerIndex >= newVideoLayers.length) {
+                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+              }
+              const text = textSegment.text?.trim() || 'Default Text';
+              newVideoLayers[layerIndex].push({
+                id: textSegment.id,
+                type: 'text',
+                text: text,
+                startTime: textSegment.timelineStartTime || 0,
+                duration: (textSegment.timelineEndTime - textSegment.timelineStartTime) || 0,
+                layer: layerIndex,
+                fontFamily: textSegment.fontFamily || 'Arial',
+                scale: textSegment.scale || 1.0,
+                rotation: textSegment.rotation || 0,
+                fontColor: textSegment.fontColor || '#FFFFFF',
+                backgroundColor: textSegment.backgroundColor || 'transparent',
+                positionX: textSegment.positionX || 0,
+                positionY: textSegment.positionY || 0,
+                alignment: textSegment.alignment || 'center',
+                backgroundOpacity: textSegment.backgroundOpacity ?? 1.0,
+                backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0,
+                backgroundBorderColor: textSegment.backgroundBorderColor || '#000000',
+                backgroundH: textSegment.backgroundH ?? 0,
+                backgroundW: textSegment.backgroundW ?? 0,
+                backgroundBorderRadius: textSegment.backgroundBorderRadius ?? 0,
+                textBorderColor: textSegment.textBorderColor || 'transparent',
+                textBorderWidth: textSegment.textBorderWidth ?? 0,
+                textBorderOpacity: textSegment.textBorderOpacity ?? 1.0,
+                letterSpacing: textSegment.letterSpacing ?? 0,
+                lineSpacing: textSegment.lineSpacing ?? 1.2,
+                keyframes: textSegment.keyframes || {},
+                opacity: textSegment.opacity || 1,
+              });
+            }
+          }
+    
+          // Process audio segments
+          if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
+            for (const audioSegment of timelineState.audioSegments) {
+              const backendLayer = audioSegment.layer || -1;
+              const layerIndex = Math.abs(backendLayer) - 1;
+              if (layerIndex >= newAudioLayers.length) {
+                while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
+              }
+              const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
+              const extracted = audioSegment.extracted || false;
+              const audioUrl = extracted
+                ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(filename)}`
+                : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
+              const waveformJsonPath = audioSegment.waveformJsonPath
+                ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+                : null;
+              const sanitizedId = audioSegment.id.replace(/[^a-zA-Z0-9]/g, '-');
+              newAudioLayers[layerIndex].push({
+                id: sanitizedId,
+                type: 'audio',
+                fileName: filename,
+                url: audioUrl,
+                startTime: audioSegment.timelineStartTime || 0,
+                duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+                timelineStartTime: audioSegment.timelineStartTime || 0,
+                timelineEndTime: audioSegment.timelineEndTime || 0,
+                layer: backendLayer,
+                startTimeWithinAudio: audioSegment.startTime || 0,
+                endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+                displayName: filename,
+                waveformJsonPath: waveformJsonPath,
+                volume: audioSegment.volume || 1.0,
+                keyframes: audioSegment.keyframes || {},
+                extracted,
+              });
+            }
+          }
+    
+          // Set layers and total duration
+          setVideoLayers(newVideoLayers);
+          setAudioLayers(newAudioLayers);
+          let maxEndTime = 0;
+          [...newVideoLayers, ...newAudioLayers].forEach((layer) => {
+            layer.forEach((item) => {
+              const endTime = item.startTime + item.duration;
+              if (endTime > maxEndTime) maxEndTime = endTime;
+            });
+          });
+          setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
+    
+          // Auto-save if there are empty text segments
+          if (timelineState.textSegments?.some((s) => !s.text?.trim())) {
+            autoSaveProject(newVideoLayers, newAudioLayers);
+          }
+        }
       } catch (error) {
         console.error('Error initializing project:', error);
-        // console.log('Error response:', error.response?.status, error.response?.data);
         if (error.response?.status === 401) {
           localStorage.removeItem('token');
           localStorage.removeItem('userProfile');
@@ -1266,6 +1465,33 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [projectId, navigate]);
+
+  useEffect(() => {
+    // Only proceed if projectId and sessionId are available
+    if (!projectId || !sessionId) {
+      console.warn('Auto-save skipped: Missing projectId or sessionId');
+      return;
+    }
+  
+    const debouncedAutoSave = debounce(async () => {
+      try {
+        await autoSaveProject(videoLayers, audioLayers);
+        console.log('Auto-save completed successfully');
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        // Notify user of failure (e.g., toast notification)
+        alert('Failed to auto-save project. Please try saving manually.');
+      }
+    }, 1000);
+  
+    // Trigger auto-save
+    debouncedAutoSave();
+  
+    // Cleanup on unmount or dependency change
+    return () => {
+      debouncedAutoSave.cancel();
+    };
+  }, [videoLayers, audioLayers, transitions, keyframes, filterParams, appliedFilters, textSettings, projectId, sessionId]); 
 
   useEffect(() => {
     if (location.state?.error) {
@@ -1339,212 +1565,212 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
     }
   };
 
-  useEffect(() => {
-    const fetchAndSetLayers = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
-          params: { sessionId },
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const project = response.data;
-        if (project && project.timelineState) {
-          let timelineState =
-            typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
-          const newVideoLayers = [[], [], []];
-          const newAudioLayers = [[], [], []];
+  // useEffect(() => {
+  //   const fetchAndSetLayers = async () => {
+  //     try {
+  //       const token = localStorage.getItem('token');
+  //       const response = await axios.get(`${API_BASE_URL}/projects/${projectId}`, {
+  //         params: { sessionId },
+  //         headers: { Authorization: `Bearer ${token}` },
+  //       });
+  //       const project = response.data;
+  //       if (project && project.timelineState) {
+  //         let timelineState =
+  //           typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
+  //         const newVideoLayers = [[], [], []];
+  //         const newAudioLayers = [[], [], []];
   
-          const filterMap = {};
-          (timelineState.filters || []).forEach((filter) => {
-            if (!filterMap[filter.segmentId]) {
-              filterMap[filter.segmentId] = [];
-            }
-            filterMap[filter.segmentId].push(filter);
-          });
+  //         const filterMap = {};
+  //         (timelineState.filters || []).forEach((filter) => {
+  //           if (!filterMap[filter.segmentId]) {
+  //             filterMap[filter.segmentId] = [];
+  //           }
+  //           filterMap[filter.segmentId].push(filter);
+  //         });
   
-          if (timelineState.segments && timelineState.segments.length > 0) {
-            for (const segment of timelineState.segments) {
-              const layerIndex = segment.layer || 0;
-              if (layerIndex < 0) continue;
-              if (layerIndex >= newVideoLayers.length) {
-                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
-              }
-              if (segment.sourceVideoPath) {
-                let videoFileName = segment.sourceVideoPath.split('/').pop();
-                let video = videos.find((v) => v.fileName === videoFileName);
-                if (video) {
-                  const thumbnail = await generateVideoThumbnail(segment.sourceVideoPath);
-                  const filters = filterMap[segment.id] || [];
-                  newVideoLayers[layerIndex].push({
-                    ...video,
-                    type: 'video',
-                    id: segment.id,
-                    startTime: segment.timelineStartTime || 0,
-                    duration: (segment.timelineEndTime - segment.timelineStartTime) || 0,
-                    layer: layerIndex,
-                    filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(videoFileName)}`,
-                    positionX: segment.positionX ?? 0,
-                    positionY: segment.positionY ?? 0,
-                    scale: segment.scale ?? 1,
-                    rotation: segment.rotation ?? 0,
-                    startTimeWithinVideo: segment.startTime || 0,
-                    endTimeWithinVideo: segment.endTime || 0,
-                    thumbnail,
-                    keyframes: segment.keyframes || {},
-                    filters,
-                    cropL: segment.cropL ?? 0,
-                    cropR: segment.cropR ?? 0,
-                    cropT: segment.cropT ?? 0,
-                    cropB: segment.cropB ?? 0,
-                    opacity: segment.opacity ?? 1,
-                    speed: segment.speed ?? 1.0,
-                  });
-                }
-              }
-            }
-          }
+  //         if (timelineState.segments && timelineState.segments.length > 0) {
+  //           for (const segment of timelineState.segments) {
+  //             const layerIndex = segment.layer || 0;
+  //             if (layerIndex < 0) continue;
+  //             if (layerIndex >= newVideoLayers.length) {
+  //               while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+  //             }
+  //             if (segment.sourceVideoPath) {
+  //               let videoFileName = segment.sourceVideoPath.split('/').pop();
+  //               let video = videos.find((v) => v.fileName === videoFileName);
+  //               if (video) {
+  //                 const thumbnail = await generateVideoThumbnail(segment.sourceVideoPath);
+  //                 const filters = filterMap[segment.id] || [];
+  //                 newVideoLayers[layerIndex].push({
+  //                   ...video,
+  //                   type: 'video',
+  //                   id: segment.id,
+  //                   startTime: segment.timelineStartTime || 0,
+  //                   duration: (segment.timelineEndTime - segment.timelineStartTime) || 0,
+  //                   layer: layerIndex,
+  //                   filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(videoFileName)}`,
+  //                   positionX: segment.positionX ?? 0,
+  //                   positionY: segment.positionY ?? 0,
+  //                   scale: segment.scale ?? 1,
+  //                   rotation: segment.rotation ?? 0,
+  //                   startTimeWithinVideo: segment.startTime || 0,
+  //                   endTimeWithinVideo: segment.endTime || 0,
+  //                   thumbnail,
+  //                   keyframes: segment.keyframes || {},
+  //                   filters,
+  //                   cropL: segment.cropL ?? 0,
+  //                   cropR: segment.cropR ?? 0,
+  //                   cropT: segment.cropT ?? 0,
+  //                   cropB: segment.cropB ?? 0,
+  //                   opacity: segment.opacity ?? 1,
+  //                   speed: segment.speed ?? 1.0,
+  //                 });
+  //               }
+  //             }
+  //           }
+  //         }
   
-          if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
-            for (const imageSegment of timelineState.imageSegments) {
-              const layerIndex = imageSegment.layer || 0;
-              if (layerIndex < 0) continue;
-              if (layerIndex >= newVideoLayers.length) {
-                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
-              }
-              const filename = imageSegment.imagePath.split('/').pop();
-              const isElement = imageSegment.element || false;
-              const filePath = isElement
-                ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
-                : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
-              const thumbnail = await generateImageThumbnail(imageSegment.imagePath, isElement);
-              const filters = filterMap[imageSegment.id] || [];
-              newVideoLayers[layerIndex].push({
-                id: imageSegment.id,
-                type: 'image',
-                fileName: filename,
-                filePath,
-                thumbnail,
-                startTime: imageSegment.timelineStartTime || 0,
-                duration: (imageSegment.timelineEndTime - imageSegment.timelineStartTime) || 5,
-                layer: layerIndex,
-                positionX: imageSegment.positionX || 0,
-                positionY: imageSegment.positionY || 0,
-                scale: imageSegment.scale || 1,
-                rotation: imageSegment.rotation || 0,
-                opacity: imageSegment.opacity || 1.0,
-                width: imageSegment.width,
-                height: imageSegment.height,
-                effectiveWidth: imageSegment.effectiveWidth,
-                effectiveHeight: imageSegment.effectiveHeight,
-                maintainAspectRatio: imageSegment.maintainAspectRatio,
-                isElement,
-                keyframes: imageSegment.keyframes || {},
-                filters,
-                cropL: imageSegment.cropL ?? 0,
-                cropR: imageSegment.cropR ?? 0,
-                cropT: imageSegment.cropT ?? 0,
-                cropB: imageSegment.cropB ?? 0,
-              });
-            }
-          }
+  //         if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
+  //           for (const imageSegment of timelineState.imageSegments) {
+  //             const layerIndex = imageSegment.layer || 0;
+  //             if (layerIndex < 0) continue;
+  //             if (layerIndex >= newVideoLayers.length) {
+  //               while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+  //             }
+  //             const filename = imageSegment.imagePath.split('/').pop();
+  //             const isElement = imageSegment.element || false;
+  //             const filePath = isElement
+  //               ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
+  //               : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
+  //             const thumbnail = await generateImageThumbnail(imageSegment.imagePath, isElement);
+  //             const filters = filterMap[imageSegment.id] || [];
+  //             newVideoLayers[layerIndex].push({
+  //               id: imageSegment.id,
+  //               type: 'image',
+  //               fileName: filename,
+  //               filePath,
+  //               thumbnail,
+  //               startTime: imageSegment.timelineStartTime || 0,
+  //               duration: (imageSegment.timelineEndTime - imageSegment.timelineStartTime) || 5,
+  //               layer: layerIndex,
+  //               positionX: imageSegment.positionX || 0,
+  //               positionY: imageSegment.positionY || 0,
+  //               scale: imageSegment.scale || 1,
+  //               rotation: imageSegment.rotation || 0,
+  //               opacity: imageSegment.opacity || 1.0,
+  //               width: imageSegment.width,
+  //               height: imageSegment.height,
+  //               effectiveWidth: imageSegment.effectiveWidth,
+  //               effectiveHeight: imageSegment.effectiveHeight,
+  //               maintainAspectRatio: imageSegment.maintainAspectRatio,
+  //               isElement,
+  //               keyframes: imageSegment.keyframes || {},
+  //               filters,
+  //               cropL: imageSegment.cropL ?? 0,
+  //               cropR: imageSegment.cropR ?? 0,
+  //               cropT: imageSegment.cropT ?? 0,
+  //               cropB: imageSegment.cropB ?? 0,
+  //             });
+  //           }
+  //         }
   
-          if (timelineState.textSegments && timelineState.textSegments.length > 0) {
-            for (const textSegment of timelineState.textSegments) {
-              const layerIndex = textSegment.layer || 0;
-              if (layerIndex < 0) continue;
-              if (layerIndex >= newVideoLayers.length) {
-                while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
-              }
-              const text = textSegment.text?.trim() || 'Default Text';
-              newVideoLayers[layerIndex].push({
-                id: textSegment.id,
-                type: 'text',
-                text: text,
-                startTime: textSegment.timelineStartTime || 0,
-                duration: (textSegment.timelineEndTime - textSegment.timelineStartTime) || 0,
-                layer: layerIndex,
-                fontFamily: textSegment.fontFamily || 'Arial',
-                scale: textSegment.scale || 1.0,
-                rotation: textSegment.rotation || 0,
-                fontColor: textSegment.fontColor || '#FFFFFF',
-                backgroundColor: textSegment.backgroundColor || 'transparent',
-                positionX: textSegment.positionX || 0,
-                positionY: textSegment.positionY || 0,
-                alignment: textSegment.alignment || 'center',
-                backgroundOpacity: textSegment.backgroundOpacity ?? 1.0,
-                backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0,
-                backgroundBorderColor: textSegment.backgroundBorderColor || '#000000',
-                backgroundH: textSegment.backgroundH ?? 0,
-                backgroundW: textSegment.backgroundW ?? 0,
-                backgroundBorderRadius: textSegment.backgroundBorderRadius ?? 0,
-                textBorderColor: textSegment.textBorderColor || 'transparent',
-                textBorderWidth: textSegment.textBorderWidth ?? 0,
-                textBorderOpacity: textSegment.textBorderOpacity ?? 1.0,
-                letterSpacing: textSegment.letterSpacing ?? 0,
-                lineSpacing: textSegment.lineSpacing ?? 1.2,
-                keyframes: textSegment.keyframes || {},
-                opacity: textSegment.opacity || 1,
-              });
-            }
-          }
+  //         if (timelineState.textSegments && timelineState.textSegments.length > 0) {
+  //           for (const textSegment of timelineState.textSegments) {
+  //             const layerIndex = textSegment.layer || 0;
+  //             if (layerIndex < 0) continue;
+  //             if (layerIndex >= newVideoLayers.length) {
+  //               while (newVideoLayers.length <= layerIndex) newVideoLayers.push([]);
+  //             }
+  //             const text = textSegment.text?.trim() || 'Default Text';
+  //             newVideoLayers[layerIndex].push({
+  //               id: textSegment.id,
+  //               type: 'text',
+  //               text: text,
+  //               startTime: textSegment.timelineStartTime || 0,
+  //               duration: (textSegment.timelineEndTime - textSegment.timelineStartTime) || 0,
+  //               layer: layerIndex,
+  //               fontFamily: textSegment.fontFamily || 'Arial',
+  //               scale: textSegment.scale || 1.0,
+  //               rotation: textSegment.rotation || 0,
+  //               fontColor: textSegment.fontColor || '#FFFFFF',
+  //               backgroundColor: textSegment.backgroundColor || 'transparent',
+  //               positionX: textSegment.positionX || 0,
+  //               positionY: textSegment.positionY || 0,
+  //               alignment: textSegment.alignment || 'center',
+  //               backgroundOpacity: textSegment.backgroundOpacity ?? 1.0,
+  //               backgroundBorderWidth: textSegment.backgroundBorderWidth ?? 0,
+  //               backgroundBorderColor: textSegment.backgroundBorderColor || '#000000',
+  //               backgroundH: textSegment.backgroundH ?? 0,
+  //               backgroundW: textSegment.backgroundW ?? 0,
+  //               backgroundBorderRadius: textSegment.backgroundBorderRadius ?? 0,
+  //               textBorderColor: textSegment.textBorderColor || 'transparent',
+  //               textBorderWidth: textSegment.textBorderWidth ?? 0,
+  //               textBorderOpacity: textSegment.textBorderOpacity ?? 1.0,
+  //               letterSpacing: textSegment.letterSpacing ?? 0,
+  //               lineSpacing: textSegment.lineSpacing ?? 1.2,
+  //               keyframes: textSegment.keyframes || {},
+  //               opacity: textSegment.opacity || 1,
+  //             });
+  //           }
+  //         }
   
-          if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
-            for (const audioSegment of timelineState.audioSegments) {
-              const backendLayer = audioSegment.layer || -1;
-              const layerIndex = Math.abs(backendLayer) - 1;
-              if (layerIndex >= newAudioLayers.length) {
-                while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
-              }
-              const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
-              const extracted = audioSegment.extracted || false;
-              const audioUrl = extracted
-                ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(filename)}`
-                : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
-              const waveformJsonPath = audioSegment.waveformJsonPath
-                ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
-                : null;
-              const sanitizedId = audioSegment.id.replace(/[^a-zA-Z0-9]/g, '-');
-              newAudioLayers[layerIndex].push({
-                id: sanitizedId,
-                type: 'audio',
-                fileName: filename,
-                url: audioUrl,
-                startTime: audioSegment.timelineStartTime || 0,
-                duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
-                timelineStartTime: audioSegment.timelineStartTime || 0,
-                timelineEndTime: audioSegment.timelineEndTime || 0,
-                layer: backendLayer,
-                startTimeWithinAudio: audioSegment.startTime || 0,
-                endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
-                displayName: filename,
-                waveformJsonPath: waveformJsonPath,
-                volume: audioSegment.volume || 1.0,
-                keyframes: audioSegment.keyframes || {},
-                extracted,
-              });
-            }
-          }
+  //         if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
+  //           for (const audioSegment of timelineState.audioSegments) {
+  //             const backendLayer = audioSegment.layer || -1;
+  //             const layerIndex = Math.abs(backendLayer) - 1;
+  //             if (layerIndex >= newAudioLayers.length) {
+  //               while (newAudioLayers.length <= layerIndex) newAudioLayers.push([]);
+  //             }
+  //             const filename = audioSegment.audioFileName || audioSegment.audioPath.split('/').pop();
+  //             const extracted = audioSegment.extracted || false;
+  //             const audioUrl = extracted
+  //               ? `${CDN_URL}/audio/projects/${projectId}/extracted/${encodeURIComponent(filename)}`
+  //               : `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(filename)}`;
+  //             const waveformJsonPath = audioSegment.waveformJsonPath
+  //               ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+  //               : null;
+  //             const sanitizedId = audioSegment.id.replace(/[^a-zA-Z0-9]/g, '-');
+  //             newAudioLayers[layerIndex].push({
+  //               id: sanitizedId,
+  //               type: 'audio',
+  //               fileName: filename,
+  //               url: audioUrl,
+  //               startTime: audioSegment.timelineStartTime || 0,
+  //               duration: (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+  //               timelineStartTime: audioSegment.timelineStartTime || 0,
+  //               timelineEndTime: audioSegment.timelineEndTime || 0,
+  //               layer: backendLayer,
+  //               startTimeWithinAudio: audioSegment.startTime || 0,
+  //               endTimeWithinAudio: audioSegment.endTime || (audioSegment.timelineEndTime - audioSegment.timelineStartTime) || 0,
+  //               displayName: filename,
+  //               waveformJsonPath: waveformJsonPath,
+  //               volume: audioSegment.volume || 1.0,
+  //               keyframes: audioSegment.keyframes || {},
+  //               extracted,
+  //             });
+  //           }
+  //         }
   
-          setVideoLayers(newVideoLayers);
-          setAudioLayers(newAudioLayers);
-          let maxEndTime = 0;
-          [...newVideoLayers, ...newAudioLayers].forEach((layer) => {
-            layer.forEach((item) => {
-              const endTime = item.startTime + item.duration;
-              if (endTime > maxEndTime) maxEndTime = endTime;
-            });
-          });
-          setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
-          if (timelineState.textSegments?.some((s) => !s.text?.trim())) {
-            autoSaveProject(newVideoLayers, newAudioLayers);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching timeline data for layers:', error);
-      }
-    };
-    if (projectId && sessionId) fetchAndSetLayers();
-  }, [projectId, sessionId, videos, photos, audios]);
+  //         setVideoLayers(newVideoLayers);
+  //         setAudioLayers(newAudioLayers);
+  //         let maxEndTime = 0;
+  //         [...newVideoLayers, ...newAudioLayers].forEach((layer) => {
+  //           layer.forEach((item) => {
+  //             const endTime = item.startTime + item.duration;
+  //             if (endTime > maxEndTime) maxEndTime = endTime;
+  //           });
+  //         });
+  //         setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
+  //         if (timelineState.textSegments?.some((s) => !s.text?.trim())) {
+  //           autoSaveProject(newVideoLayers, newAudioLayers);
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error('Error fetching timeline data for layers:', error);
+  //     }
+  //   };
+  //   if (projectId && sessionId) fetchAndSetLayers();
+  // }, [projectId, sessionId, videos, photos, audios]);
 
     useEffect(() => {
       if (videoLayers.some((layer) => layer.length > 0) || audioLayers.some((layer) => layer.length > 0)) {
@@ -2226,10 +2452,10 @@ const handleVideoClick = debounce(async (video, isDragEvent = false) => {
     setTotalDuration((prev) => Math.max(prev, timelineStartTime + segmentDuration));
 
     saveHistory();
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject();
-    }, 1000);
+    // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    // updateTimeoutRef.current = setTimeout(() => {
+    //   autoSaveProject();
+    // }, 1000);
   } catch (error) {
     console.error('Error adding video to timeline:', error);
     alert('Failed to add video to timeline. Please try again.');
@@ -2306,10 +2532,10 @@ const handleVideoClick = debounce(async (video, isDragEvent = false) => {
   
       setTotalDuration((prev) => Math.max(prev, newSegment.startTime + newSegment.duration));
   
-      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-      updateTimeoutRef.current = setTimeout(() => {
-        autoSaveProject(updatedVideoLayers, audioLayers);
-      }, 1000);
+      // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      // updateTimeoutRef.current = setTimeout(() => {
+      //   autoSaveProject(updatedVideoLayers, audioLayers);
+      // }, 1000);
   
       saveHistory();
       return newSegment;
@@ -2420,10 +2646,10 @@ const handleDeleteSegment = async () => {
     setIsTransformOpen(false);
     setIsFiltersOpen(false);
 
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(updatedVideoLayers, updatedAudioLayers);
-    }, 1000);
+    // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    // updateTimeoutRef.current = setTimeout(() => {
+    //   autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+    // }, 1000);
   } catch (error) {
     console.error('Error deleting segment:', error);
     alert('Failed to delete segment. Please try again.');
@@ -2480,10 +2706,10 @@ const handleDeleteMultipleSegments = async () => {
     saveHistory();
 
     // Trigger auto-save
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(updatedVideoLayers, updatedAudioLayers);
-    }, 1000);
+    // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    // updateTimeoutRef.current = setTimeout(() => {
+    //   autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+    // }, 1000);
   } catch (error) {
     console.error('Error deleting multiple segments:', error);
     alert('Failed to delete segments. Please try again.');
@@ -2982,10 +3208,10 @@ const addKeyframe = async (property, value) => {
       { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
     );
 
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(updatedVideoLayers, updatedAudioLayers);
-    }, 1000);
+    // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    // updateTimeoutRef.current = setTimeout(() => {
+    //   autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+    // }, 1000);
   } catch (error) {
     console.error('Error adding keyframe:', error);
   }
@@ -3042,10 +3268,10 @@ const removeKeyframe = async (property, time) => {
     });
 
     // Schedule auto-save
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(updatedVideoLayers, updatedAudioLayers);
-    }, 1000);
+    // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    // updateTimeoutRef.current = setTimeout(() => {
+    //   autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+    // }, 1000);
 
     // Optionally fetch keyframes to ensure sync, but only if necessary
     // await fetchKeyframes(selectedSegment.id, selectedSegment.type);
@@ -3588,13 +3814,12 @@ const navigateKeyframes = (property, direction) => {
   
       // Refresh keyframes after saving
       await fetchKeyframes(selectedSegment.id, selectedSegment.type);
-      await fetchTransitions();
-  
+        
       // Trigger auto-save of the project with updated layers
-      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-      updateTimeoutRef.current = setTimeout(() => {
-        autoSaveProject(updatedVideoLayers, updatedAudioLayers);
-      }, 1000);
+      // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      // updateTimeoutRef.current = setTimeout(() => {
+      //   autoSaveProject(updatedVideoLayers, updatedAudioLayers);
+      // }, 1000);
     } catch (error) {
       console.error('Error saving segment changes:', error);
       if (error.response) {
@@ -3690,10 +3915,10 @@ const handlePhotoClick = async (photo, isDragEvent = false) => {
     setTotalDuration((prev) => Math.max(prev, timelineStartTime + duration));
     saveHistory();
 
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      autoSaveProject(videoLayers, audioLayers);
-    }, 1000);
+    // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    // updateTimeoutRef.current = setTimeout(() => {
+    //   autoSaveProject(videoLayers, audioLayers);
+    // }, 1000);
   } catch (error) {
     console.error('Error adding photo to timeline:', error);
     alert('Failed to add photo to timeline. Please try again.');
@@ -4060,10 +4285,10 @@ const filteredElements = elements.filter((element) =>
       )
       .then(() => {
         // Schedule auto-save
-        if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-        updateTimeoutRef.current = setTimeout(() => {
-          autoSaveProject(videoLayers, audioLayers);
-        }, 1000);
+        // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+        // updateTimeoutRef.current = setTimeout(() => {
+        //   autoSaveProject(videoLayers, audioLayers);
+        // }, 1000);
       })
       .catch((error) => {
         console.error('Error updating keyframe:', error);

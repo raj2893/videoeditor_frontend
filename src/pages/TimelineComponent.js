@@ -666,92 +666,92 @@ const handleVideoSelect = (videoId, event) => {
   }, [setPlayheadFromParent, onTimeUpdate]);
 
   const generateVideoThumbnail = async (videoPath) => {
-  const fileName = videoPath.split('/').pop();
-  const fullVideoPath = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fileName)}`;
-  return new Promise((resolve) => {
-    const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
-    video.src = fullVideoPath;
-    video.muted = true;
+  // const fileName = videoPath.split('/').pop();
+  // const fullVideoPath = `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(fileName)}`;
+  // return new Promise((resolve) => {
+  //   const video = document.createElement('video');
+  //   video.crossOrigin = 'anonymous';
+  //   video.src = fullVideoPath;
+  //   video.muted = true;
 
-    video.onloadeddata = () => {
-      video.currentTime = 1;
-    };
+  //   video.onloadeddata = () => {
+  //     video.currentTime = 1;
+  //   };
 
-    video.onseeked = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const maxWidth = 120;
-      const maxHeight = 80;
-      let width = video.videoWidth;
-      let height = video.videoHeight;
+  //   video.onseeked = () => {
+  //     const canvas = document.createElement('canvas');
+  //     const ctx = canvas.getContext('2d');
+  //     const maxWidth = 120;
+  //     const maxHeight = 80;
+  //     let width = video.videoWidth;
+  //     let height = video.videoHeight;
 
-      if (width > height) {
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-      } else {
-        if (height > maxHeight) {
-          width = (width * maxHeight) / height;
-          height = maxHeight;
-        }
-      }
+  //     if (width > height) {
+  //       if (width > maxWidth) {
+  //         height = (height * maxWidth) / width;
+  //         width = maxWidth;
+  //       }
+  //     } else {
+  //       if (height > maxHeight) {
+  //         width = (width * maxHeight) / height;
+  //         height = maxHeight;
+  //       }
+  //     }
 
-      canvas.width = width;
-      canvas.height = height;
-      ctx.drawImage(video, 0, 0, width, height);
-      const thumbnail = canvas.toDataURL('image/jpeg');
-      resolve(thumbnail);
-    };
+  //     canvas.width = width;
+  //     canvas.height = height;
+  //     ctx.drawImage(video, 0, 0, width, height);
+  //     const thumbnail = canvas.toDataURL('image/jpeg');
+  //     resolve(thumbnail);
+  //   };
 
-    video.onerror = () => {
-      console.error(`Failed to load video for thumbnail: ${fullVideoPath}`);
-      resolve(null);
-    };
-  });
+  //   video.onerror = () => {
+  //     console.error(`Failed to load video for thumbnail: ${fullVideoPath}`);
+  //     resolve(null);
+  //   };
+  // });
 };
 
   const generateImageThumbnail = async (imagePath, isElement = false) => {
-    const filename = imagePath.split('/').pop();
-    const fullImagePath = isElement
-      ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
-      : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = fullImagePath;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const maxWidth = 120;
-        const maxHeight = 80;
-        let width = img.width;
-        let height = img.height;
+    // const filename = imagePath.split('/').pop();
+    // const fullImagePath = isElement
+    //   ? `${CDN_URL}/elements/${encodeURIComponent(filename)}`
+    //   : `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(filename)}`;
+    // return new Promise((resolve) => {
+    //   const img = new Image();
+    //   img.crossOrigin = 'anonymous';
+    //   img.src = fullImagePath;
+    //   img.onload = () => {
+    //     const canvas = document.createElement('canvas');
+    //     const ctx = canvas.getContext('2d');
+    //     const maxWidth = 120;
+    //     const maxHeight = 80;
+    //     let width = img.width;
+    //     let height = img.height;
   
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
+    //     if (width > height) {
+    //       if (width > maxWidth) {
+    //         height = (height * maxWidth) / width;
+    //         width = maxWidth;
+    //       }
+    //     } else {
+    //       if (height > maxHeight) {
+    //         width = (width * maxHeight) / height;
+    //         height = maxHeight;
+    //       }
+    //     }
   
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
-        const thumbnail = canvas.toDataURL('image/jpeg');
-        resolve(thumbnail);
-      };
-      img.onerror = () => {
-        console.error(`Failed to load image for thumbnail: ${fullImagePath}`);
-        resolve(null);
-      };
-    });
+    //     canvas.width = width;
+    //     canvas.height = height;
+    //     ctx.drawImage(img, 0, 0, width, height);
+    //     const thumbnail = canvas.toDataURL('image/jpeg');
+    //     resolve(thumbnail);
+    //   };
+    //   img.onerror = () => {
+    //     console.error(`Failed to load image for thumbnail: ${fullImagePath}`);
+    //     resolve(null);
+    //   };
+    // });
   };
 
   const loadProjectTimeline = async () => {

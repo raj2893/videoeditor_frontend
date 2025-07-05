@@ -43,18 +43,11 @@ const TimelineLayer = ({
           const style = {
             left: `${item.startTime * timeScale}px`,
             width: `${item.duration * timeScale}px`,
-            backgroundImage:
-              item.thumbnail
-                ? `url(${item.thumbnail})`
-                : item.type === 'image' && item.filePath
-                ? `url(${item.filePath})`
-                : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundColor: item.type === 'audio' ? 'none' : item.type === 'video' ? '#3b82f6' : item.type === 'image' ? '#10b981' : 'none',
             top: '5px',
           };
           const isSelected = item.id === selectedSegmentId;
-          const isMultiSelected = multiSelectedSegmentIds.includes(item.id); // Check if multi-selected
+          const isMultiSelected = multiSelectedSegmentIds.includes(item.id);
         
           const itemTransitions = transitions.filter(
             (t) => t.segmentId === item.id && t.layer === layerIndex

@@ -257,7 +257,7 @@ const TimelineComponent = ({
 const handleCopySegment = async () => {
   if (!selectedSegment) return;
 
-  const { id, type, startTime, duration, layerIndex } = selectedSegment;
+  const { type, startTime, duration, layerIndex } = selectedSegment;
   const endTime = startTime + duration;
 
   // Determine target layers based on segment type
@@ -294,8 +294,8 @@ const handleCopySegment = async () => {
     let newSegment = null;
     const backendLayer = type === 'audio' ? -(targetLayerIndex + 1) : targetLayerIndex;
 
-    // Deep copy the selected segment to avoid reference issues
-    const segmentCopy = JSON.parse(JSON.stringify(selectedSegment));
+    // Deep copy the selected segment to avoid reference issues, excluding the ID
+    const segmentCopy = JSON.parse(JSON.stringify({ ...selectedSegment, id: undefined }));
 
     if (type === 'text') {
       newSegment = await textHandler.addTextToTimeline(backendLayer, startTime, {
@@ -367,20 +367,28 @@ const handleCopySegment = async () => {
       });
       newSegment = { ...newSegment, layerIndex: targetLayerIndex, type: 'image' };
     } else if (type === 'video') {
-      newSegment = await videoHandler.addVideoToTimeline(
-        segmentCopy.fileName,
-        backendLayer,
-        roundToThreeDecimals(startTime),
-        roundToThreeDecimals(endTime),
-        roundToThreeDecimals(segmentCopy.startTimeWithinVideo || 0),
-        roundToThreeDecimals(segmentCopy.endTimeWithinVideo || duration),
-        false // Do not create an audio segment for the copied video
-      );
-      setVideoLayers((prev) => {
-        const newLayers = [...prev];
-        while (newLayers.length <= backendLayer) newLayers.push([]);
-        newLayers[backendLayer].push({
-          ...newSegment,
+      try {
+        // Call addVideoToTimeline to create a new video segment
+        const response = await videoHandler.addVideoToTimeline(
+          segmentCopy.fileName,
+          backendLayer,
+          roundToThreeDecimals(startTime),
+          roundToThreeDecimals(endTime),
+          roundToThreeDecimals(segmentCopy.startTimeWithinVideo || 0),
+          roundToThreeDecimals(segmentCopy.endTimeWithinVideo || duration),
+          false // Do not create an audio segment for the copied video
+        );
+
+        // Ensure newSegment.videoSegment exists
+        if (!response.videoSegment) {
+          throw new Error('Failed to create new video segment');
+        }
+
+        // Use the backend-generated segment
+        newSegment = {
+          ...response.videoSegment,
+          layerIndex: targetLayerIndex,
+          type: 'video',
           thumbnail: segmentCopy.thumbnail,
           positionX: segmentCopy.positionX || 0,
           positionY: segmentCopy.positionY || 0,
@@ -396,12 +404,11 @@ const handleCopySegment = async () => {
           speed: segmentCopy.speed || 1.0,
           startTimeWithinVideo: roundToThreeDecimals(segmentCopy.startTimeWithinVideo || 0),
           endTimeWithinVideo: roundToThreeDecimals(segmentCopy.endTimeWithinVideo || duration),
-          type: 'video',
-          filePath: `${CDN_URL}/videos/projects/${projectId}/${encodeURIComponent(segmentCopy.fileName)}`,
-        });
-        return newLayers;
-      });
-      newSegment = { ...newSegment, layerIndex: targetLayerIndex, type: 'video' };
+        };
+      } catch (error) {
+        console.error('Error copying video segment:', error);
+        throw error; // Rethrow to be caught by the outer try-catch
+      }
     } else if (type === 'audio') {
       newSegment = await audioHandler.addAudioToTimeline(
         segmentCopy.fileName,

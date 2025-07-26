@@ -12,13 +12,19 @@ const ExportPage = () => {
     const [exportStatus, setExportStatus] = useState('ready');
     const [downloadUrl, setDownloadUrl] = useState(null);
     const [errorMessage, setErrorMessage] = useState('');
+    const [taskId, setTaskId] = useState(null);
     const exportLock = useRef(null);
+    const pollingRef = useRef(null);
     const requestIdRef = useRef(crypto.randomUUID());
 
     useEffect(() => {
         console.log('ExportPage mounted', { projectId, sessionId, requestId: requestIdRef.current, timestamp: Date.now() });
         return () => {
             console.log('ExportPage unmounted', { projectId, sessionId, requestId: requestIdRef.current, timestamp: Date.now() });
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+                console.log('Polling stopped on unmount', { requestId: requestIdRef.current });
+            }
         };
     }, [projectId, sessionId]);
 
@@ -56,21 +62,25 @@ const ExportPage = () => {
                 );
 
                 console.log('Export API response:', exportResponse.data, { requestId, timestamp: Date.now() });
-                const { fileName, downloadUrl } = exportResponse.data;
+                const { taskId, fileName, downloadUrl, message } = exportResponse.data;
 
-                if (!downloadUrl) {
-                    throw new Error('Download URL not provided in export response');
+                if (!taskId) {
+                    throw new Error('Task ID not provided in export response');
                 }
 
-                console.log('Download URL received:', downloadUrl, { requestId, timestamp: Date.now() });
+                console.log('Export task queued:', { taskId, fileName, downloadUrl, message, requestId, timestamp: Date.now() });
+                setTaskId(taskId);
                 setDownloadUrl(downloadUrl);
-                setExportStatus('success');
+                setExportStatus('queued');
+
+                // Start polling task status
+                pollTaskStatus(taskId, token, requestId);
             } catch (error) {
                 console.error('Export error:', error.response?.data || error.message, { requestId, timestamp: Date.now() });
                 const errorMsg = error.response?.data?.message ||
                                  error.response?.data ||
                                  error.message ||
-                                 'Failed to export project. Please try again.';
+                                 'Failed to queue export task. Please try again.';
                 setExportStatus('error');
                 setErrorMessage(errorMsg);
             } finally {
@@ -78,6 +88,51 @@ const ExportPage = () => {
                 exportLock.current = null;
             }
         })();
+    };
+
+    const pollTaskStatus = (taskId, token, requestId) => {
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+        }
+
+        pollingRef.current = setInterval(async () => {
+            try {
+                console.log('Polling task status', { taskId, requestId, timestamp: Date.now() });
+                const statusResponse = await axios.get(
+                    `${API_BASE_URL}/projects/task/${taskId}`,
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+
+                console.log('Task status response:', statusResponse.data, { requestId, timestamp: Date.now() });
+                const { status, downloadUrl: updatedDownloadUrl, errorMessage } = statusResponse.data;
+
+                if (status === 'QUEUED') {
+                    setExportStatus('queued');
+                } else if (status === 'PROCESSING') {
+                    setExportStatus('exporting');
+                } else if (status === 'COMPLETED') {
+                    setExportStatus('success');
+                    setDownloadUrl(updatedDownloadUrl || downloadUrl);
+                    clearInterval(pollingRef.current);
+                    pollingRef.current = null;
+                    console.log('Polling stopped: Task completed', { taskId, requestId, timestamp: Date.now() });
+                } else if (status === 'FAILED') {
+                    setExportStatus('error');
+                    setErrorMessage(errorMessage || 'Export task failed. Please try again.');
+                    clearInterval(pollingRef.current);
+                    pollingRef.current = null;
+                    console.log('Polling stopped: Task failed', { taskId, requestId, timestamp: Date.now() });
+                }
+            } catch (error) {
+                console.error('Task status polling error:', error.response?.data || error.message, { requestId, timestamp: Date.now() });
+                setExportStatus('error');
+                setErrorMessage('Failed to check task status. Please try again.');
+                clearInterval(pollingRef.current);
+                pollingRef.current = null;
+            }
+        }, 5000); // Poll every 5 seconds
     };
 
     const handleDownload = () => {
@@ -94,6 +149,11 @@ const ExportPage = () => {
 
     const handleBack = () => {
         console.log('Navigating back to editor for project', projectId, { requestId: requestIdRef.current, timestamp: Date.now() });
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            console.log('Polling stopped on navigation', { requestId: requestIdRef.current });
+        }
         navigate(`/projecteditor/${projectId}`);
     };
 
@@ -116,11 +176,24 @@ const ExportPage = () => {
                         </button>
                     </>
                 )}
+                {exportStatus === 'queued' && (
+                    <>
+                        <div className="loading-spinner"></div>
+                        <h2>Export Task Queued</h2>
+                        <p>Your export task is in the queue. Please wait...</p>
+                        <button className="back-button" onClick={handleBack}>
+                            Back to Editor
+                        </button>
+                    </>
+                )}
                 {exportStatus === 'exporting' && (
                     <>
                         <div className="loading-spinner"></div>
                         <h2>Exporting Your Video</h2>
-                        <p>Please wait while we process your project...</p>
+                        <p>Your video is being processed. This may take a few minutes...</p>
+                        <button className="back-button" onClick={handleBack}>
+                            Back to Editor
+                        </button>
                     </>
                 )}
                 {exportStatus === 'success' && (

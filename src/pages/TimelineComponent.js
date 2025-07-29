@@ -599,12 +599,9 @@ const handleVideoSelect = (videoId, event) => {
       }
     }
     setMultiSelectedSegments(newMultiSelected);
-    if (newMultiSelected.length >= 1) {
-      // Do not call onSegmentSelect to avoid resetting multiSelectedSegments
-      setSelectedSegment(null); // Clear single selection
-    } else {
-      setSelectedSegment(null);
-      if (onSegmentSelect) onSegmentSelect(null);
+    setSelectedSegment(null);
+    if (onSegmentSelect) {
+      onSegmentSelect(null, newMultiSelected); // Pass multiSelected array
     }
   } else {
     // Single selection
@@ -627,7 +624,7 @@ const handleVideoSelect = (videoId, event) => {
         }
       }
     }
-    if (onSegmentSelect) onSegmentSelect(selected);
+    if (onSegmentSelect) onSegmentSelect(selected, []); // Pass empty multiSelected for single selection
   }
   if (selected && onTimelineClick) onTimelineClick();
 };

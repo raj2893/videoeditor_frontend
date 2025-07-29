@@ -2637,8 +2637,34 @@ const toggleSection = (section) => {
   }
 };
 
-const handleSegmentSelect = async (segment) => {
-  // Find the latest segment data from videoLayers or audioLayers
+const handleSegmentSelect = async (segment, multiSelected = []) => {
+  // If multiSelected is provided and not empty, handle multi-selection
+  if (multiSelected.length > 0) {
+    setMultiSelectedSegments(multiSelected);
+    setSelectedSegment(null); // Clear single selection
+    setIsTextToolOpen(false); // Disable text tool for multi-selection
+    setIsTransformOpen(false); // Disable transform panel
+    setIsFiltersOpen(false); // Disable filters panel
+    setTempSegmentValues({}); // Clear temp values
+    setAppliedFilters([]); // Clear filters
+    setFilterParams({
+      brightness: 0,
+      contrast: 1,
+      saturation: 1,
+      hue: 0,
+      blur: 0,
+      sharpen: 0,
+      grayscale: '',
+      invert: '',
+      flip: '',
+    });
+    setKeyframes({}); // Clear keyframes
+    setCurrentTimeInSegment(0); // Reset time in segment
+    await fetchTransitions(); // Refresh transitions
+    return;
+  }
+
+  // Single segment selection logic
   let updatedSegment = segment;
   if (segment) {
     if (segment.type === 'audio') {
@@ -2650,7 +2676,7 @@ const handleSegmentSelect = async (segment) => {
   }
 
   setSelectedSegment(updatedSegment);
-  setMultiSelectedSegments([]);
+  setMultiSelectedSegments([]); // Clear multi-selection for single select
   if (updatedSegment) {
     let initialValues = {};
     switch (updatedSegment.type) {

@@ -12,6 +12,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { debounce } from 'lodash';
 import { API_BASE_URL, CDN_URL } from '../Config.js';
 import VideoSegmentHandler from './VideoSegmentHandler.js';
+import AiSubtitlesPanel from './AiSubtitlesPanel';
+import TextStyles from './TextStyles';
+import AIVoicesPanel from './AIVoicesPanel';
 
 const ProjectEditor = () => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -94,6 +97,12 @@ const ProjectEditor = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [multiSelectedSegments, setMultiSelectedSegments] = useState([]);
+  const [changedTextProperty, setChangedTextProperty] = useState(null);
+  const [aiSubtitleStyles, setAiSubtitleStyles] = useState([]);
+  const [selectedAiStyle, setSelectedAiStyle] = useState(null);
+  const [voices, setVoices] = useState([]);
+  const [aiVoiceText, setAiVoiceText] = useState('');
+  const [selectedVoice, setSelectedVoice] = useState(null);  
   const textSettingsRef = useRef(textSettings);
 
   const canUndo = historyIndex > 0;
@@ -158,6 +167,26 @@ const ProjectEditor = () => {
 
     fetchTextStyles();
   }, []);
+
+  useEffect(() => {
+    const fetchAiStyles = async () => {
+      try {
+        const response = await fetch('/data/AiStyles.json');
+        if (!response.ok) {
+          throw new Error('Failed to fetch AI subtitle styles');
+        }
+        const styles = await response.json();
+        setAiSubtitleStyles(styles);
+        // Optionally set a default style
+        setSelectedAiStyle(styles[0] || null);
+      } catch (error) {
+        console.error('Error fetching AI subtitle styles:', error);
+        setAiSubtitleStyles([]);
+      }
+    };
+  
+    fetchAiStyles();
+  }, []);  
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -323,6 +352,7 @@ const ProjectEditor = () => {
               letterSpacing: item.letterSpacing,
               lineSpacing: item.lineSpacing,
               keyframes: item.keyframes || {},
+              isSubtitle: item.isSubtitle || false,
             });
           }
         });
@@ -858,22 +888,33 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
   const updateTextSettings = (newSettings) => {
     const trimmedText = newSettings.text?.trim();
     const isEmpty = !trimmedText;
-  
+    
     setIsTextEmpty(isEmpty);
     setTextSettings(newSettings);
-  
-    if (editingTextSegment && !isEmpty) {
+    
+    // Identify the changed property by comparing newSettings with textSettings
+    const changedKey = Object.keys(newSettings).find(
+      (key) => newSettings[key] !== textSettings[key]
+    );
+    setChangedTextProperty(changedKey || null);
+    
+    if (multiSelectedSegments.length > 0 && multiSelectedSegments.every((seg) => seg.type === 'text') && !isEmpty) {
+      const updatePayload = changedKey && changedKey !== 'text' ? { [changedKey]: newSettings[changedKey] } : {};
+      // Handle multiple text segments
+      handleMultiTextUpdate(updatePayload);
+    } else if (editingTextSegment && !isEmpty) {
+      // Existing single segment update logic
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         const currentSegment = newLayers[editingTextSegment.layer].find(
           (item) => item.id === editingTextSegment.id
         );
-  
+    
         if (!currentSegment) {
           console.warn(`Segment with ID ${editingTextSegment.id} not found in videoLayers`);
           return prevLayers;
         }
-  
+    
         newLayers[editingTextSegment.layer] = newLayers[editingTextSegment.layer].map((item) =>
           item.id === editingTextSegment.id
             ? {
@@ -900,38 +941,156 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
                 positionY: tempSegmentValues.positionY !== undefined ? tempSegmentValues.positionY : item.positionY,
                 scale: tempSegmentValues.scale !== undefined ? tempSegmentValues.scale : item.scale,
                 opacity: tempSegmentValues.opacity !== undefined ? tempSegmentValues.opacity : item.opacity,
+                rotation: tempSegmentValues.rotation !== undefined ? tempSegmentValues.rotation : item.rotation,
                 keyframes: keyframes,
               }
             : item
         );
         return newLayers;
       });
-  
+    
       setTempSegmentValues((prev) => ({
         ...prev,
         scale: newSettings.scale !== undefined ? newSettings.scale : prev.scale,
       }));
-  
+    
       setTotalDuration((prev) => {
         const layer = videoLayers[editingTextSegment.layer];
         const updatedSegment = layer.find((item) => item.id === editingTextSegment.id);
         return Math.max(prev, updatedSegment?.startTime + updatedSegment?.duration || prev);
       });
-  
+    
       // Debounced auto-save for text changes only if text is not empty
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
-        handleSaveTextSegment({
-          ...newSettings,
-          startTime: videoLayers[editingTextSegment.layer].find(
-            (item) => item.id === editingTextSegment.id
-          )?.startTime || editingTextSegment.startTime,
-        });
+        handleSaveTextSegment(newSettings, changedKey);
       }, 1000);
     }
   };
 
-  const handleSaveTextSegment = async (settings = textSettings) => {
+const handleSelectSubtitles = () => {
+  // Collect all text segments with isSubtitle: true from videoLayers
+  const subtitleSegments = videoLayers
+    .flat()
+    .filter((segment) => segment.type === 'text' && segment.isSubtitle === true);
+
+  // Update multiSelectedSegments with the subtitle segments
+  setMultiSelectedSegments(subtitleSegments);
+
+  // If there are subtitle segments, open the text tool and set text settings based on the first subtitle
+  if (subtitleSegments.length > 0) {
+    const firstSubtitle = subtitleSegments[0];
+    setTextSettings({
+      text: firstSubtitle.text || 'New Text',
+      fontFamily: firstSubtitle.fontFamily || 'Arial',
+      fontColor: firstSubtitle.fontColor || '#FFFFFF',
+      backgroundColor: firstSubtitle.backgroundColor || 'transparent',
+      duration: firstSubtitle.duration || 5,
+      alignment: firstSubtitle.alignment || 'center',
+      backgroundOpacity: firstSubtitle.backgroundOpacity ?? 1.0,
+      backgroundBorderWidth: firstSubtitle.backgroundBorderWidth ?? 0,
+      backgroundBorderColor: firstSubtitle.backgroundBorderColor || '#000000',
+      backgroundH: firstSubtitle.backgroundH ?? 0,
+      backgroundW: firstSubtitle.backgroundW ?? 0,
+      backgroundBorderRadius: firstSubtitle.backgroundBorderRadius ?? 0,
+      textBorderColor: firstSubtitle.textBorderColor || 'transparent',
+      textBorderWidth: firstSubtitle.textBorderWidth ?? 0,
+      textBorderOpacity: firstSubtitle.textBorderOpacity ?? 1.0,
+      letterSpacing: firstSubtitle.letterSpacing ?? 0,
+      lineSpacing: firstSubtitle.lineSpacing ?? 1.2,
+      scale: firstSubtitle.scale || 1.0,
+      positionX: firstSubtitle.positionX || 0,
+      positionY: firstSubtitle.positionY || 0,
+      opacity: firstSubtitle.opacity || 1,
+      rotation: firstSubtitle.rotation || 0,
+    });
+    setIsTextToolOpen(true);
+    setIsContentPanelOpen(true);
+    setExpandedSection('text');
+    setSelectedSegment(null); // Clear single selection to focus on multi-selection
+  } else {
+    // If no subtitles, clear selections and close text tool
+    setMultiSelectedSegments([]);
+    setSelectedSegment(null);
+    setIsTextToolOpen(false);
+    setIsContentPanelOpen(false);
+    setExpandedSection(null);
+  }
+};  
+
+const handleMultiTextUpdate = async (newSettings) => {
+  if (multiSelectedSegments.length === 0 || !multiSelectedSegments.every((seg) => seg.type === 'text')) {
+    return;
+  }
+
+  // Skip if no valid settings to update
+  if (Object.keys(newSettings).length === 0) {
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+    const token = localStorage.getItem('token');
+    const segmentIds = multiSelectedSegments.map((seg) => seg.id);
+
+    const payload = {
+      segmentIds,
+      ...newSettings,
+      keyframes: keyframes,
+      isSubtitle: multiSelectedSegments.map((seg) => seg.isSubtitle || false),
+    };
+
+    // Update local state optimistically
+    let updatedVideoLayers = videoLayers;
+    setVideoLayers((prevLayers) => {
+      const newLayers = [...prevLayers];
+      multiSelectedSegments.forEach((selectedSegment) => {
+        newLayers[selectedSegment.layer] = newLayers[selectedSegment.layer].map((item) =>
+          item.id === selectedSegment.id
+            ? {
+                ...item,
+                ...newSettings, // Apply only the changed property
+                keyframes: keyframes,
+                isSubtitle: item.isSubtitle || false,
+              }
+            : item
+        );
+      });
+      updatedVideoLayers = newLayers;
+      return newLayers;
+    });
+
+    // Update total duration
+    setTotalDuration((prev) => {
+      let maxEndTime = 0;
+      updatedVideoLayers.forEach((layer) => {
+        layer.forEach((item) => {
+          const endTime = item.startTime + item.duration;
+          if (endTime > maxEndTime) maxEndTime = endTime;
+        });
+      });
+      return Math.max(prev, maxEndTime);
+    });
+
+    // Save to backend
+    await axios.put(
+      `${API_BASE_URL}/projects/${projectId}/update-multiple-text`,
+      payload,
+      { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    saveHistory();
+    await Promise.all(segmentIds.map((id) => fetchKeyframes(id, 'text')));
+    await autoSaveProject(updatedVideoLayers, audioLayers);
+  } catch (error) {
+    console.error('Error updating multiple text segments:', error);
+    alert('Failed to update multiple text segments. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};  
+
+  const handleSaveTextSegment = async (settings = textSettings, changedProperty = changedTextProperty) => {
     if (!editingTextSegment || !sessionId || !projectId) return;
     const trimmedText = settings.text?.trim();
     if (!trimmedText) {
@@ -950,63 +1109,50 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         return;
       }
   
-      const updatedTextSegment = {
-        ...currentSegment,
-        text: trimmedText,
-        fontFamily: settings.fontFamily,
-        fontColor: settings.fontColor,
-        backgroundColor: settings.backgroundColor,
-        duration: settings.duration,
-        timelineStartTime: currentSegment.startTime,
-        timelineEndTime: currentSegment.startTime + settings.duration,
-        alignment: settings.alignment,
-        backgroundOpacity: settings.backgroundOpacity,
-        backgroundBorderWidth: settings.backgroundBorderWidth,
-        backgroundBorderColor: settings.backgroundBorderColor,
-        backgroundH: settings.backgroundH,
-        backgroundW: settings.backgroundW,
-        backgroundBorderRadius: settings.backgroundBorderRadius,
-        textBorderColor: settings.textBorderColor,
-        textBorderWidth: settings.textBorderWidth,
-        textBorderOpacity: settings.textBorderOpacity,
-        letterSpacing: settings.letterSpacing,
-        lineSpacing: settings.lineSpacing,
-        positionX: tempSegmentValues.positionX !== undefined ? tempSegmentValues.positionX : currentSegment.positionX,
-        positionY: tempSegmentValues.positionY !== undefined ? tempSegmentValues.positionY : currentSegment.positionY,
-        scale: tempSegmentValues.scale !== undefined ? tempSegmentValues.scale : currentSegment.scale,
-        opacity: tempSegmentValues.opacity !== undefined ? tempSegmentValues.opacity : currentSegment.opacity,
+      // Construct payload with required fields and text
+      const textPayload = {
+        segmentId: editingTextSegment.id,
+        text: trimmedText, // Always include text as required by the backend
+        timelineStartTime: Number(currentSegment.startTime),
+        timelineEndTime: Number(currentSegment.startTime + currentSegment.duration),
+        layer: Number(currentSegment.layer),
         keyframes: keyframes,
+        isSubtitle: currentSegment.isSubtitle || false,
       };
+  
+      // Include only the changed property in the payload, if specified
+      if (changedProperty && changedProperty !== 'text') {
+        textPayload[changedProperty] = settings[changedProperty];
+        // Special case for duration to update timelineEndTime
+        if (changedProperty === 'duration') {
+          textPayload.timelineEndTime = Number(currentSegment.startTime + settings.duration);
+        }
+      } else if (!changedProperty) {
+        // If no specific property changed, include all properties (fallback for initial save or unspecified changes)
+        textPayload.fontFamily = settings.fontFamily;
+        textPayload.fontColor = settings.fontColor;
+        textPayload.backgroundColor = settings.backgroundColor;
+        textPayload.alignment = settings.alignment;
+        textPayload.backgroundOpacity = settings.backgroundOpacity;
+        textPayload.backgroundBorderWidth = settings.backgroundBorderWidth;
+        textPayload.backgroundBorderColor = settings.backgroundBorderColor;
+        textPayload.backgroundH = settings.backgroundH;
+        textPayload.backgroundW = settings.backgroundW;
+        textPayload.backgroundBorderRadius = settings.backgroundBorderRadius;
+        textPayload.textBorderColor = settings.textBorderColor;
+        textPayload.textBorderWidth = settings.textBorderWidth;
+        textPayload.textBorderOpacity = settings.textBorderOpacity;
+        textPayload.letterSpacing = settings.letterSpacing;
+        textPayload.lineSpacing = settings.lineSpacing;
+        textPayload.positionX = tempSegmentValues.positionX !== undefined ? tempSegmentValues.positionX : currentSegment.positionX;
+        textPayload.positionY = tempSegmentValues.positionY !== undefined ? tempSegmentValues.positionY : currentSegment.positionY;
+        textPayload.scale = tempSegmentValues.scale !== undefined ? tempSegmentValues.scale : currentSegment.scale;
+        textPayload.opacity = tempSegmentValues.opacity !== undefined ? tempSegmentValues.opacity : currentSegment.opacity;
+      }
   
       await axios.put(
         `${API_BASE_URL}/projects/${projectId}/update-text`,
-        {
-          segmentId: editingTextSegment.id,
-          text: updatedTextSegment.text,
-          fontFamily: updatedTextSegment.fontFamily,
-          scale: updatedTextSegment.scale,
-          fontColor: updatedTextSegment.fontColor,
-          backgroundColor: updatedTextSegment.backgroundColor,
-          timelineStartTime: updatedTextSegment.timelineStartTime,
-          timelineEndTime: updatedTextSegment.timelineEndTime,
-          layer: updatedTextSegment.layer,
-          positionX: updatedTextSegment.positionX,
-          positionY: updatedTextSegment.positionY,
-          opacity: updatedTextSegment.opacity,
-          alignment: updatedTextSegment.alignment,
-          backgroundOpacity: updatedTextSegment.backgroundOpacity,
-          backgroundBorderWidth: updatedTextSegment.backgroundBorderWidth,
-          backgroundBorderColor: updatedTextSegment.backgroundBorderColor,
-          backgroundH: updatedTextSegment.backgroundH,
-          backgroundW: updatedTextSegment.backgroundW,
-          backgroundBorderRadius: updatedTextSegment.backgroundBorderRadius,
-          textBorderColor: updatedTextSegment.textBorderColor,
-          textBorderWidth: updatedTextSegment.textBorderWidth,
-          textBorderOpacity: updatedTextSegment.textBorderOpacity,
-          letterSpacing: updatedTextSegment.letterSpacing,
-          lineSpacing: updatedTextSegment.lineSpacing,
-          keyframes: updatedTextSegment.keyframes,
-        },
+        textPayload,
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
   
@@ -1014,24 +1160,104 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
       setVideoLayers((prevLayers) => {
         const newLayers = [...prevLayers];
         newLayers[editingTextSegment.layer] = newLayers[editingTextSegment.layer].map((item) =>
-          item.id === editingTextSegment.id ? { ...updatedTextSegment } : item
+          item.id === editingTextSegment.id
+            ? {
+                ...item,
+                ...(changedProperty ? { [changedProperty]: settings[changedProperty] } : {
+                    text: settings.text,
+                    fontFamily: settings.fontFamily,
+                    fontColor: settings.fontColor,
+                    backgroundColor: settings.backgroundColor,
+                    duration: settings.duration,
+                    timelineEndTime: item.startTime + settings.duration,
+                    alignment: settings.alignment,
+                    backgroundOpacity: settings.backgroundOpacity,
+                    backgroundBorderWidth: settings.backgroundBorderWidth,
+                    backgroundBorderColor: settings.backgroundBorderColor,
+                    backgroundH: settings.backgroundH,
+                    backgroundW: settings.backgroundW,
+                    backgroundBorderRadius: settings.backgroundBorderRadius,
+                    textBorderColor: settings.textBorderColor,
+                    textBorderWidth: settings.textBorderWidth,
+                    textBorderOpacity: settings.textBorderOpacity,
+                    letterSpacing: settings.letterSpacing,
+                    lineSpacing: settings.lineSpacing,
+                  }),
+                positionX: tempSegmentValues.positionX !== undefined ? tempSegmentValues.positionX : item.positionX,
+                positionY: tempSegmentValues.positionY !== undefined ? tempSegmentValues.positionY : item.positionY,
+                scale: tempSegmentValues.scale !== undefined ? tempSegmentValues.scale : item.scale,
+                opacity: tempSegmentValues.opacity !== undefined ? tempSegmentValues.opacity : item.opacity,
+                keyframes: keyframes,
+                isSubtitle: item.isSubtitle || false,
+              }
+            : item
         );
         updatedVideoLayers = newLayers;
         return newLayers;
       });
   
-      setSelectedSegment(updatedTextSegment);
-      setEditingTextSegment(updatedTextSegment);
+      setSelectedSegment({
+        ...currentSegment,
+        ...(changedProperty ? { [changedProperty]: settings[changedProperty] } : {
+          text: settings.text,
+          fontFamily: settings.fontFamily,
+          fontColor: settings.fontColor,
+          backgroundColor: settings.backgroundColor,
+          duration: settings.duration,
+          timelineEndTime: currentSegment.startTime + settings.duration,
+          alignment: settings.alignment,
+          backgroundOpacity: settings.backgroundOpacity,
+          backgroundBorderWidth: settings.backgroundBorderWidth,
+          backgroundBorderColor: settings.backgroundBorderColor,
+          backgroundH: settings.backgroundH,
+          backgroundW: settings.backgroundW,
+          backgroundBorderRadius: settings.backgroundBorderRadius,
+          textBorderColor: settings.textBorderColor,
+          textBorderWidth: settings.textBorderWidth,
+          textBorderOpacity: settings.textBorderOpacity,
+          letterSpacing: settings.letterSpacing,
+          lineSpacing: settings.lineSpacing,
+        }),
+        positionX: tempSegmentValues.positionX !== undefined ? tempSegmentValues.positionX : currentSegment.positionX,
+        positionY: tempSegmentValues.positionY !== undefined ? tempSegmentValues.positionY : currentSegment.positionY,
+        scale: tempSegmentValues.scale !== undefined ? tempSegmentValues.scale : currentSegment.scale,
+        opacity: tempSegmentValues.opacity !== undefined ? tempSegmentValues.opacity : currentSegment.opacity,
+        keyframes: keyframes,
+        isSubtitle: currentSegment.isSubtitle || false,
+      });
+  
+      setEditingTextSegment({
+        ...currentSegment,
+        ...(changedProperty ? { [changedProperty]: settings[changedProperty] } : {
+          text: settings.text,
+          fontFamily: settings.fontFamily,
+          fontColor: settings.fontColor,
+          backgroundColor: settings.backgroundColor,
+          duration: settings.duration,
+          timelineEndTime: currentSegment.startTime + settings.duration,
+          alignment: settings.alignment,
+          backgroundOpacity: settings.backgroundOpacity,
+          backgroundBorderWidth: settings.backgroundBorderWidth,
+          backgroundBorderColor: settings.backgroundBorderColor,
+          backgroundH: settings.backgroundH,
+          backgroundW: settings.backgroundW,
+          backgroundBorderRadius: settings.backgroundBorderRadius,
+          textBorderColor: settings.textBorderColor,
+          textBorderWidth: settings.textBorderWidth,
+          textBorderOpacity: settings.textBorderOpacity,
+          letterSpacing: settings.letterSpacing,
+          lineSpacing: settings.lineSpacing,
+        }),
+        positionX: tempSegmentValues.positionX !== undefined ? tempSegmentValues.positionX : currentSegment.positionX,
+        positionY: tempSegmentValues.positionY !== undefined ? tempSegmentValues.positionY : currentSegment.positionY,
+        scale: tempSegmentValues.scale !== undefined ? tempSegmentValues.scale : currentSegment.scale,
+        opacity: tempSegmentValues.opacity !== undefined ? tempSegmentValues.opacity : currentSegment.opacity,
+        keyframes: keyframes,
+        isSubtitle: currentSegment.isSubtitle || false,
+      });
   
       saveHistory();
-  
       await fetchKeyframes(editingTextSegment.id, 'text');
-  
-      // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-      // updateTimeoutRef.current = setTimeout(() => {
-      //   autoSaveProject(updatedVideoLayers, audioLayers);
-      //   console.log('Auto-saved project after text segment save:', editingTextSegment.id);
-      // }, 1000);
     } catch (error) {
       console.error('Error saving text segment:', error);
       alert('Failed to save text segment. Please try again.');
@@ -1079,6 +1305,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         letterSpacing: textSettings.letterSpacing, // Added
         lineSpacing: textSettings.lineSpacing, // Added
         keyframes: {},
+        isSubtitle: false,
       };
 
       // Add temporary segment to videoLayers for instant rendering
@@ -1116,6 +1343,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
           textBorderOpacity: textSettings.textBorderOpacity, // Added
           letterSpacing: textSettings.letterSpacing, // Added
           lineSpacing: textSettings.lineSpacing, // Added
+          isSubtitle: false,
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -1155,6 +1383,7 @@ const handleAudioClick = debounce(async (audio, isDragEvent = false) => {
         letterSpacing: newTextSegment.letterSpacing ?? 0, // Added
         lineSpacing: newTextSegment.lineSpacing ?? 1.2, // Added
         keyframes: newTextSegment.keyframes || {},
+        isSubtitle: newTextSegment.isSubtitle || false,
       };
 
       setVideoLayers((prevLayers) => {
@@ -1373,6 +1602,7 @@ const initializeProject = async () => {
             lineSpacing: textSegment.lineSpacing ?? 1.2,
             keyframes: textSegment.keyframes || {},
             opacity: textSegment.opacity || 1,
+            isSubtitle: textSegment.isSubtitle || false,
           });
         }
       }
@@ -2009,6 +2239,7 @@ const generateVideoThumbnail = async (video) => {
         letterSpacing: style.letterSpacing ?? 0, // Added
         lineSpacing: style.lineSpacing ?? 1.2, // Added
         keyframes: {},
+        isSubtitle: false,
       };
 
       // Add temporary segment to videoLayers
@@ -2046,6 +2277,7 @@ const generateVideoThumbnail = async (video) => {
           textBorderOpacity: style.textBorderOpacity ?? 1.0, // Added
           letterSpacing: style.letterSpacing ?? 0, // Added
           lineSpacing: style.lineSpacing ?? 1.2, // Added
+          isSubtitle: false,
         },
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       );
@@ -2084,6 +2316,7 @@ const generateVideoThumbnail = async (video) => {
         letterSpacing: newTextSegment.letterSpacing ?? 0, // Added
         lineSpacing: newTextSegment.lineSpacing ?? 1.2, // Added
         keyframes: newTextSegment.keyframes || {},
+        isSubtitle: newTextSegment.isSubtitle || false,
       };
 
       setVideoLayers((prevLayers) => {
@@ -2640,9 +2873,9 @@ const toggleSection = (section) => {
 const handleSegmentSelect = async (segment, multiSelected = []) => {
   // If multiSelected is provided and not empty, handle multi-selection
   if (multiSelected.length > 0) {
+    const allTextSegments = multiSelected.every((seg) => seg.type === 'text');
     setMultiSelectedSegments(multiSelected);
     setSelectedSegment(null); // Clear single selection
-    setIsTextToolOpen(false); // Disable text tool for multi-selection
     setIsTransformOpen(false); // Disable transform panel
     setIsFiltersOpen(false); // Disable filters panel
     setTempSegmentValues({}); // Clear temp values
@@ -2661,6 +2894,42 @@ const handleSegmentSelect = async (segment, multiSelected = []) => {
     setKeyframes({}); // Clear keyframes
     setCurrentTimeInSegment(0); // Reset time in segment
     await fetchTransitions(); // Refresh transitions
+
+    if (allTextSegments) {
+      // Set text settings based on the first text segment for consistency
+      const firstSegment = multiSelected[0];
+      setTextSettings({
+        text: firstSegment.text || 'New Text',
+        fontFamily: firstSegment.fontFamily || 'Arial',
+        fontColor: firstSegment.fontColor || '#FFFFFF',
+        backgroundColor: firstSegment.backgroundColor || 'transparent',
+        duration: firstSegment.duration || 5,
+        alignment: firstSegment.alignment || 'center',
+        backgroundOpacity: firstSegment.backgroundOpacity ?? 1.0,
+        backgroundBorderWidth: firstSegment.backgroundBorderWidth ?? 0,
+        backgroundBorderColor: firstSegment.backgroundBorderColor || '#000000',
+        backgroundH: firstSegment.backgroundH ?? 0,
+        backgroundW: firstSegment.backgroundW ?? 0,
+        backgroundBorderRadius: firstSegment.backgroundBorderRadius ?? 0,
+        textBorderColor: firstSegment.textBorderColor || 'transparent',
+        textBorderWidth: firstSegment.textBorderWidth ?? 0,
+        textBorderOpacity: firstSegment.textBorderOpacity ?? 1.0,
+        letterSpacing: firstSegment.letterSpacing ?? 0,
+        lineSpacing: firstSegment.lineSpacing ?? 1.2,
+        scale: firstSegment.scale || 1.0,
+        positionX: firstSegment.positionX || 0,
+        positionY: firstSegment.positionY || 0,
+        opacity: firstSegment.opacity || 1,
+        rotation: firstSegment.rotation || 0,
+      });
+      setIsTextToolOpen(true);
+      setIsContentPanelOpen(true);
+      setExpandedSection('text');
+    } else {
+      setIsTextToolOpen(false);
+      setIsContentPanelOpen(false);
+      setExpandedSection(null);
+    }
     return;
   }
 
@@ -4123,8 +4392,8 @@ const filteredElements = elements.filter((element) =>
   };
 
 const handleGenerateSubtitles = async () => {
-  if (!sessionId || !projectId) {
-    alert('Cannot generate subtitles: Missing sessionId or projectId');
+  if (!sessionId || !projectId || !selectedAiStyle) {
+    alert('Cannot generate subtitles: Missing sessionId, projectId, or selected style');
     return;
   }
 
@@ -4134,7 +4403,11 @@ const handleGenerateSubtitles = async () => {
 
     await axios.post(
       `${API_BASE_URL}/projects/${projectId}/subtitles`,
-      {},
+      {
+        fontFamily: selectedAiStyle.fontFamily,
+        fontColor: selectedAiStyle.fontColor,
+        backgroundColor: selectedAiStyle.backgroundColor,
+      },
       {
         params: { sessionId },
         headers: { Authorization: `Bearer ${token}` },
@@ -4142,9 +4415,101 @@ const handleGenerateSubtitles = async () => {
     );
 
     await initializeProject();
-
   } catch (error) {
     console.error('Error generating subtitles:', error.response?.data || error.message);
+    alert('Failed to generate subtitles. Please try again.');
+  } finally {
+    setIsAddingToTimeline(false);
+  }
+};
+
+const handleGenerateAiAudio = async () => {
+  if (!sessionId || !projectId || !aiVoiceText.trim() || !selectedVoice) {
+    alert('Cannot generate AI audio: Missing session ID, project ID, text, or selected voice');
+    return;
+  }
+
+  try {
+    setIsAddingToTimeline(true);
+    const token = localStorage.getItem('token');
+    let startTime = roundToThreeDecimals(currentTime);
+    let maxEndTime = 0;
+    [...videoLayers, ...audioLayers].forEach((layer) => {
+      layer.forEach((segment) => {
+        const segmentEndTime = segment.startTime + segment.duration;
+        if (segmentEndTime > maxEndTime) maxEndTime = segmentEndTime;
+      });
+    });
+    startTime = Math.max(startTime, maxEndTime);
+
+    const layer = findAvailableLayer(startTime, startTime + 5, audioLayers); // Assume 5s duration as placeholder
+    const negativeLayer = -(layer + 1); // Convert to negative layer as required by backend
+
+    const response = await axios.post(
+      `${API_BASE_URL}/projects/${projectId}/generate-ai-audio`,
+      {
+        text: aiVoiceText,
+        voiceName: selectedVoice.voiceName,
+        languageCode: selectedVoice.languageCode,
+        layer: negativeLayer,
+        timelineStartTime: startTime,
+      },
+      {
+        params: { sessionId },
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const audioSegment = response.data;
+
+    // Validate response
+    if (!audioSegment.audioSegmentId) {
+      throw new Error('Backend did not return audioSegmentId');
+    }
+
+    // Add audio segment to audioLayers
+    const newAudioSegment = {
+      id: audioSegment.audioSegmentId,
+      type: 'audio',
+      fileName: audioSegment.audioPath.split('/').pop(),
+      url: `${CDN_URL}/audio/projects/${projectId}/${encodeURIComponent(audioSegment.audioPath.split('/').pop())}`,
+      startTime: audioSegment.timelineStartTime,
+      duration: audioSegment.timelineEndTime - audioSegment.timelineStartTime,
+      timelineStartTime: audioSegment.timelineStartTime,
+      timelineEndTime: audioSegment.timelineEndTime,
+      layer: audioSegment.layer,
+      startTimeWithinAudio: audioSegment.startTime || 0,
+      endTimeWithinAudio: audioSegment.endTime || audioSegment.timelineEndTime - audioSegment.timelineStartTime,
+      displayName: audioSegment.audioPath.split('/').pop(),
+      waveformJsonPath: audioSegment.waveformJsonPath
+        ? `${CDN_URL}/audio/projects/${projectId}/waveforms/${encodeURIComponent(audioSegment.waveformJsonPath.split('/').pop())}`
+        : null,
+      volume: audioSegment.volume || 1.0,
+      keyframes: audioSegment.keyframes || {},
+      extracted: audioSegment.isExtracted || false,
+    };
+
+    let updatedAudioLayers = audioLayers;
+    setAudioLayers((prevLayers) => {
+      const newLayers = [...prevLayers];
+      while (newLayers.length <= layer) newLayers.push([]);
+      newLayers[layer] = [...newLayers[layer], newAudioSegment];
+      updatedAudioLayers = newLayers;
+      return newLayers;
+    });
+
+    setTotalDuration((prev) => Math.max(prev, startTime + newAudioSegment.duration));
+    saveHistory();
+
+    // Clear inputs after successful generation
+    setAiVoiceText('');
+    setSelectedVoice(null);
+
+    // Trigger auto-save
+    await autoSaveProject(videoLayers, updatedAudioLayers);
+  } catch (error) {
+    console.error('Error generating AI audio:', error.response?.data || error.message);
+    alert('Failed to generate AI audio. Please try again.');
   } finally {
     setIsAddingToTimeline(false);
   }
@@ -4196,84 +4561,109 @@ return (
         </button>
       </div>
       {isMediaPanelOpen && (
-        <div className="panel-content">
-          <div className="media-section">
-            <button className="section-button" data-section="videos" onClick={() => toggleSection('videos')}>
-              Videos
-            </button>
-          </div>
-          <div className="media-section">
-            <button className="section-button" data-section="photos" onClick={() => toggleSection('photos')}>
-              Photos
-            </button>
-          </div>
-          <div className="media-section">
-            <button className="section-button" data-section="audios" onClick={() => toggleSection('audios')}>
-              Audio
-            </button>
-          </div>
-          <div className="media-section">
-            <button className="section-button" data-section="elements" onClick={() => toggleSection('elements')}>
-              Elements
-            </button>
-          </div>
-          <div className="media-section">
-            <button className="section-button" data-section="textStyles" onClick={() => toggleSection('textStyles')}>
-              Text Styles
-            </button>
-          </div>
-          <div className="divider-section">
-            <hr className="divider-line" />
-            <span className="divider-text">Edit Section</span>
-            <hr className="divider-line" />
-          </div>
-          <div className="media-section">
-            <button
-              className={`section-button ${expandedSection === 'transform' ? 'active' : ''}`}
-              data-section="transform"
-              onClick={toggleTransformPanel}
-            >
-              Transform
-            </button>
-          </div>                   
-          <div className="media-section">
-            <button
-              className={`section-button ${expandedSection === 'text' ? 'active' : ''}`}
-              data-section="text"
-              onClick={toggleTextTool}
-              disabled={!selectedSegment || selectedSegment.type !== 'text'}
-            >
-              Text
-            </button>
-          </div>          
-          <div className="media-section">
-            <button
-              className={`section-button ${expandedSection === 'filters' ? 'active' : ''}`}
-              data-section="filters"
-              onClick={toggleFiltersPanel}
-            >
-              Filters
-            </button>
-          </div>
-          <div className="media-section">
-            <button
-              className={`section-button ${expandedSection === 'transitions' ? 'active' : ''}`}
-              data-section="transitions"
-              onClick={toggleTransitionsPanel}
-            >
-              Transitions
-            </button>
-          </div>
-          <div className="media-section">
-            <button
-              className={`section-button ${expandedSection === 'aiSubtitles' ? 'active' : ''}`}
-              data-section="aiSubtitles"
-              onClick={() => toggleSection('aiSubtitles')}
-            >
-              AI Subtitles
-            </button>
-          </div>          
-        </div>
+            <div className="panel-content">
+
+              {/* AI SECTION */}
+              <div className="divider-section">
+                <hr className="divider-line" />
+                <span className="divider-text">AI</span>
+                <hr className="divider-line" />
+              </div>
+              <div className="media-section">
+                <button
+                  className={`section-button ${expandedSection === 'aiSubtitles' ? 'active' : ''}`}
+                  data-section="aiSubtitles"
+                  onClick={() => toggleSection('aiSubtitles')}
+                >
+                  AI Subtitles
+                </button>
+              </div>
+              <div className="media-section">
+                <button
+                  className={`section-button ${expandedSection === 'aiVoice' ? 'active' : ''}`}
+                  data-section="aiVoice"
+                  onClick={() => toggleSection('aiVoice')}
+                >
+                  AI Voice
+                </button>
+              </div>              
+
+              {/* MEDIA SECTION */}
+              <div className="divider-section">
+                <hr className="divider-line" />
+                <span className="divider-text">Media</span>
+                <hr className="divider-line" />
+              </div>
+              <div className="media-section">
+                <button className="section-button" data-section="videos" onClick={() => toggleSection('videos')}>
+                  Videos
+                </button>
+              </div>
+              <div className="media-section">
+                <button className="section-button" data-section="photos" onClick={() => toggleSection('photos')}>
+                  Photos
+                </button>
+              </div>
+              <div className="media-section">
+                <button className="section-button" data-section="audios" onClick={() => toggleSection('audios')}>
+                  Audio
+                </button>
+              </div>
+              <div className="media-section">
+                <button className="section-button" data-section="elements" onClick={() => toggleSection('elements')}>
+                  Elements
+                </button>
+              </div>
+              <div className="media-section">
+                <button className="section-button" data-section="textStyles" onClick={() => toggleSection('textStyles')}>
+                  Text Styles
+                </button>
+              </div>
+
+              {/* EDIT SECTION */}
+              <div className="divider-section">
+                <hr className="divider-line" />
+                <span className="divider-text">Edit Section</span>
+                <hr className="divider-line" />
+              </div>
+              <div className="media-section">
+                <button
+                  className={`section-button ${expandedSection === 'transform' ? 'active' : ''}`}
+                  data-section="transform"
+                  onClick={toggleTransformPanel}
+                >
+                  Transform
+                </button>
+              </div>
+              <div className="media-section">
+                <button
+                  className={`section-button ${expandedSection === 'text' ? 'active' : ''}`}
+                  data-section="text"
+                  onClick={toggleTextTool}
+                  disabled={!selectedSegment || selectedSegment.type !== 'text'}
+                >
+                  Text
+                </button>
+              </div>
+              <div className="media-section">
+                <button
+                  className={`section-button ${expandedSection === 'filters' ? 'active' : ''}`}
+                  data-section="filters"
+                  onClick={toggleFiltersPanel}
+                >
+                  Filters
+                </button>
+              </div>
+              <div className="media-section">
+                <button
+                  className={`section-button ${expandedSection === 'transitions' ? 'active' : ''}`}
+                  data-section="transitions"
+                  onClick={toggleTransitionsPanel}
+                >
+                  Transitions
+                </button>
+              </div>
+            </div>
       )}
     </aside>
 
@@ -4534,39 +4924,11 @@ return (
             </div>
           )}
           {expandedSection === 'textStyles' && (
-            <div className="section-content">
-              {defaultTextStyles.length === 0 ? (
-                <div className="empty-state">No text styles available!</div>
-              ) : (
-                <div className="text-style-list">
-                  {defaultTextStyles.map((style, index) => (
-                    <div
-                      key={`text-style-${index}`}
-                      className="text-style-item"
-                      draggable={true}
-                      onDragStart={(e) => handleTextStyleDragStart(e, style)}
-                      onClick={() => handleTextStyleClick(style)}
-                      style={{
-                        backgroundColor: style.backgroundColor,
-                        color: style.fontColor,
-                        fontFamily: style.fontFamily,
-                        padding: `${Math.max(style.backgroundH / 2, style.backgroundW / 2)}px`,
-                        borderRadius: `${style.backgroundBorderRadius}px`,
-                        border: `${style.backgroundBorderWidth}px solid ${style.backgroundBorderColor}`,
-                        opacity: style.backgroundOpacity,
-                        textAlign: style.alignment,
-                        margin: '10px 0',
-                        cursor: 'pointer',
-                        WebkitTextStroke: style.textBorderWidth > 0 ? `${style.textBorderWidth}px ${style.textBorderColor}` : 'none',
-                        WebkitTextStrokeOpacity: style.textBorderOpacity || 1.0,
-                      }}
-                    >
-                      {style.text}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <TextStyles
+              defaultTextStyles={defaultTextStyles}
+              handleTextStyleDragStart={handleTextStyleDragStart}
+              handleTextStyleClick={handleTextStyleClick}
+            />
           )}
           {expandedSection === 'transform' && (
             <div className="section-content tool-subpanel transform-panel">
@@ -4604,7 +4966,7 @@ return (
               />
             </div>
           )}
-          {expandedSection === 'text' && selectedSegment && selectedSegment.type === 'text' && (
+          {expandedSection === 'text' && (selectedSegment?.type === 'text' || multiSelectedSegments.every((seg) => seg.type === 'text')) && (
             <TextPanel
               textSettings={textSettings}
               updateTextSettings={updateTextSettings}
@@ -4625,17 +4987,26 @@ return (
             </div>
           )}
           {expandedSection === 'aiSubtitles' && (
-            <div className="section-content tool-subpanel ai-subtitles-panel">
-              <h3>AI Subtitles</h3>
-              <button
-                className="generate-subtitles-button"
-                onClick={handleGenerateSubtitles}
-                disabled={isAddingToTimeline}
-              >
-                Generate Subtitles
-              </button>
-            </div>
-          )}          
+            <AiSubtitlesPanel
+              aiSubtitleStyles={aiSubtitleStyles}
+              selectedAiStyle={selectedAiStyle}
+              setSelectedAiStyle={setSelectedAiStyle}
+              handleGenerateSubtitles={handleGenerateSubtitles}
+              isAddingToTimeline={isAddingToTimeline}
+            />
+          )}
+          {expandedSection === 'aiVoice' && (
+            <AIVoicesPanel
+              voices={voices}
+              setVoices={setVoices}
+              selectedVoice={selectedVoice}
+              setSelectedVoice={setSelectedVoice}
+              aiVoiceText={aiVoiceText}
+              setAiVoiceText={setAiVoiceText}
+              handleGenerateAiAudio={handleGenerateAiAudio}
+              isAddingToTimeline={isAddingToTimeline}
+            />
+          )}                   
         </div>
     </aside>
   )}
@@ -4702,6 +5073,13 @@ return (
           <button className="control-button" onClick={handleExportProject} title="Export Project">
             ⬆️
           </button>
+          <button
+            className="control-button"
+            onClick={handleSelectSubtitles}
+            title="Select All Subtitles"
+          >
+            ✅ Subtitles
+          </button>          
         </div>
         <div
           className={`timeline-section ${isTimelineSelected ? 'selected' : ''}`}

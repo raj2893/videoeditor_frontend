@@ -8,6 +8,7 @@ import ProjectEditor from "./pages/ProjectEditor";
 import DeveloperLogin from "./pages/DeveloperLogin";
 import DeveloperDashboard from "./pages/DeveloperDashboard";
 import ExportPage from "./pages/ExportPage";
+import LandingPage from './pages/LandingPage';
 
 function TitleAndFaviconManager() {
   const location = useLocation();
@@ -59,7 +60,7 @@ function App() {
     <Router>
       <TitleAndFaviconManager />
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />

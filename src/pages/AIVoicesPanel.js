@@ -555,7 +555,6 @@ const AIVoicesPanel = () => {
             Get ready for next-level AI voice synthesis!
           </p>
           <div className="orb-container" ref={mountRef}></div>
-          <button className="neon-button">Notify Me</button>
         </div>
       </div>
     </div>

@@ -613,6 +613,7 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
+      <div className="circuit-overlay"></div>
       {isLoading && (
         <div className="loading-overlay">
           <div className="spinner"></div>
@@ -621,7 +622,7 @@ const Dashboard = () => {
       )}
       <nav className={`nav-bar ${isScrolled ? 'scrolled' : ''}`}>
         <div className="nav-content">
-          <div className="branding-container">
+          <div className="branding-container" onClick={() => navigate('/')}>
             <h1>
               <span className="letter">S</span>
               <span className="letter">C</span>

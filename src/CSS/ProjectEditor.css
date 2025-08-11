@@ -36,7 +36,11 @@
 }
 
 .section-button[data-section="aiSubtitles"]::before {
-  background-image: url('/public/images/TextM.jpeg');
+  background-image: url('/public/images/AiSubtitlesLogo.jpg');
+}
+
+.section-button[data-section="aiVoice"]::before {
+  background-image: url('/public/images/AiAudioLogo.jpg');
 }
 
 /* Import Montserrat font for consistency with dashboard.css */
@@ -1419,78 +1423,6 @@
   text-align: center;
   color: #d1d1d1 !important;
   margin-top: 5px; /* Space between preview and title */
-}
-
-/* AI Subtitles Panel */
-.ai-subtitles-panel {
-  padding: 12px;
-  background-color: #1e1e1e;
-  border-radius: 8px;
-  border: 1px solid #2a2a2a;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-  box-sizing: border-box;
-  overflow-y: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-.ai-subtitles-panel::-webkit-scrollbar {
-  display: none;
-}
-
-.ai-subtitles-panel h3 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  color: #a1a1a1;
-  margin-bottom: 12px;
-}
-
-.generate-subtitles-button {
-  width: 100%;
-  padding: 8px 16px;
-  background: transparent;
-  color: #4A919E;
-  border: 1px solid #4A919E;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  position: relative;
-  transition: all 0.3s ease;
-  box-shadow: none;
-}
-
-.generate-subtitles-button:hover:enabled {
-  background: #4A919E;
-  color: #121212;
-  transform: scale(1.02);
-}
-
-.generate-subtitles-button::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background-color: #4A919E;
-  transition: all 0.3s ease;
-}
-
-.generate-subtitles-button:hover:enabled::after {
-  width: 80%;
-  left: 10%;
-}
-
-.generate-subtitles-button:disabled {
-  background: transparent;
-  color: #666;
-  border-color: #666;
-  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

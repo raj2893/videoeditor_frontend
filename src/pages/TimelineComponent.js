@@ -322,6 +322,7 @@ const handleCopySegment = async () => {
         duration,
         keyframes: segmentCopy.keyframes || {},
         opacity: segmentCopy.opacity || 1,
+        isSubtitle: segmentCopy.isSubtitle || false,
       });
       setVideoLayers((prev) => {
         const newLayers = [...prev];
@@ -332,6 +333,7 @@ const handleCopySegment = async () => {
           startTime: roundToThreeDecimals(startTime),
           duration: roundToThreeDecimals(duration),
           type: 'text',
+          isSubtitle: newSegment.isSubtitle || false,
         });
         return newLayers;
       });
@@ -902,6 +904,7 @@ const handleVideoSelect = (videoId, event) => {
               lineSpacing: textSegment.lineSpacing || 1.2,
               keyframes: textSegment.keyframes || {},
               opacity: textSegment.opacity || 1,
+              isSubtitle: textSegment.isSubtitle || false,
             });
           }
         }
@@ -1394,6 +1397,7 @@ const handleVideoSelect = (videoId, event) => {
             textBorderOpacity: style.textBorderOpacity || 1.0,
             letterSpacing: style.letterSpacing || 0,
             lineSpacing: style.lineSpacing || 1.2,
+            isSubtitle: false,
           },
           { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
         );
@@ -1425,6 +1429,7 @@ const handleVideoSelect = (videoId, event) => {
           letterSpacing: style.letterSpacing || 0,
           lineSpacing: style.lineSpacing || 1.2,
           keyframes: {},
+          isSubtitle: newTextSegment.isSubtitle || false,
         };
   
         setVideoLayers((prevLayers) => {
@@ -1714,6 +1719,7 @@ const handleVideoSelect = (videoId, event) => {
               lineSpacing: item.lineSpacing ?? 1.2, // Added
               keyframes: item.keyframes || {},
               opacity: item.opacity,
+              isSubtitle: item.isSubtitle || false,
             });
           } else if (item.type === 'video') {
             segments.push({
@@ -1878,8 +1884,9 @@ const handleVideoSelect = (videoId, event) => {
                   showResizeHandles={(item) => item.id === (selectedSegment ? selectedSegment.id : null)}
                   transitions={transitions.filter((t) => t.layer === layerIndex)}
                   onTransitionSelect={onTransitionSelect}
-                  isSplitMode={isSplitMode} // Add isSplitMode prop
-                  handleSplit={handleSplit} // Add handleSplit prop
+                  isSplitMode={isSplitMode}
+                  handleSplit={handleSplit}
+                  isSubtitle={item => item.type === 'text' ? item.isSubtitle || false : false}
                 />
               </div>
             );

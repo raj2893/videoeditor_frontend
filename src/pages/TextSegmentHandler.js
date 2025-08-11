@@ -49,7 +49,8 @@ const TextSegmentHandler = ({
           textBorderWidth: updatedTextSettings.textBorderWidth ?? 0, // Added
           textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
           letterSpacing: updatedTextSettings.letterSpacing ?? 0, // Added
-          lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
+          lineSpacing: updatedTextSettings.lineSpacing ?? 1.2,
+          isSubtitle: updatedTextSettings.isSubtitle ?? false,
         },
         {
           params: { sessionId },
@@ -86,7 +87,8 @@ const TextSegmentHandler = ({
         lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
         timelineStartTime,
         timelineEndTime,
-        keyframes: segment.keyframes || {}, // Add keyframes
+        keyframes: segment.keyframes || {},
+        isSubtitle: segment.isSubtitle || false,
       };
 
       setVideoLayers((prev) => {
@@ -156,6 +158,7 @@ const TextSegmentHandler = ({
         textBorderOpacity: updatedTextSettings.textBorderOpacity ?? 1.0, // Added
         letterSpacing: updatedTextSettings.letterSpacing ?? 0, // Added
         lineSpacing: updatedTextSettings.lineSpacing ?? 1.2, // Added
+        isSubtitle: updatedTextSettings.isSubtitle || false,
       };
       // Only include keyframes if explicitly provided (e.g., from Transform panel)
       if (updatedTextSettings.keyframes) {
@@ -216,6 +219,7 @@ const TextSegmentHandler = ({
             textBorderOpacity: 1.0, // Added
             letterSpacing: 0, // Added
             lineSpacing: 1.2, // Added
+            isSubtitle: false,
           };
         }
       }
@@ -272,6 +276,7 @@ const TextSegmentHandler = ({
       positionY: draggingItem.positionY || 0, // Add positionY
       scale: draggingItem.scale || 1, // Add scale
       rotation: draggingItem.rotation || 0, // Add rotation
+      isSubtitle: draggingItem.isSubtitle || false,
     };
     newVideoLayers[actualLayerIndex].push(updatedItem);
     setVideoLayers(newVideoLayers);
@@ -320,6 +325,7 @@ const TextSegmentHandler = ({
         lineSpacing: updatedTextSettings.lineSpacing ?? 1.2,
         timelineStartTime: roundToThreeDecimals(startTime),
         timelineEndTime: roundToThreeDecimals(startTime + duration),
+        isSubtitle: updatedTextSettings.isSubtitle || false,
       };
       const newVideoLayers = [...videoLayers];
       while (newVideoLayers.length <= editingTextSegment.layer) newVideoLayers.push([]);
@@ -363,6 +369,7 @@ const TextSegmentHandler = ({
                 lineSpacing: updatedTextSettings.lineSpacing ?? 1.2,
                 duration,
                 timelineEndTime: roundToThreeDecimals(item.startTime + duration),
+                isSubtitle: updatedTextSettings.isSubtitle || item.isSubtitle || false,
               }
             : item
         )
@@ -414,6 +421,7 @@ const TextSegmentHandler = ({
       positionY: item.positionY || 0, // Add positionY
       scale: item.scale || 1, // Add scale
       rotation: item.rotation || 0, // Add rotation
+      isSubtitle: item.isSubtitle || false,
     };
 
     // Create second part (temporary)
@@ -441,6 +449,7 @@ const TextSegmentHandler = ({
       positionX: item.positionX || 0, // Add positionX
       positionY: item.positionY || 0, // Add positionY
       rotation: item.rotation || 0, // Add rotation
+      isSubtitle: item.isSubtitle || false,
     };
 
     // Update videoLayers with both parts
@@ -494,6 +503,7 @@ const TextSegmentHandler = ({
         textBorderOpacity: secondPart.textBorderOpacity,
         letterSpacing: secondPart.letterSpacing,
         lineSpacing: secondPart.lineSpacing,
+        isSubtitle: secondPart.isSubtitle || false,
       });
 
       if (!newSegment) {

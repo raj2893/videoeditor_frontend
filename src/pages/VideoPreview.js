@@ -30,9 +30,10 @@ const googleFonts = [
   'Courier Prime:700',
   'Courier Prime:700italic',
   'Courier Prime:italic',
-  'Doto Black',
-  'Doto ExtraBold',
-  'Doto Rounded Bold',
+  // Corrected Doto fonts to use proper family and weights
+  'Dodo:900', // Maps to Doto Black
+  'Dodo:800', // Maps to Doto ExtraBold
+  'Dodo:700', // Maps to Doto Rounded Bold (assuming bold weight for rounded style)
   'Fascinate Inline',
   'Freckle Face',
   'Fredericka the Great',
@@ -45,11 +46,11 @@ const googleFonts = [
   'Kirang Haerang',
   'Lavishly Yours',
   'Lexend Giga',
-  'Lexend Giga Black',
-  'Lexend Giga Bold',
+  'Lexend Giga:900', // Maps to Lexend Giga Black
+  'Lexend Giga:700', // Maps to Lexend Giga Bold
   'Montserrat Alternates',
-  'Montserrat Alternates Black',
-  'Montserrat Alternates Medium Italic',
+  'Montserrat Alternates:900', // Maps to Montserrat Alternates Black
+  'Montserrat Alternates:500italic', // Maps to Montserrat Alternates Medium Italic
   'Mountains of Christmas',
   'Mountains of Christmas:700',
   'Noto Sans Mono',
@@ -127,25 +128,54 @@ const VideoPreview = ({
     let style = 'normal';
     let family = fontFamily;
   
-    if (fontFamily.includes('Bold')) {
+    // Handle Google Fonts weight and style suffixes
+    if (fontFamily.includes(':700italic')) {
+      style = 'italic';
+      weight = '700';
+      family = fontFamily.replace(':700italic', '');
+    } else if (fontFamily.includes(':italic')) {
+      style = 'italic';
+      family = fontFamily.replace(':italic', '');
+    } else if (fontFamily.includes(':900')) {
+      weight = '900';
+      family = fontFamily.replace(':900', '');
+    } else if (fontFamily.includes(':800')) {
+      weight = '800';
+      family = fontFamily.replace(':800', '');
+    } else if (fontFamily.includes(':700')) {
+      weight = '700';
+      family = fontFamily.replace(':700', '');
+    } else if (fontFamily.includes(':500italic')) {
+      style = 'italic';
+      weight = '500';
+      family = fontFamily.replace(':500italic', '');
+    } else if (fontFamily.includes('Bold')) {
       weight = 'bold';
       family = fontFamily.replace(' Bold', '');
-    }
-    if (fontFamily.includes('Italic')) {
+    } else if (fontFamily.includes('Italic')) {
       style = 'italic';
-      family = family.replace(' Italic', '');
-    }
-    if (fontFamily.includes('Black')) {
+      family = fontFamily.replace(' Italic', '');
+    } else if (fontFamily.includes('Black')) {
       weight = '900';
-      family = family.replace(' Black', '');
-    }
-    if (fontFamily.includes('ExtraBold')) {
+      family = fontFamily.replace(' Black', '');
+    } else if (fontFamily.includes('ExtraBold')) {
       weight = '800';
-      family = family.replace(' ExtraBold', '');
+      family = fontFamily.replace(' ExtraBold', '');
+    } else if (fontFamily.includes('Rounded Bold')) {
+      weight = '700'; // Assuming bold weight for rounded style
+      family = fontFamily.replace(' Rounded Bold', '');
+    } else if (fontFamily.includes('Medium')) {
+      weight = '500';
+      family = fontFamily.replace(' Medium', '');
+    }
+  
+    // Map Doto to Dodo for Google Fonts compatibility
+    if (family === 'Doto') {
+      family = 'Dodo';
     }
   
     return { family, weight, style };
-  };  
+  }; 
 
     // Convert canvas coordinates to normalized canvas space
     const getCanvasCoordinates = (clientX, clientY) => {

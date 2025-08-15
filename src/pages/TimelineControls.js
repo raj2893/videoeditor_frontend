@@ -25,22 +25,31 @@ const TimelineControls = ({
     currentTime < (selectedSegment.startTime + selectedSegment.duration);
 
   return (
-    <div className="timeline-controls">
-      <button onClick={togglePlayback}>
+    <div className="timeline-controls" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation(); // Explicitly stop propagation
+          togglePlayback();
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation(); // Stop touch events as well
+          togglePlayback();
+        }}
+      >
         <span className="button-icon">{isPlaying ? '⏸️' : '▶️'}</span>
         <span className="button-text">{isPlaying ? 'Pause' : 'Play'}</span>
       </button>
-      <span className="time-display" onClick={(e) => { stopPropagationForControls(e); }}>
+      <span className="time-display" onClick={(e) => e.stopPropagation()}>
         {formatTime(currentTime)} / {formatTime(totalDuration)}
       </span>
       <div className="add-text-control">
-        <button onClick={(e) => { stopPropagationForControls(e); onAddTextClick(); }}>
+        <button onClick={(e) => { e.stopPropagation(); onAddTextClick(); }}>
           <span className="button-text">Add Text</span>
         </button>
       </div>
       <div className="split-control">
         <button
-          onClick={(e) => { stopPropagationForControls(e); toggleSplitMode(); }}
+          onClick={(e) => { e.stopPropagation(); toggleSplitMode(); }}
           className={isSplitMode ? 'active' : ''}
           title="Split Segment"
         >
@@ -49,7 +58,7 @@ const TimelineControls = ({
       </div>
       <div className="split-control">
         <button
-          onClick={(e) => { stopPropagationForControls(e); handleSplitAtCurrent(); }}
+          onClick={(e) => { e.stopPropagation(); handleSplitAtCurrent(); }}
           className={isSplitAtCurrentEnabled ? '' : 'disabled'}
           disabled={!isSplitAtCurrentEnabled}
           title="Split at Current Time"
@@ -59,7 +68,7 @@ const TimelineControls = ({
       </div>      
       <div className="copy-control">
         <button
-          onClick={(e) => { stopPropagationForControls(e); handleCopySegment(); }}
+          onClick={(e) => { e.stopPropagation(); handleCopySegment(); }}
           className={selectedSegment ? '' : 'disabled'}
           disabled={!selectedSegment}
           title="Copy Selected Segment"

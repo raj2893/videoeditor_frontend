@@ -1481,6 +1481,11 @@ const handleVideoSelect = (videoId, event) => {
   };
 
   const handleTimelineClick = async (e) => {
+
+    if (e.target.closest('.timeline-controls')) {
+      return;
+    } 
+       
     if (!timelineRef.current) return;
     const rect = timelineRef.current.getBoundingClientRect();
   
@@ -1661,11 +1666,8 @@ const handleVideoSelect = (videoId, event) => {
   const togglePlayback = () => {
     setIsPlaying((prev) => {
       const newIsPlaying = !prev;
-      if (newIsPlaying) {
-        // Ensure playback starts from the current playhead position
-        onTimeUpdate(currentTime);
-      } else {
-        // Explicitly update parent with current time when pausing
+      if (!newIsPlaying) {
+        // Only update time when pausing to ensure parent state is synced
         onTimeUpdate(currentTime);
       }
       return newIsPlaying;

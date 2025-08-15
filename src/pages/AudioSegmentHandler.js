@@ -299,7 +299,7 @@ const AudioSegmentHandler = ({
   
     let targetLayerIndex;
     if (reversedIndex < audioLayerStartIndex) {
-      // console.log('Cannot drop audio in video layers or top drop area');
+      console.log('Cannot drop audio in video layers or top drop area');
       return undefined;
     } else if (reversedIndex >= audioLayerStartIndex && reversedIndex < audioLayerEndIndex) {
       targetLayerIndex = reversedIndex - audioLayerStartIndex;
@@ -311,6 +311,7 @@ const AudioSegmentHandler = ({
     const backendLayer = -(targetLayerIndex + 1);
   
     let newAudioLayers = audioLayers.map((layer) => [...layer]);
+    while (newAudioLayers.length <= targetLayerIndex) newAudioLayers.push([]);
   
     const doesIdExist = (id) => {
       return newAudioLayers.some((layer) => layer.some((segment) => segment.id === id));
@@ -323,7 +324,6 @@ const AudioSegmentHandler = ({
         if (data.type === 'audio') {
           const audio = data.audio;
           let adjustedStartTime = Math.max(0, (mouseX - timelineRect.left) / timeScale);
-          while (newAudioLayers.length <= targetLayerIndex) newAudioLayers.push([]);
   
           const targetLayerAudios = newAudioLayers[targetLayerIndex];
           let hasOverlap = true;
@@ -345,14 +345,14 @@ const AudioSegmentHandler = ({
             }
           }
   
-          await addAudioToTimeline(
+          const newSegment = await addAudioToTimeline(
             audio.fileName,
             backendLayer,
             roundToThreeDecimals(adjustedStartTime),
             roundToThreeDecimals(adjustedStartTime + audio.duration),
             audio.extracted || false
           );
-          return undefined;
+          return { newSegment, response: newSegment };
         }
       }
       return undefined;
@@ -365,6 +365,7 @@ const AudioSegmentHandler = ({
         ? snapIndicators[0].time - (snapIndicators[0].edge === 'end' ? draggingItem.duration : 0)
         : Math.max(0, (mouseX - timelineRect.left) / timeScale - dragOffset);
   
+    // Check for overlap in the target layer
     const hasOverlap = newAudioLayers[targetLayerIndex].some((audio) => {
       if (audio.id === draggingItem.id) return false;
       const start = audio.startTime;
@@ -391,12 +392,13 @@ const AudioSegmentHandler = ({
       endTimeWithinAudio: roundToThreeDecimals(draggingItem.endTimeWithinAudio),
     };
   
+    // Update audioLayers
     if (isSameLayer) {
-      const layer = newAudioLayers[targetLayerIndex];
-      const itemIndex = layer.findIndex((a) => a.id === draggingItem.id);
-      layer[itemIndex] = updatedItem;
+      newAudioLayers[targetLayerIndex] = newAudioLayers[targetLayerIndex].map((a) =>
+        a.id === draggingItem.id ? updatedItem : a
+      );
     } else {
-      if (sourceLayerIndex !== -1) {
+      if (sourceLayerIndex !== -1 && newAudioLayers[sourceLayerIndex]) {
         newAudioLayers[sourceLayerIndex] = newAudioLayers[sourceLayerIndex].filter(
           (a) => a.id !== draggingItem.id
         );
@@ -405,9 +407,10 @@ const AudioSegmentHandler = ({
     }
   
     setAudioLayers(newAudioLayers);
+    setTotalDuration((prev) => Math.max(prev, newStartTime + draggingItem.duration));
     saveHistory([], newAudioLayers);
     autoSave([], newAudioLayers);
-    setTotalDuration((prev) => Math.max(prev, newStartTime + draggingItem.duration));
+  
     await updateAudioSegment(
       draggingItem.id,
       roundToThreeDecimals(newStartTime),
@@ -418,7 +421,7 @@ const AudioSegmentHandler = ({
       updatedItem
     );
   
-    return updatedItem;
+    return { newSegment: updatedItem, response: updatedItem };
   };
 
   const handleAudioSplit = async (item, clickTime, layerIndex) => {

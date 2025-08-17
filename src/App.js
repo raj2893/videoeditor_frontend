@@ -9,6 +9,8 @@ import DeveloperLogin from "./pages/DeveloperLogin";
 import DeveloperDashboard from "./pages/DeveloperDashboard";
 import ExportPage from "./pages/ExportPage";
 import LandingPage from './pages/LandingPage';
+import HowToAddSubtitlesToVideo from "./blogs/how-to-add-subtitles-to-video";
+import Blog from "./blogs/Blog";
 
 function TitleAndFaviconManager() {
   const location = useLocation();
@@ -69,6 +71,8 @@ function App() {
         <Route path="/developer-login" element={<DeveloperLogin />} />
         <Route path="/developer-dashboard" element={<DeveloperDashboard />} />
         <Route path="/export/:projectId" element={<ExportPage />} />
+        <Route path="/blogs/how-to-add-subtitles-to-video" element={<HowToAddSubtitlesToVideo/>} />
+        <Route path="/blogs" element={<Blog />} />
       </Routes>
     </Router>
   );

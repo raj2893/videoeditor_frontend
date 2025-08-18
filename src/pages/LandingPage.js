@@ -148,6 +148,13 @@ const LandingPage = () => {
             <button
               type="button"
               className="nav-link"
+              onClick={() => scrollToSection('blog-section')}
+            >
+              Blogs
+            </button>            
+            <button
+              type="button"
+              className="nav-link"
               onClick={() => scrollToSection('footer-section')}
             >
               Contact Us
@@ -270,6 +277,58 @@ const LandingPage = () => {
           View More on YouTube
         </a>
       </section>
+      <section className="blog-preview-section" id="blog-section">
+        <div className="section-header">
+          <h2>Latest from Our Blog</h2>
+        </div>
+        <motion.div
+          className="blog-preview-grid"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="blog-preview-card">
+            <div className="blog-preview-content">
+              <h3>How to Add Subtitles to Video</h3>
+              <p>Master the art of subtitle creation with our comprehensive guide. Learn techniques that make your content accessible and engaging.</p>
+              <button 
+                className="blog-preview-cta"
+                onClick={() => {
+                  navigate('/blogs/how-to-add-subtitles-to-video');
+                  window.scrollTo(0, 0);
+                }}
+              >
+                Read More
+              </button>
+            </div>
+          </div>
+          <div className="blog-preview-card">
+            <div className="blog-preview-content">
+              <h3>Transform Videos with Keyframing</h3>
+              <p>Discover advanced keyframing techniques to create smooth animations and professional-looking video effects.</p>
+              <button 
+                className="blog-preview-cta"
+                onClick={() => {
+                  navigate('/blogs/transform-videos-with-keyframing');
+                  window.scrollTo(0, 0);
+                }}
+              >
+                Read More
+              </button>
+            </div>
+          </div>
+        </motion.div>
+        <button
+          className="view-all-blogs-cta"
+          onClick={() => {
+            navigate('/blogs');
+            window.scrollTo(0, 0);
+          }}
+        >
+          View All Blog Posts
+        </button>
+      </section>      
 
       <section className="motivation-section" id="motivation-section">
         <div className="section-header">

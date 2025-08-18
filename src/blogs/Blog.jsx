@@ -21,7 +21,22 @@ const Blog = () => {
       featured: true,
       views: "12.5K",
       slug: "how-to-add-subtitles-to-video"
-    }
+    },
+    {
+      id: 2,
+      title: "Transform Your Videos with Keyframing: The Secret to Dynamic Visuals in 2025",
+      excerpt: "Reality check: If your videos feel static, you’re losing viewers. Keyframing with Scenith creates dynamic, scroll-stopping content in minutes.",
+      category: "Video Editing",
+      readTime: "5 min read",
+      publishDate: "2025-08-18",
+      author: "Scenith Team",
+      image: "🎥",
+      gradient: "linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)",
+      tags: ["Keyframing", "Video Editing", "Animation", "Productivity"],
+      featured: false,
+      views: "8.7K",
+      slug: "transform-videos-with-keyframing"
+    }    
     // Add more blog posts here as you create them
   ];
 

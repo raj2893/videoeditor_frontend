@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
+import { Helmet } from 'react-helmet';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const Blog = () => {
   const [hoveredCard, setHoveredCard] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Blog posts data (you can expand this later)
+  // Blog posts data
   const blogPosts = [
     {
       id: 1,
@@ -20,7 +23,7 @@ const Blog = () => {
       tags: ["AI", "Subtitles", "Video Editing", "Productivity"],
       featured: true,
       views: "12.5K",
-      slug: "how-to-add-subtitles-to-video"
+      slug: "how-to-add-subtitles-to-video",
     },
     {
       id: 2,
@@ -35,211 +38,316 @@ const Blog = () => {
       tags: ["Keyframing", "Video Editing", "Animation", "Productivity"],
       featured: false,
       views: "8.7K",
-      slug: "transform-videos-with-keyframing"
-    }    
-    // Add more blog posts here as you create them
+      slug: "transform-videos-with-keyframing",
+    },
+    {
+      id: 3,
+      title: "How to Reach 4000 Hours of YouTube Watch Time Fast in 2025",
+      excerpt: "Discover how to hit 4000 hours of YouTube watch time fast using AI-powered subtitles with Scenith. Boost viewer retention and skyrocket your channel’s growth.",
+      category: "YouTube Growth",
+      readTime: "5 min read",
+      publishDate: "2025-08-19",
+      author: "Scenith Team",
+      image: "📈",
+      gradient: "linear-gradient(135deg, #00b894 0%, #38a169 100%)",
+      tags: ["YouTube", "Subtitles", "AI Tools", "Watch Time"],
+      featured: false,
+      views: "10.2K",
+      slug: "how-to-reach-4000-hours-watchtime",
+    },
   ];
 
-  const categories = ['all', 'AI Tools', 'Video Editing', 'Productivity', 'Tutorials'];
+  const categories = ['all', 'AI Tools', 'Video Editing', 'YouTube Growth', 'Productivity', 'Tutorials'];
 
-  const filteredPosts = blogPosts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredPosts = blogPosts.filter((post) => {
+    const matchesSearch =
+      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const handleCardClick = (slug) => {
-    // Navigate to individual blog post
     window.location.href = `/blogs/${slug}`;
   };
 
+  const scrollToSection = (sectionId) => {
+    const section = document.getElementById(sectionId);
+    if (section) {
+      const navHeight = document.querySelector('.nav-bar').offsetHeight || 80;
+      window.scrollTo({
+        top: section.offsetTop - navHeight - 20,
+        behavior: 'smooth',
+      });
+    }
+  };
+
   return (
-    <div className="blog-container">
-      {/* Hero Section */}
-      <div className="hero-section-blog">
-        <div className="hero-content-blog">
-          <div className="hero-badge-blog">
-            <span className="badge-text">📚 Knowledge Hub</span>
-          </div>
-          <h1 className="hero-title-blog">
-            Master Video Creation with 
-            <span className="gradient-text"> AI-Powered Insights</span>
-          </h1>
-          <p className="hero-description-blog">
-            Discover cutting-edge techniques, insider tips, and game-changing tools 
-            that will transform your video content creation process forever.
-          </p>
-          
-          {/* Search Bar */}
-          <div className="search-container">
-            <div className="search-box">
-              <div className="search-icon">🔍</div>
-              <input
-                type="text"
-                placeholder="Search for AI tools, tutorials, productivity hacks..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
+    <>
+      <Helmet>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Scenith | Video Editing & AI Tools Blog</title>
+        <meta
+          name="description"
+          content="Explore Scenith’s blog for expert tips on video editing, AI tools, YouTube growth, and productivity hacks to elevate your content creation in 2025."
+        />
+        <meta
+          name="keywords"
+          content="video editing, AI tools, YouTube growth, subtitles, keyframing, productivity, Scenith"
+        />
+        <meta name="author" content="Scenith" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="Scenith | Video Editing & AI Tools Blog" />
+        <meta
+          property="og:description"
+          content="Discover cutting-edge techniques, AI-powered tools, and tutorials to transform your video content creation with Scenith’s blog."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://yourwebsite.com/blogs" />
+        <meta property="og:image" content="https://yourwebsite.com/images/blog-og.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Scenith | Video Editing & AI Tools Blog" />
+        <meta
+          name="twitter:description"
+          content="Discover cutting-edge techniques, AI-powered tools, and tutorials to transform your video content creation with Scenith’s blog."
+        />
+        <meta name="twitter:image" content="https://yourwebsite.com/images/blog-og.jpg" />
+        <link rel="canonical" href="https://yourwebsite.com/blogs" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Blog',
+            headline: 'Scenith Video Editing & AI Tools Blog',
+            description:
+              'Explore Scenith’s blog for expert tips on video editing, AI tools, YouTube growth, and productivity hacks to elevate your content creation in 2025.',
+            publisher: {
+              '@type': 'Organization',
+              name: 'Scenith',
+              logo: {
+                '@type': 'ImageObject',
+                url: 'https://yourwebsite.com/images/logo.png',
+              },
+            },
+            datePublished: '2025-08-19',
+            url: 'https://yourwebsite.com/blogs',
+          })}
+        </script>
+      </Helmet>
+      <Navbar pageType="blogs" scrollToSection={scrollToSection} />
+      <div className="blog-container">
+        {/* Hero Section */}
+        <div className="hero-section-blog">
+          <div className="hero-content-blog">
+            <div className="hero-badge-blog">
+              <span className="badge-text">📚 Knowledge Hub</span>
+            </div>
+            <h1 className="hero-title-blog">
+              Master Video Creation with
+              <span className="gradient-text"> AI-Powered Insights</span>
+            </h1>
+            <p className="hero-description-blog">
+              Discover cutting-edge techniques, insider tips, and game-changing tools that will
+              transform your video content creation process forever.
+            </p>
+
+            {/* Search Bar */}
+            <div className="search-container">
+              <div className="search-box">
+                <div className="search-icon">🔍</div>
+                <input
+                  type="text"
+                  placeholder="Search for AI tools, tutorials, productivity hacks..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Floating Elements */}
-        <div className="floating-elements">
-          <div className="floating-card card1">🎬</div>
-          <div className="floating-card card2">⚡</div>
-          <div className="floating-card card3">🚀</div>
-          <div className="floating-card card4">🤖</div>
-        </div>
-      </div>
-
-      {/* Category Filter */}
-      <div className="filter-section">
-        <div className="filter-container">
-          <h3 className="filter-title">Browse by Category</h3>
-          <div className="category-filters">
-            {categories.map(category => (
-              <button
-                key={category}
-                className={`category-btn ${selectedCategory === category ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category === 'all' ? 'All Posts' : category}
-              </button>
-            ))}
+          {/* Floating Elements */}
+          <div className="floating-elements">
+            <div className="floating-card card1">🎬</div>
+            <div className="floating-card card2">⚡</div>
+            <div className="floating-card card3">🚀</div>
+            <div className="floating-card card4">🤖</div>
           </div>
         </div>
-      </div>
 
-      {/* Blog Posts Grid */}
-      <div className="posts-section">
-        <div className="posts-container">
-          {/* Featured Post */}
-          {filteredPosts.find(post => post.featured) && (
-            <div className="featured-section">
-              <h2 className="section-title">🔥 Featured Article</h2>
-              {filteredPosts.filter(post => post.featured).map(post => (
-                <div 
-                  key={post.id}
-                  className="featured-card"
-                  onClick={() => handleCardClick(post.slug)}
-                  onMouseEnter={() => setHoveredCard(`featured-${post.id}`)}
-                  onMouseLeave={() => setHoveredCard(null)}
+        {/* Category Filter */}
+        <div className="filter-section">
+          <div className="filter-container">
+            <h3 className="filter-title">Browse by Category</h3>
+            <div className="category-filters">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  className={`category-btn ${selectedCategory === category ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(category)}
                 >
-                  <div className="featured-content">
-                    <div className="featured-left">
-                      <div className="featured-meta">
-                        <span className="featured-badge">⭐ FEATURED</span>
-                        <span className="post-category">{post.category}</span>
-                      </div>
-                      <h3 className="featured-title">{post.title}</h3>
-                      <p className="featured-excerpt">{post.excerpt}</p>
-                      <div className="featured-stats">
-                        <span className="stat">👁️ {post.views} views</span>
-                        <span className="stat">⏱️ {post.readTime}</span>
-                        <span className="stat">📅 {new Date(post.publishDate).toLocaleDateString()}</span>
-                      </div>
-                      <div className="featured-tags">
-                        {post.tags.slice(0, 3).map(tag => (
-                          <span key={tag} className="tag">{tag}</span>
-                        ))}
-                      </div>
-                      <button className="read-more-btn">
-                        Read Full Article →
-                      </button>
-                    </div>
-                    <div className="featured-right">
-                      <div className="featured-visual" style={{background: post.gradient}}>
-                        <div className="featured-icon">{post.image}</div>
-                        <div className="visual-overlay"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  {category === 'all' ? 'All Posts' : category}
+                </button>
               ))}
             </div>
-          )}
+          </div>
+        </div>
 
-          {/* Regular Posts */}
-          <div className="regular-posts">
-            <h2 className="section-title">📖 Latest Articles</h2>
-            <div className="posts-grid">
-              {filteredPosts.filter(post => !post.featured).length === 0 ? (
-                <div className="no-posts">
-                  <div className="no-posts-icon">📝</div>
-                  <h3>More Amazing Content Coming Soon!</h3>
-                  <p>We're working on more game-changing articles. Check back soon!</p>
-                </div>
-              ) : (
-                filteredPosts.filter(post => !post.featured).map(post => (
-                  <div 
-                    key={post.id}
-                    className={`post-card ${hoveredCard === post.id ? 'hovered' : ''}`}
-                    onClick={() => handleCardClick(post.slug)}
-                    onMouseEnter={() => setHoveredCard(post.id)}
-                    onMouseLeave={() => setHoveredCard(null)}
-                  >
-                    <div className="post-visual" style={{background: post.gradient}}>
-                      <div className="post-icon">{post.image}</div>
-                      <div className="post-overlay"></div>
-                    </div>
-                    <div className="post-content">
-                      <div className="post-header">
-                        <span className="post-category">{post.category}</span>
-                        <span className="post-views">👁️ {post.views}</span>
-                      </div>
-                      <h3 className="post-title">{post.title}</h3>
-                      <p className="post-excerpt">{post.excerpt}</p>
-                      <div className="post-tags">
-                        {post.tags.slice(0, 2).map(tag => (
-                          <span key={tag} className="tag">{tag}</span>
-                        ))}
-                      </div>
-                      <div className="post-footer">
-                        <div className="post-meta">
-                          <span className="read-time">⏱️ {post.readTime}</span>
-                          <span className="post-date">📅 {new Date(post.publishDate).toLocaleDateString()}</span>
+        {/* Blog Posts Grid */}
+        <div className="posts-section">
+          <div className="posts-container">
+            {/* Featured Post */}
+            {filteredPosts.find((post) => post.featured) && (
+              <div className="featured-section">
+                <h2 className="section-title">🔥 Featured Article</h2>
+                {filteredPosts
+                  .filter((post) => post.featured)
+                  .map((post) => (
+                    <div
+                      key={post.id}
+                      className="featured-card"
+                      onClick={() => handleCardClick(post.slug)}
+                      onMouseEnter={() => setHoveredCard(`featured-${post.id}`)}
+                      onMouseLeave={() => setHoveredCard(null)}
+                    >
+                      <div className="featured-content">
+                        <div className="featured-left">
+                          <div className="featured-meta">
+                            <span className="featured-badge">⭐ FEATURED</span>
+                            <span className="post-category">{post.category}</span>
+                          </div>
+                          <h3 className="featured-title">{post.title}</h3>
+                          <p className="featured-excerpt">{post.excerpt}</p>
+                          <div className="featured-stats">
+                            <span className="stat">👁️ {post.views} views</span>
+                            <span className="stat">⏱️ {post.readTime}</span>
+                            <span className="stat">
+                              📅 {new Date(post.publishDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="featured-tags">
+                            {post.tags.slice(0, 3).map((tag) => (
+                              <span key={tag} className="tag">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                          <button className="read-more-btn">Read Full Article →</button>
                         </div>
-                        <button className="read-btn">Read →</button>
+                        <div className="featured-right">
+                          <div className="featured-visual" style={{ background: post.gradient }}>
+                            <div className="featured-icon">{post.image}</div>
+                            <div className="visual-overlay"></div>
+                          </div>
+                        </div>
                       </div>
                     </div>
+                  ))}
+              </div>
+            )}
+
+            {/* Regular Posts */}
+            <div className="regular-posts">
+              <h2 className="section-title">📖 Latest Articles</h2>
+              <div className="posts-grid">
+                {filteredPosts.filter((post) => !post.featured).length === 0 ? (
+                  <div className="no-posts">
+                    <div className="no-posts-icon">📝</div>
+                    <h3>More Amazing Content Coming Soon!</h3>
+                    <p>We're working on more game-changing articles. Check back soon!</p>
                   </div>
-                ))
-              )}
+                ) : (
+                  filteredPosts
+                    .filter((post) => !post.featured)
+                    .map((post) => (
+                      <div
+                        key={post.id}
+                        className={`post-card ${hoveredCard === post.id ? 'hovered' : ''}`}
+                        onClick={() => handleCardClick(post.slug)}
+                        onMouseEnter={() => setHoveredCard(post.id)}
+                        onMouseLeave={() => setHoveredCard(null)}
+                      >
+                        <div className="post-visual" style={{ background: post.gradient }}>
+                          <div className="post-icon">{post.image}</div>
+                          <div className="post-overlay"></div>
+                        </div>
+                        <div className="post-content">
+                          <div className="post-header">
+                            <span className="post-category">{post.category}</span>
+                            <span className="post-views">👁️ {post.views}</span>
+                          </div>
+                          <h3 className="post-title">{post.title}</h3>
+                          <p className="post-excerpt">{post.excerpt}</p>
+                          <div className="post-tags">
+                            {post.tags.slice(0, 2).map((tag) => (
+                              <span key={tag} className="tag">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="post-footer">
+                            <div className="post-meta">
+                              <span className="read-time">⏱️ {post.readTime}</span>
+                              <span className="post-date">
+                                📅 {new Date(post.publishDate).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <button className="read-btn">Read →</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Newsletter Section */}
+        <div className="newsletter-section">
+          <div className="newsletter-container">
+            <div className="newsletter-content">
+              <div className="newsletter-icon">📧</div>
+              <h2>Never Miss a Game-Changing Tip</h2>
+              <p>
+                Get the latest AI tools, video creation hacks, and productivity secrets delivered to
+                your inbox every week.
+              </p>
+              <div className="newsletter-form">
+                <input
+                  type="email"
+                  placeholder="Enter your email address..."
+                  className="newsletter-input"
+                />
+                <button className="newsletter-btn">Subscribe Free →</button>
+              </div>
+              <p className="newsletter-disclaimer">
+                ✨ Join 25,000+ creators • Unsubscribe anytime • Zero spam
+              </p>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Newsletter Section */}
-      <div className="newsletter-section">
-        <div className="newsletter-container">
-          <div className="newsletter-content">
-            <div className="newsletter-icon">📧</div>
-            <h2>Never Miss a Game-Changing Tip</h2>
-            <p>Get the latest AI tools, video creation hacks, and productivity secrets delivered to your inbox every week.</p>
-            <div className="newsletter-form">
-              <input type="email" placeholder="Enter your email address..." className="newsletter-input" />
-              <button className="newsletter-btn">Subscribe Free →</button>
-            </div>
-            <p className="newsletter-disclaimer">✨ Join 25,000+ creators • Unsubscribe anytime • Zero spam</p>
-          </div>
-        </div>
-      </div>
-
+      <Footer />
       <style jsx>{`
+        :root {
+          --navbar-height: 80px; /* Adjust based on Navbar.js height */
+        }
+
         .blog-container {
           min-height: 100vh;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          padding-top: calc(var(--navbar-height) + 20px); /* Prevent navbar overlap */
+          max-width: 1200px; /* Ensure wide layout */
+          margin: 0 auto; /* Center content */
+          width: 100%; /* Full width within max-width */
         }
 
         /* Hero Section */
         .hero-section-blog {
           position: relative;
-          padding: 120px 20px 80px;
+          padding: 80px 20px 60px;
           text-align: center;
           overflow: hidden;
         }
@@ -257,13 +365,13 @@ const Blog = () => {
         }
 
         .badge-text {
-          background: rgba(255,255,255,0.2);
+          background: rgba(255, 255, 255, 0.2);
           color: white;
           padding: 8px 20px;
           border-radius: 25px;
           font-weight: 600;
           backdrop-filter: blur(10px);
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .hero-title-blog {
@@ -283,7 +391,7 @@ const Blog = () => {
 
         .hero-description-blog {
           font-size: 1.3em;
-          color: rgba(255,255,255,0.9);
+          color: rgba(255, 255, 255, 0.9);
           margin-bottom: 40px;
           line-height: 1.6;
           max-width: 700px;
@@ -303,7 +411,7 @@ const Blog = () => {
           background: white;
           border-radius: 50px;
           padding: 8px 8px 8px 25px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
 
         .search-icon {
@@ -339,14 +447,14 @@ const Blog = () => {
           position: absolute;
           width: 80px;
           height: 80px;
-          background: rgba(255,255,255,0.1);
+          background: rgba(255, 255, 255, 0.1);
           border-radius: 20px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 2em;
           backdrop-filter: blur(10px);
-          border: 1px solid rgba(255,255,255,0.2);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           animation: float 6s ease-in-out infinite;
         }
 
@@ -375,8 +483,13 @@ const Blog = () => {
         }
 
         @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(5deg); }
+          0%,
+          100% {
+            transform: translateY(0px) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-20px) rotate(5deg);
+          }
         }
 
         /* Filter Section */
@@ -460,7 +573,7 @@ const Blog = () => {
           background: white;
           border-radius: 25px;
           overflow: hidden;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
           cursor: pointer;
           transition: all 0.4s ease;
           border: 1px solid #f0f0f0;
@@ -468,7 +581,7 @@ const Blog = () => {
 
         .featured-card:hover {
           transform: translateY(-10px);
-          box-shadow: 0 30px 80px rgba(0,0,0,0.15);
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15);
         }
 
         .featured-content {
@@ -596,7 +709,7 @@ const Blog = () => {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0,0,0,0.1);
+          background: rgba(0, 0, 0, 0.1);
         }
 
         /* Regular Posts */
@@ -614,7 +727,7 @@ const Blog = () => {
           background: white;
           border-radius: 20px;
           overflow: hidden;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
           cursor: pointer;
           transition: all 0.3s ease;
           border: 1px solid #f0f0f0;
@@ -622,7 +735,7 @@ const Blog = () => {
 
         .post-card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
         }
 
         .post-visual {
@@ -644,7 +757,7 @@ const Blog = () => {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0,0,0,0.1);
+          background: rgba(0, 0, 0, 0.1);
         }
 
         .post-content {
@@ -697,7 +810,8 @@ const Blog = () => {
           gap: 15px;
         }
 
-        .read-time, .post-date {
+        .read-time,
+        .post-date {
           color: #718096;
           font-size: 0.8em;
           font-weight: 500;
@@ -818,6 +932,14 @@ const Blog = () => {
 
         /* Mobile Responsive */
         @media (max-width: 768px) {
+          :root {
+            --navbar-height: 60px; /* Adjust for smaller screens */
+          }
+
+          .blog-container {
+            padding-top: calc(var(--navbar-height) + 20px);
+          }
+
           .hero-title-blog {
             font-size: 2.5em;
           }
@@ -856,15 +978,24 @@ const Blog = () => {
         }
 
         @media (max-width: 480px) {
+          :root {
+            --navbar-height: 50px; /* Adjust for very small screens */
+          }
+
+          .blog-container {
+            padding-top: calc(var(--navbar-height) + 15px);
+          }
+
           .hero-section-blog {
-            padding: 80px 15px 60px;
+            padding: 60px 15px 40px;
           }
 
           .hero-title-blog {
             font-size: 2em;
           }
 
-          .filter-section, .posts-section {
+          .filter-section,
+          .posts-section {
             padding-left: 15px;
             padding-right: 15px;
           }
@@ -886,7 +1017,7 @@ const Blog = () => {
           }
         }
       `}</style>
-    </div>
+    </>
   );
 };
 

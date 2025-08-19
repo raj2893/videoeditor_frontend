@@ -8,6 +8,24 @@
     <changefreq>daily</changefreq>
   </url>
 
+  <url>
+    <loc>https://scenith.in/login</loc>
+    <priority>0.9</priority>
+    <changefreq>daily</changefreq>
+  </url>
+
+  <url>
+    <loc>https://scenith.in/signup</loc>
+    <priority>0.9</priority>
+    <changefreq>monthly</changefreq>
+  </url>      
+
+  <url>
+    <loc>https://scenith.in/dashboard</loc>
+    <priority>0.9</priority>
+    <changefreq>monthly</changefreq>
+  </url>  
+
   <!-- Blog Listing Page -->
   <url>
     <loc>https://scenith.in/blogs</loc>
@@ -23,9 +41,9 @@
   </url>
 
   <url>
-    <loc>https://scenith.in/dashboard</loc>
-    <priority>0.9</priority>
-    <changefreq>daily</changefreq>
-  </url>
+    <loc>https://scenith.in/blogs/how-to-reach-4000-hours-watchtime</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>  
 
 </urlset>

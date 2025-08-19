@@ -6,6 +6,7 @@ import { Tilt } from 'react-tilt';
 import '../CSS/Dashboard.css';
 import { FaTrash, FaSignOutAlt, FaBars } from 'react-icons/fa';
 import { API_BASE_URL, CDN_URL } from '../Config';
+import Navbar from '../components/Navbar';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, projectName }) => {
   if (!isOpen) return null;
@@ -603,14 +604,6 @@ const Dashboard = () => {
     });
   }, [isDataLoaded]);
 
-  const fallbackScrollToSection = (sectionId) => {
-    const section = document.getElementById(sectionId);
-    if (!section) return;
-
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setIsNavMenuOpen(false);
-  };
-
   return (
     <div className="dashboard">
       <div className="circuit-overlay"></div>
@@ -620,137 +613,14 @@ const Dashboard = () => {
           <p>Loading your dashboard...</p>
         </div>
       )}
-      <nav className={`nav-bar ${isScrolled ? 'scrolled' : ''}`}>
-        <div className="nav-content">
-          <div className="branding-container" onClick={() => navigate('/')}>
-            <h1>
-              <span className="letter">S</span>
-              <span className="letter">C</span>
-              <span className="letter">E</span>
-              <span className="letter">N</span>
-              <span className="letter">I</span>
-              <span className="letter">T</span>
-              <span className="letter">H</span>
-            </h1>
-            <div className="logo-element"></div>
-          </div>
-          <button className="hamburger-menu" onClick={toggleNavMenu}>
-            <FaBars />
-          </button>
-          <div className={`nav-links ${isNavMenuOpen ? 'open' : ''}`}>
-            <button
-              type="button"
-              className="nav-link"
-              onClick={() => {
-                scrollToSection('dashboard-section');
-                setTimeout(() => fallbackScrollToSection('dashboard-section'), 100);
-              }}
-            >
-              My Projects
-            </button>
-            <button
-              type="button"
-              className="nav-link"
-              onClick={() => {
-                scrollToSection('about-us-section');
-                setTimeout(() => fallbackScrollToSection('about-us-section'), 100);
-              }}
-            >
-              About Us
-            </button>
-            <button
-              type="button"
-              className="nav-link"
-              onClick={() => {
-                scrollToSection('contact-us-section');
-                setTimeout(() => fallbackScrollToSection('contact-us-section'), 100);
-              }}
-            >
-              Contact Us
-            </button>
-          </div>
-          <div className="profile-section">
-            {userProfile.email ? (
-              <>
-                <div className="profile-icon" onClick={toggleProfileDropdown}>
-                  {userProfile.picture ? (
-                    <>
-                      <img
-                        src={userProfile.picture}
-                        alt="Profile"
-                        className="profile-picture"
-                        onError={handleImageError}
-                        crossOrigin="anonymous"
-                      />
-                      <div className="default-profile-icon" style={{ display: 'none' }}>
-                        {userProfile.firstName && userProfile.firstName.length > 0
-                          ? userProfile.firstName.charAt(0).toUpperCase()
-                          : 'U'}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="default-profile-icon">
-                      {userProfile.firstName && userProfile.firstName.length > 0
-                        ? userProfile.firstName.charAt(0).toUpperCase()
-                        : 'U'}
-                    </div>
-                  )}
-                </div>
-                {isProfileDropdownOpen && (
-                  <div className="profile-dropdown">
-                    <div className="profile-header">
-                      <div className="profile-avatar">
-                        {userProfile.picture ? (
-                          <>
-                            <img
-                              src={userProfile.picture}
-                              alt="Profile"
-                              className="dropdown-profile-picture"
-                              onError={handleImageError}
-                              crossOrigin="anonymous"
-                            />
-                            <div className="dropdown-default-avatar" style={{ display: 'none' }}>
-                              {userProfile.firstName && userProfile.firstName.length > 0
-                                ? userProfile.firstName.charAt(0).toUpperCase()
-                                : 'U'}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="dropdown-default-avatar">
-                            {userProfile.firstName && userProfile.firstName.length > 0
-                              ? userProfile.firstName.charAt(0).toUpperCase()
-                              : 'U'}
-                          </div>
-                        )}
-                      </div>
-                      <div className="profile-info">
-                        <div className="profile-name">
-                          {(userProfile.firstName || userProfile.lastName)
-                            ? `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim()
-                            : 'Unknown User'}
-                        </div>
-                        <div className="profile-email">{userProfile.email}</div>
-                        {userProfile.googleAuth && <div className="profile-google-badge">Google</div>}
-                      </div>
-                    </div>
-                    <div className="profile-divider"></div>
-                    <div className="profile-dropdown-item logout-item" onClick={handleLogout}>
-                      <FaSignOutAlt className="dropdown-icon" /> Logout
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <button
-                className="login-button"
-                onClick={() => navigate('/login')}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </div>
-      </nav>
+      <Navbar
+        isScrolled={isScrolled}
+        userProfile={userProfile}
+        isLoggedIn={isDataLoaded && userProfile.email}
+        handleLogout={handleLogout}
+        scrollToSection={scrollToSection}
+        pageType="dashboard"
+      />
 
       <div className="ripple-effect">
         <div className="ripple-ring"></div>

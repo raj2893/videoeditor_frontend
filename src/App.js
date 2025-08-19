@@ -12,6 +12,9 @@ import LandingPage from './pages/LandingPage';
 import HowToAddSubtitlesToVideo from "./blogs/how-to-add-subtitles-to-video";
 import Blog from "./blogs/Blog";
 import KeyframingBlogPost from "./blogs/KeyframingBlogPost";
+import NotFound from "./pages/NotFound";
+import RemoveBackground from "./pages/RemoveBackground";
+import HowToReach4000HoursWatchTime from "./blogs/HowToReach4000HoursWatchTime";
 
 function TitleAndFaviconManager() {
   const location = useLocation();
@@ -75,6 +78,9 @@ function App() {
         <Route path="/blogs/how-to-add-subtitles-to-video" element={<HowToAddSubtitlesToVideo/>} />
         <Route path="/blogs" element={<Blog />} />
         <Route path="/blogs/transform-videos-with-keyframing" element={<KeyframingBlogPost/>} />
+        {/* <Route path="/background-removal" element={<RemoveBackground />} /> */}
+        <Route path="/blogs/how-to-reach-4000-hours-watchtime" element={<HowToReach4000HoursWatchTime />} />
+        <Route path="*" element={<NotFound />} /> {/* Catch-all for undefined routes */}
       </Routes>
     </Router>
   );

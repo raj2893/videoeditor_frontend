@@ -5,6 +5,8 @@ import { FaPlay, FaCut, FaMusic, FaFont, FaFilm, FaRobot, FaBars, FaEnvelope } f
 import axios from 'axios';
 import { API_BASE_URL } from '../Config';
 import '../CSS/LandingPage.css';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -106,69 +108,27 @@ const LandingPage = () => {
         <div className="particle"></div>
         <div className="particle"></div>
       </div>
-      <nav className={`nav-bar ${isScrolled ? 'scrolled' : ''}`}>
-        <div className="nav-content">
-          <div className="branding-container">
-            <h1>
-              <span className="letter">S</span>
-              <span className="letter">C</span>
-              <span className="letter">E</span>
-              <span className="letter">N</span>
-              <span className="letter">I</span>
-              <span className="letter">T</span>
-              <span className="letter">H</span>
-            </h1>
-            <div className="logo-element"></div>
-          </div>
-          <button className="hamburger-menu" onClick={toggleNavMenu}>
-            <FaBars />
-          </button>
-          <div className={`nav-links ${isNavMenuOpen ? 'open' : ''}`}>
-            <button
-              type="button"
-              className="nav-link"
-              onClick={() => scrollToSection('hero-section')}
-            >
-              Home
-            </button>
-            <button
-              type="button"
-              className="nav-link"
-              onClick={() => scrollToSection('features-section')}
-            >
-              Features
-            </button>
-            <button
-              type="button"
-              className="nav-link"
-              onClick={() => scrollToSection('tutorials-section')}
-            >
-              Tutorials
-            </button>
-            <button
-              type="button"
-              className="nav-link"
-              onClick={() => scrollToSection('blog-section')}
-            >
-              Blogs
-            </button>            
-            <button
-              type="button"
-              className="nav-link"
-              onClick={() => scrollToSection('footer-section')}
-            >
-              Contact Us
-            </button>
-          </div>
-          <div className="header-container">
-            {!isLoading && !isLoggedIn && (
-              <button className="login-button" onClick={() => navigate('/login')}>
-                Login
-              </button>
-            )}
-          </div>
-        </div>
-      </nav>
+      <Navbar
+        isScrolled={isScrolled}
+        userProfile={userProfile}
+        isLoggedIn={isLoggedIn}
+        handleLogout={() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('userProfile');
+          setUserProfile({
+            email: '',
+            firstName: '',
+            lastName: '',
+            picture: null,
+            googleAuth: false,
+            role: '',
+          });
+          setIsLoggedIn(false);
+          navigate('/');
+        }}
+        scrollToSection={scrollToSection}
+        pageType="landing"
+      />
 
       <section className="hero-section" id="hero-section">
         <motion.div
@@ -353,51 +313,7 @@ const LandingPage = () => {
         </motion.div>
       </section>
 
-      <footer className="footer" id="footer-section">
-        <motion.div
-          className="footer-content"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-        >
-          <h3 className="footer-subtitle">Get in Touch</h3>
-          <p>
-            <FaEnvelope className="footer-icon" />{' '}
-            <a href="mailto:scenith.spprt@gmail.com">scenith.spprt@gmail.com</a>
-          </p>
-          <div className="social-links">
-            <a href="https://x.com/scenith_1902/" target="_blank" rel="noopener noreferrer" className="social-link">
-              <img src="/images/X_logo.png" alt="X" className="social-icon" />
-            </a>
-            <a
-              href="https://www.instagram.com/scenith.labs/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="social-link"
-            >
-              <img src="/images/Instagram_logo.png" alt="Instagram" className="social-icon" />
-            </a>
-            <a
-              href="https://linkedin.com/company/scenith/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="social-link"
-            >
-              <img src="/images/LinkedIn_logo.png" alt="LinkedIn" className="social-icon" />
-            </a>
-            <a
-              href="https://www.youtube.com/@Scenith-f4n"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="social-link"
-            >
-              <img src="/images/Youtube_logo.png" alt="YouTube" className="social-icon" />
-            </a>
-          </div>
-          <p className="footer-note">© 2025 Scenith. All rights reserved.</p>
-        </motion.div>
-      </footer>
+      <Footer />
     </div>
   );
 };

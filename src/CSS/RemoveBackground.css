@@ -1,0 +1,62 @@
+/* CSS/RemoveBackgroundPage.css */
+.remove-background-page {
+  font-family: 'Montserrat', sans-serif;
+  background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  min-height: 100vh;
+  height: auto;
+  color: #1E293B;
+  padding: 120px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 60px;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+  align-items: center;
+}
+
+/* Particle Background */
+.particle-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 50%;
+  animation: float 15s infinite ease-in-out;
+}
+
+.particle:nth-child(1) { width: 10px; height: 10px; top: 20%; left: 10%; animation-duration: 20s; }
+.particle:nth-child(2) { width: 15px; height: 15px; top: 50%; left: 30%; animation-duration: 25s; }
+.particle:nth-child(3) { width: 8px; height: 8px; top: 70%; left: 50%; animation-duration: 18s; }
+.particle:nth-child(4) { width: 12px; height: 12px; top: 30%; left: 80%; animation-duration: 22s; }
+.particle:nth-child(5) { width: 10px; height: 10px; top: 90%; left: 20%; animation-duration: 20s; }
+.particle:nth-child(6) { width: 14px; height: 14px; top: 40%; left: 60%; animation-duration: 24s; }
+
+@keyframes float {
+  0% { transform: translateY(0) scale(1); opacity: 0.3; }
+  50% { transform: translateY(-100px) scale(1.2); opacity: 0.5; }
+  100% { transform: translateY(0) scale(1); opacity: 0.3; }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .remove-background-page {
+    padding: 100px 15px;
+    gap: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .remove-background-page {
+    padding: 80px 10px;
+    gap: 30px;
+  }
+}

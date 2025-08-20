@@ -161,49 +161,15 @@ const ExportPage = () => {
       }, 7000); // Poll every 7 seconds
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     if (downloadUrl) {
       console.log('Initiating download for URL:', downloadUrl, { requestId: requestIdRef.current, timestamp: Date.now() });
-      try {
-        // Fetch the video as a blob
-        const response = await fetch(downloadUrl, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`, // Include token if required
-          },
-        });
-  
-        if (!response.ok) {
-          throw new Error('Failed to fetch video for download');
-        }
-  
-        // Convert response to blob
-        const blob = await response.blob();
-        
-        // Create a temporary URL for the blob
-        const url = window.URL.createObjectURL(blob);
-        
-        // Create a temporary link element
-        const link = document.createElement('a');
-        link.href = url;
-        
-        // Extract filename from downloadUrl or use a default
-        const fileName = downloadUrl.split('/').pop() || 'exported_video.mp4';
-        link.download = fileName; // Set the download attribute to force download
-        
-        // Programmatically click the link to trigger download
-        document.body.appendChild(link);
-        link.click();
-        
-        // Clean up
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        
-        console.log('Download initiated successfully', { fileName, requestId: requestIdRef.current, timestamp: Date.now() });
-      } catch (error) {
-        console.error('Download error:', error.message, { requestId: requestIdRef.current, timestamp: Date.now() });
-        setExportStatus('error');
-        setErrorMessage('Failed to download video. Please try again.');
-      }
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = '';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 

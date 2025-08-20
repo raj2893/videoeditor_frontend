@@ -92,31 +92,3 @@
   background-color: #444444;
   cursor: not-allowed;
 }
-
-.progress-bar-container {
-  width: 100%;
-  max-width: 500px; /* Adjust as needed */
-  height: 30px; /* Height of the progress bar */
-  background-color: #444444; /* Background for unfilled portion */
-  border-radius: 5px;
-  overflow: hidden;
-  margin: 20px auto; /* Center and space the progress bar */
-}
-
-.progress-bar {
-  height: 100%;
-  background-color: #00ff88; /* Progress bar fill color */
-  display: flex;
-  align-items: center;
-  justify-content: flex-end; /* Align text to the right of the filled portion */
-  transition: width 0.3s ease-in-out; /* Smooth width transition */
-  position: relative;
-}
-
-.progress-bar-text {
-  color: #000000; /* Text color for contrast */
-  font-size: 14px;
-  font-weight: bold;
-  padding-right: 10px; /* Space from the right edge */
-  white-space: nowrap; /* Prevent text wrapping */
-}

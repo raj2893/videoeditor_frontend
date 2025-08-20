@@ -78,7 +78,7 @@ function App() {
         <Route path="/blogs/how-to-add-subtitles-to-video" element={<HowToAddSubtitlesToVideo/>} />
         <Route path="/blogs" element={<Blog />} />
         <Route path="/blogs/transform-videos-with-keyframing" element={<KeyframingBlogPost/>} />
-        {/* <Route path="/background-removal" element={<RemoveBackground />} /> */}
+        <Route path="/background-removal" element={<RemoveBackground />} />
         <Route path="/blogs/how-to-reach-4000-hours-watchtime" element={<HowToReach4000HoursWatchTime />} />
         <Route path="*" element={<NotFound />} /> {/* Catch-all for undefined routes */}
       </Routes>

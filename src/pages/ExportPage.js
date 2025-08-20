@@ -13,20 +13,23 @@ const ExportPage = () => {
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [messageId, setMessageId] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [renderKey, setRenderKey] = useState(0); 
   const exportLock = useRef(null);
   const pollingRef = useRef(null);
   const requestIdRef = useRef(crypto.randomUUID());
 
   useEffect(() => {
-    console.log('ExportPage mounted', { projectId, sessionId, requestId: requestIdRef.current, timestamp: Date.now() });
-    return () => {
-      console.log('ExportPage unmounted', { projectId, sessionId, requestId: requestIdRef.current, timestamp: Date.now() });
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        console.log('Polling stopped on unmount', { requestId: requestIdRef.current });
-      }
-    };
-  }, [projectId, sessionId]);
+      console.log('ExportPage mounted', { projectId, sessionId, requestId: requestIdRef.current, timestamp: Date.now() });
+      return () => {
+          console.log('ExportPage unmounted', { projectId, sessionId, requestId: requestIdRef.current, timestamp: Date.now() });
+          if (pollingRef.current) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+              console.log('Polling stopped on unmount', { requestId: requestIdRef.current });
+          }
+      };
+  }, []); // Empty dependency array
 
   const startExport = async () => {
     if (exportLock.current) {
@@ -42,6 +45,7 @@ const ExportPage = () => {
     }
 
     setExportStatus('exporting');
+    setProgress(0);
     const requestId = requestIdRef.current;
     console.log('startExport called', { projectId, requestId, timestamp: Date.now() });
 
@@ -51,6 +55,8 @@ const ExportPage = () => {
         if (!token) {
           throw new Error('Authentication token missing');
         }
+
+        pollExportStatus(projectId, sessionId, token, requestId);
 
         console.log('Calling export API', { projectId, requestId, timestamp: Date.now() });
         const exportResponse = await axios.get(
@@ -72,8 +78,7 @@ const ExportPage = () => {
         setMessageId(messageId);
         setExportStatus('queued');
 
-        // Start polling project status
-        pollExportStatus(projectId, sessionId, token, requestId);
+        // pollExportStatus(projectId, sessionId, token, requestId);
       } catch (error) {
         console.error('Export error:', error.response?.data || error.message, { requestId, timestamp: Date.now() });
         const errorMsg =
@@ -83,6 +88,7 @@ const ExportPage = () => {
           'Failed to queue export task. Please try again.';
         setExportStatus('error');
         setErrorMessage(errorMsg);
+        setProgress(0);
       } finally {
         console.log('Export lock released', { requestId, timestamp: Date.now() });
         exportLock.current = null;
@@ -91,58 +97,54 @@ const ExportPage = () => {
   };
 
   const pollExportStatus = (projectId, sessionId, token, requestId) => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-    }
-
-    pollingRef.current = setInterval(async () => {
-      try {
-        console.log('Polling export status', { projectId, sessionId, requestId, timestamp: Date.now() });
-        const statusResponse = await axios.get(
-          `${API_BASE_URL}/projects/${projectId}/export/status`,
-          {
-            params: { sessionId },
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        console.log('Export status response:', statusResponse.data, { requestId, timestamp: Date.now() });
-        const status = statusResponse.data;
-
-        if (status === 'PENDING' || status === 'QUEUED') {
-          setExportStatus('queued');
-        } else if (status === 'EXPORTED') {
-          setExportStatus('success');
-          // Fetch the latest export link
-          const projectResponse = await axios.get(
-            `${API_BASE_URL}/projects/${projectId}`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          const exports = JSON.parse(projectResponse.data.exportsJson || '[]');
-          const latestExport = exports[exports.length - 1];
-          if (latestExport?.downloadUrl) {
-            setDownloadUrl(latestExport.downloadUrl);
-          }
+      if (pollingRef.current) {
           clearInterval(pollingRef.current);
-          pollingRef.current = null;
-          console.log('Polling stopped: Export completed', { projectId, requestId, timestamp: Date.now() });
-        } else if (status === 'FAILED') {
-          setExportStatus('error');
-          setErrorMessage('Export task failed. Please try again.');
-          clearInterval(pollingRef.current);
-          pollingRef.current = null;
-          console.log('Polling stopped: Export failed', { projectId, requestId, timestamp: Date.now() });
-        }
-      } catch (error) {
-        console.error('Export status polling error:', error.response?.data || error.message, { requestId, timestamp: Date.now() });
-        setExportStatus('error');
-        setErrorMessage('Failed to check export status. Please try again.');
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
       }
-    }, 5000); // Poll every 5 seconds
+  
+      pollingRef.current = setInterval(async () => {
+          try {
+              console.log('Polling export status and progress', { projectId, sessionId, requestId, timestamp: Date.now() });
+              const progressResponse = await axios.get(
+                  `${API_BASE_URL}/projects/${projectId}/export/progress`,
+                  {
+                      params: { sessionId, _t: Date.now() }, // Add timestamp to bust cache
+                      headers: { Authorization: `Bearer ${token}` },
+                      cache: 'no-cache',
+                  }
+              );
+  
+              console.log('Export progress response:', progressResponse.data, { requestId, timestamp: Date.now() });
+              const { status, progress } = progressResponse.data;
+  
+              const parsedProgress = Math.round(parseFloat(progress) / 10) * 10; // Round to nearest multiple of 10
+              setProgress(parsedProgress);
+              console.log('Progress set to:', parsedProgress, { requestId, timestamp: Date.now() });
+  
+              if (status === 'PENDING' || status === 'QUEUED') {
+                  setExportStatus('queued');
+              } else if (status === 'EXPORTED') {
+                  setExportStatus('success');
+                  setDownloadUrl(`${API_BASE_URL}/exports/${progressResponse.data.fileName || 'exported_video.mp4'}`);
+                  clearInterval(pollingRef.current);
+                  pollingRef.current = null;
+                  console.log('Polling stopped: Export completed', { projectId, requestId, timestamp: Date.now() });
+              } else if (status === 'FAILED') {
+                  setExportStatus('error');
+                  setErrorMessage('Export task failed. Please try again.');
+                  setProgress(0);
+                  clearInterval(pollingRef.current);
+                  pollingRef.current = null;
+                  console.log('Polling stopped: Export failed', { projectId, requestId, timestamp: Date.now() });
+              }
+          } catch (error) {
+              console.error('Export progress polling error:', error.response?.data || error.message, { requestId, timestamp: Date.now() });
+              setExportStatus('error');
+              setErrorMessage('Failed Repubblica to check export status. Please try again.');
+              setProgress(0);
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+          }
+      }, 7000); // Poll every 2 seconds
   };
 
   const handleDownload = () => {
@@ -186,25 +188,27 @@ const ExportPage = () => {
             </button>
           </>
         )}
-        {exportStatus === 'queued' && (
-          <>
-            <div className="loading-spinner"></div>
-            <h2>Export Task Queued</h2>
-            <p>Your export task is in the queue. Please wait...</p>
-            <button className="back-button" onClick={handleBack}>
-              Back to Editor
-            </button>
-          </>
-        )}
-        {exportStatus === 'exporting' && (
-          <>
-            <div className="loading-spinner"></div>
-            <h2>Exporting Your Video</h2>
-            <p>Your video is being processed. This may take a few minutes...</p>
-            <button className="back-button" onClick={handleBack}>
-              Back to Editor
-            </button>
-          </>
+        {(exportStatus === 'queued' || exportStatus === 'exporting') && (
+            <>
+                <h2>Exporting Your Video</h2>
+                <div className="progress-bar-container">
+                    <div
+                        className="progress-bar"
+                        style={{ width: `${progress}%` }}
+                        role="progressbar"
+                        aria-valuenow={progress}
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                    >
+                        <span className="progress-bar-text">{progress}%</span>
+                    </div>
+                </div>
+                <p>Export Progress: {progress}%</p>
+                <p>Your video is being processed. This may take a few minutes...</p>
+                <button className="back-button" onClick={handleBack}>
+                    Back to Editor
+                </button>
+            </>
         )}
         {exportStatus === 'success' && (
           <>

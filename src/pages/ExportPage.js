@@ -124,7 +124,21 @@ const ExportPage = () => {
                   setExportStatus('queued');
               } else if (status === 'EXPORTED') {
                   setExportStatus('success');
-                  setDownloadUrl(`${API_BASE_URL}/exports/${progressResponse.data.fileName || 'exported_video.mp4'}`);
+                  // Fetch the latest export link from project data
+                  const projectResponse = await axios.get(
+                      `${API_BASE_URL}/projects/${projectId}`,
+                      {
+                          headers: { Authorization: `Bearer ${token}` },
+                      }
+                  );
+                  const exports = JSON.parse(projectResponse.data.exportsJson || '[]');
+                  const latestExport = exports[exports.length - 1];
+                  if (latestExport?.downloadUrl) {
+                      setDownloadUrl(latestExport.downloadUrl);
+                      console.log('Download URL set:', latestExport.downloadUrl, { requestId, timestamp: Date.now() });
+                  } else {
+                      throw new Error('Download URL not found in project exports');
+                  }
                   clearInterval(pollingRef.current);
                   pollingRef.current = null;
                   console.log('Polling stopped: Export completed', { projectId, requestId, timestamp: Date.now() });
@@ -139,12 +153,12 @@ const ExportPage = () => {
           } catch (error) {
               console.error('Export progress polling error:', error.response?.data || error.message, { requestId, timestamp: Date.now() });
               setExportStatus('error');
-              setErrorMessage('Failed Repubblica to check export status. Please try again.');
+              setErrorMessage('Failed to check export status. Please try again.');
               setProgress(0);
               clearInterval(pollingRef.current);
               pollingRef.current = null;
           }
-      }, 7000); // Poll every 2 seconds
+      }, 7000); // Poll every 7 seconds
   };
 
   const handleDownload = () => {

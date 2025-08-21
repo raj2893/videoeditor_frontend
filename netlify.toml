@@ -5,14 +5,14 @@
 
 # Proxy blog routes to your secondary app
 [[redirects]]
-  from = "/blog"
-  to = "https://scenithblog.netlify.app/blog"
+  from = "/blogs"
+  to = "https://scenithblog.netlify.app/blogs"
   status = 200
   force = true
 
 [[redirects]]
-  from = "/blog/*"
-  to = "https://scenithblog.netlify.app/blog/:splat"
+  from = "/blogs/*"
+  to = "https://scenithblog.netlify.app/blogs/:splat"
   status = 200
   force = true
 

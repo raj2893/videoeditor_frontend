@@ -255,8 +255,7 @@ const LandingPage = () => {
               <button 
                 className="blog-preview-cta"
                 onClick={() => {
-                  navigate('/blogs/how-to-add-subtitles-to-video');
-                  window.scrollTo(0, 0);
+                  window.location.href = '/blogs/how-to-add-subtitles-to-video';
                 }}
               >
                 Read More
@@ -270,7 +269,7 @@ const LandingPage = () => {
               <button 
                 className="blog-preview-cta"
                 onClick={() => {
-                  navigate('/blogs/transform-videos-with-keyframing');
+                  window.location.href = '/blogs/transform-videos-with-keyframing';
                   window.scrollTo(0, 0);
                 }}
               >
@@ -282,7 +281,7 @@ const LandingPage = () => {
         <button
           className="view-all-blogs-cta"
           onClick={() => {
-            navigate('/blogs');
+            window.location.href = '/blogs';
             window.scrollTo(0, 0);
           }}
         >

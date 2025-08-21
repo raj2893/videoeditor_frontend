@@ -1,0 +1,23 @@
+# Build settings for your main app
+[build]
+  publish = "build"
+  command = "npm run build"
+
+# Proxy blog routes to your secondary app
+[[redirects]]
+  from = "/blog"
+  to = "https://scenithblog.netlify.app/blog"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/blog/*"
+  to = "https://scenithblog.netlify.app/blog/:splat"
+  status = 200
+  force = true
+
+# Catch-all for your main React app (keep this last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

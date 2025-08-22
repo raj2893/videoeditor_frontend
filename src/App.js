@@ -9,12 +9,8 @@ import DeveloperLogin from "./pages/DeveloperLogin";
 import DeveloperDashboard from "./pages/DeveloperDashboard";
 import ExportPage from "./pages/ExportPage";
 import LandingPage from './pages/LandingPage';
-import HowToAddSubtitlesToVideo from "./blogs/how-to-add-subtitles-to-video";
-import Blog from "./blogs/Blog";
-import KeyframingBlogPost from "./blogs/KeyframingBlogPost";
 import NotFound from "./pages/NotFound";
 import RemoveBackground from "./pages/RemoveBackground";
-import HowToReach4000HoursWatchTime from "./blogs/HowToReach4000HoursWatchTime";
 
 function TitleAndFaviconManager() {
   const location = useLocation();

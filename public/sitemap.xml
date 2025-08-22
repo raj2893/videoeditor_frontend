@@ -41,9 +41,14 @@
   </url>
 
   <url>
-    <loc>https://scenith.in/blogs/how-to-reach-4000-hours-watchtime</loc>
+    <loc>https://scenith.in/blogs/how-to-reach-4000-hours-watch-time</loc>
     <priority>0.8</priority>
     <changefreq>weekly</changefreq>
   </url>  
 
+  <url>
+    <loc>https://scenith.in/blogs/how-to-use-layers-in-video-editing</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
 </urlset>

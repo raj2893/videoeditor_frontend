@@ -5,7 +5,6 @@ import axios from 'axios';
 import { FaUpload, FaSpinner, FaDownload, FaTimes } from 'react-icons/fa';
 import { API_BASE_URL } from '../Config';
 import '../CSS/BackgroundRemoval.css';
-import { jwtDecode } from "jwt-decode";
 
 const BackgroundRemoval = () => {
   const navigate = useNavigate();
@@ -68,7 +67,6 @@ const BackgroundRemoval = () => {
 
     try {
       const token = localStorage.getItem('token');
-      console.log('Sending token:', token);
       const response = await axios.post(`${API_BASE_URL}/api/standalone-images/remove-background`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,

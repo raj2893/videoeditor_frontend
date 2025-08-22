@@ -12,14 +12,27 @@ const Footer = () => {
   const navigationLinks = [
     { label: 'Home', path: '/' },
     { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Background Removal', path: '/background-removal' },
-    { label: 'Blogs', path: '/blogs' },
+    { label: 'Background Removal', path: '/background-removal' }
   ];
 
   // Resource links (specific blog posts and tutorials)
   const resourceLinks = [
-    { label: 'How to Add Subtitles', path: '/blogs/how-to-add-subtitles-to-video' },
-    { label: 'How to reach 4000 Hours of Watch Time on YouTube', path: '/blogs/how-to-reach-4000-hours-watchtime' },
+    {
+      label: 'Blogs',
+      href: 'https://scenith.in/blogs'
+    },
+    { 
+      label: 'How to Add Subtitles', 
+      href: 'https://scenith.in/blogs/how-to-add-subtitles-to-video' 
+    },
+    { 
+      label: 'How to reach 4000 Hours of Watch Time on YouTube', 
+      href: 'https://scenith.in/blogs/how-to-reach-4000-hours-watch-time' 
+    },
+    { 
+      label: 'How to use LAYERS in Video Editing', 
+      href: 'https://scenith.in/blogs/how-to-use-layers-in-video-editing' 
+    },    
     { label: 'Tutorials', path: '/', sectionId: 'tutorials-section' },
   ];
 
@@ -27,18 +40,14 @@ const Footer = () => {
   const supportLinks = [
     { label: 'Contact Us', path: '/', sectionId: 'footer-section' },
     { label: 'Support Email', href: 'mailto:scenith.spprt@gmail.com' },
-    { label: 'FAQ', path: '/faq' }, // Placeholder for future FAQ page
   ];
 
   // Company links
   const companyLinks = [
-    { label: 'About Us', path: '/about' }, // Placeholder for future About page
-    { label: 'Careers', path: '/careers' }, // Placeholder for future Careers page
-    { label: 'Privacy Policy', path: '/privacy' }, // Placeholder for future Privacy page
-    { label: 'Terms of Service', path: '/terms' }, // Placeholder for future Terms page
+    { label: 'About Us', path: '/' }, // Placeholder for future About page
   ];
 
-  // Handle navigation for links with paths or section IDs
+  // Handle navigation for internal links with paths or section IDs
   const handleNavigation = (path, sectionId) => {
     if (path) {
       navigate(path);
@@ -57,6 +66,11 @@ const Footer = () => {
         });
       }
     }
+  };
+
+  // Handle external navigation for blog links
+  const handleExternalNavigation = (href) => {
+    window.location.href = href; // Redirect to external URL
   };
 
   return (
@@ -129,12 +143,21 @@ const Footer = () => {
             <ul className="footer-links">
               {resourceLinks.map((link) => (
                 <li key={link.label}>
-                  <button
-                    className="footer-link"
-                    onClick={() => handleNavigation(link.path, link.sectionId)}
-                  >
-                    {link.label}
-                  </button>
+                  {link.href ? (
+                    <button
+                      className="footer-link"
+                      onClick={() => handleExternalNavigation(link.href)}
+                    >
+                      {link.label}
+                    </button>
+                  ) : (
+                    <button
+                      className="footer-link"
+                      onClick={() => handleNavigation(link.path, link.sectionId)}
+                    >
+                      {link.label}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

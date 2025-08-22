@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlay, FaCut, FaMusic, FaFont, FaFilm, FaRobot, FaBars, FaEnvelope } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+import { FaPlay, FaCut, FaMusic, FaFont, FaFilm, FaRobot } from 'react-icons/fa';
 import axios from 'axios';
 import { API_BASE_URL } from '../Config';
 import '../CSS/LandingPage.css';
@@ -70,10 +70,6 @@ const LandingPage = () => {
 
     checkAuthStatus();
   }, []);
-
-  const toggleNavMenu = () => {
-    setIsNavMenuOpen(!isNavMenuOpen);
-  };
 
   const scrollToSection = (sectionId) => {
     setTimeout(() => {
@@ -264,12 +260,12 @@ const LandingPage = () => {
           </div>
           <div className="blog-preview-card">
             <div className="blog-preview-content">
-              <h3>Transform Videos with Keyframing</h3>
-              <p>Discover advanced keyframing techniques to create smooth animations and professional-looking video effects.</p>
+              <h3>How to reach 4000 hours of Watch Time on YouTube</h3>
+              <p>Discover the way to reach the mark of 4000 hours of Watch Time on YouTube and start your monetization journey.</p>
               <button 
                 className="blog-preview-cta"
                 onClick={() => {
-                  window.location.href = '/blogs/transform-videos-with-keyframing';
+                  window.location.href = '/blogs/how-to-reach-4000-hours-of-watch-time';
                   window.scrollTo(0, 0);
                 }}
               >

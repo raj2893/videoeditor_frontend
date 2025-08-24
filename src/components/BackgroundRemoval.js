@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { FaUpload, FaSpinner, FaDownload, FaTimes } from 'react-icons/fa';
-import { API_BASE_URL } from '../Config';
+import { API_BASE_URL, CDN_URL } from '../Config';
 import '../CSS/BackgroundRemoval.css';
 
 const BackgroundRemoval = () => {
@@ -88,8 +88,8 @@ const BackgroundRemoval = () => {
           console.log('Poll response:', image); // Debug poll result
           if (image) {
             if (image.status === 'SUCCESS') {
-            setPreviewUrl(`${API_BASE_URL}/image/standalone/${userId}/original/${image.originalFileName}`);
-            setProcessedImage(`${API_BASE_URL}/image/standalone/${userId}/processed/${image.processedFileName}`);
+            setPreviewUrl(`${CDN_URL}/image/standalone/${userId}/original/${image.originalFileName}`);
+            setProcessedImage(`${CDN_URL}/image/standalone/${userId}/processed/${image.processedFileName}`);
               setStatus('success');
             } else if (image.status === 'FAILED') {
               setStatus('error');

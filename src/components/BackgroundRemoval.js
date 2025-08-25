@@ -10,29 +10,29 @@ const BackgroundRemoval = () => {
   const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [processedImage, setProcessedImage] = useState(null);
+  const [processedImage, setProcessedImage] = useState(null); // Store full StandaloneImage object
   const [status, setStatus] = useState('idle'); // idle, uploading, processing, success, error
   const [errorMessage, setErrorMessage] = useState('');
   const [imageId, setImageId] = useState(null);
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem('token');
     if (!token) {
-      navigate("/login");
+      navigate('/login');
     } else {
-      axios.get(`${API_BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => {
-        setUserId(res.data.id);
-      })
-      .catch(() => {
-        navigate("/login");
-      });
+      axios
+        .get(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => {
+          setUserId(res.data.id);
+        })
+        .catch(() => {
+          navigate('/login');
+        });
     }
   }, [navigate]);
-
 
   // Debug status changes
   useEffect(() => {
@@ -67,12 +67,16 @@ const BackgroundRemoval = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_BASE_URL}/api/standalone-images/remove-background`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await axios.post(
+        `${API_BASE_URL}/api/standalone-images/remove-background`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
 
       console.log('Upload response:', response.data); // Debug response
       setImageId(response.data.id);
@@ -81,15 +85,20 @@ const BackgroundRemoval = () => {
       // Poll for status
       const pollStatus = async () => {
         try {
-          const pollResponse = await axios.get(`${API_BASE_URL}/api/standalone-images/user-images`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const pollResponse = await axios.get(
+            `${API_BASE_URL}/api/standalone-images/user-images`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
           const image = pollResponse.data.find((img) => img.id === response.data.id);
           console.log('Poll response:', image); // Debug poll result
           if (image) {
             if (image.status === 'SUCCESS') {
-            setPreviewUrl(`${CDN_URL}/image/standalone/${userId}/original/${image.originalFileName}`);
-            setProcessedImage(`${CDN_URL}/image/standalone/${userId}/processed/${image.processedFileName}`);
+              setPreviewUrl(
+                `${CDN_URL}/image/standalone/${userId}/original/${image.originalFileName}`
+              );
+              setProcessedImage(image); // Store full StandaloneImage object
               setStatus('success');
             } else if (image.status === 'FAILED') {
               setStatus('error');
@@ -104,23 +113,57 @@ const BackgroundRemoval = () => {
         } catch (error) {
           console.error('Polling error:', error);
           setStatus('error');
-          setErrorMessage('Error checking processing status: ' + (error.response?.data?.message || error.message));
+          setErrorMessage(
+            'Error checking processing status: ' +
+              (error.response?.data?.message || error.message)
+          );
         }
       };
       setTimeout(pollStatus, 2000);
     } catch (error) {
       console.error('Upload error:', error);
       setStatus('error');
-      setErrorMessage('Failed to upload image: ' + (error.response?.data?.message || error.message));
+      setErrorMessage(
+        'Failed to upload image: ' + (error.response?.data?.message || error.message)
+      );
     }
   };
 
-  const handleDownload = () => {
-    if (processedImage) {
+  const handleDownload = async () => {
+    if (!processedImage || !processedImage.processedCdnUrl) {
+      setErrorMessage('No processed image available for download.');
+      setStatus('error');
+      return;
+    }
+
+    try {
+      // Fetch the image as a blob
+      const response = await fetch(processedImage.processedCdnUrl, {
+        method: 'GET',
+        headers: {
+          // No Authorization header needed for cdnUrl
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = processedImage;
-      link.download = 'background-removed-image.png';
+      link.href = url;
+      link.download = processedImage.processedFileName || 'background-removed-image.png';
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url); // Clean up the temporary URL
+
+      console.log('Image downloaded successfully:', processedImage.processedFileName);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      setErrorMessage('Failed to download image. Please try again.');
+      setStatus('error');
     }
   };
 
@@ -160,10 +203,7 @@ const BackgroundRemoval = () => {
             id="image-upload"
             disabled={status === 'uploading' || status === 'processing'}
           />
-          <label
-            htmlFor="image-upload"
-            className="upload-button"
-          >
+          <label htmlFor="image-upload" className="upload-button">
             <FaUpload className="upload-icon" />
             {selectedFile ? 'Change Image' : 'Select Image'}
           </label>
@@ -200,7 +240,11 @@ const BackgroundRemoval = () => {
             {processedImage && (
               <div className="image-card">
                 <h3>Background Removed</h3>
-                <img src={processedImage} alt="Processed" className="preview-image" />
+                <img
+                  src={processedImage.processedCdnUrl}
+                  alt="Processed"
+                  className="preview-image"
+                />
                 <button className="download-button" onClick={handleDownload}>
                   <FaDownload className="download-icon" />
                   Download

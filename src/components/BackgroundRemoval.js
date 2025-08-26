@@ -85,28 +85,26 @@ const BackgroundRemoval = () => {
       // Poll for status
       const pollStatus = async () => {
         try {
-          const token = localStorage.getItem('token');
           const pollResponse = await axios.get(
             `${API_BASE_URL}/api/standalone-images/user-images`,
             {
               headers: { Authorization: `Bearer ${token}` },
             }
           );
-          const image = pollResponse.data.find((img) => img.id === imageId);
-          console.log('Poll response:', image);
+          const image = pollResponse.data.find((img) => img.id === response.data.id);
+          console.log('Poll response:', image); // Debug poll result
           if (image) {
             if (image.status === 'SUCCESS') {
-              setPreviewUrl(image.originalPresignedUrl); // Use pre-signed URL for preview
-              setProcessedImage({
-                ...image,
-                downloadUrl: image.processedPresignedUrl, // Use pre-signed URL for download
-              });
+              setPreviewUrl(
+                `${CDN_URL}/image/standalone/${userId}/original/${image.originalFileName}`
+              );
+              setProcessedImage(image); // Store full StandaloneImage object
               setStatus('success');
             } else if (image.status === 'FAILED') {
               setStatus('error');
               setErrorMessage(image.errorMessage || 'Background removal failed.');
             } else {
-              setTimeout(pollStatus, 2000);
+              setTimeout(pollStatus, 2000); // Poll every 2 seconds
             }
           } else {
             setStatus('error');

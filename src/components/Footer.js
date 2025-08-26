@@ -36,7 +36,11 @@ const Footer = () => {
     { 
       label: 'How to Create a Video Editing Project in Scenith', 
       href: 'https://scenith.in/blogs/how-to-create-video-editing-project' 
-    },        
+    }, 
+    { 
+      label: 'How to Upload and Organize Media in Scenith', 
+      href: 'https://scenith.in/blogs/how-to-upload-media-for-editing' 
+    },            
     { label: 'Tutorials', path: '/', sectionId: 'tutorials-section' },
   ];
 

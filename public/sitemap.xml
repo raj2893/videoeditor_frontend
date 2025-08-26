@@ -51,4 +51,10 @@
     <priority>0.8</priority>
     <changefreq>weekly</changefreq>
   </url>
+
+  <url>
+    <loc>https://scenith.in/blogs/how-to-create-video-editing-project</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>  
 </urlset>

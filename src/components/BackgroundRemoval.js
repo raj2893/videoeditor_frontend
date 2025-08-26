@@ -130,16 +130,15 @@ const BackgroundRemoval = () => {
   };
 
   const handleDownload = async () => {
-    if (!processedImage || !processedImage.processedPresignedUrl) {
+    const fileUrl = processedImage.processedPresignedUrl || processedImage.processedCdnUrl;
+    if (!fileUrl) {
       setErrorMessage('No processed image available for download.');
       setStatus('error');
       return;
     }
 
     try {
-      const response = await fetch(processedImage.processedPresignedUrl, {
-        method: 'GET',
-      });
+      const response = await fetch(fileUrl, { method: 'GET' });
   
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);

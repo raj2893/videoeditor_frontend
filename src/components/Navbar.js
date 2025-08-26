@@ -1,6 +1,6 @@
 // Navbar.js
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { href, useNavigate } from 'react-router-dom';
 import { FaBars, FaSignOutAlt } from 'react-icons/fa';
 
 const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSection, pageType }) => {
@@ -36,7 +36,7 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
     dashboard: [
       { label: 'My Projects', sectionId: 'dashboard-section' },
       { label: 'Background Remover', path: '/background-removal' },
-      { label: 'Blogs', path: '/blogs' },
+      { label: 'Blogs', href: 'https:scenith.in/blogs' },
       { label: 'About Us', sectionId: 'about-us-section' },
       { label: 'Contact Us', sectionId: 'contact-us-section' },
     ],

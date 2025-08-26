@@ -130,7 +130,7 @@ const BackgroundRemoval = () => {
   };
 
   const handleDownload = async () => {
-    const fileUrl = processedImage.processedPresignedUrl || processedImage.processedCdnUrl;
+    const fileUrl = processedImage.processedCdnUrl || processedImage.processedPresignedUrl;
     if (!fileUrl) {
       setErrorMessage('No processed image available for download.');
       setStatus('error');

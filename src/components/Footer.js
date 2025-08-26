@@ -32,7 +32,11 @@ const Footer = () => {
     { 
       label: 'How to use LAYERS in Video Editing', 
       href: 'https://scenith.in/blogs/how-to-use-layers-in-video-editing' 
-    },    
+    },
+    { 
+      label: 'How to Create a Video Editing Project in Scenith', 
+      href: 'https://scenith.in/blogs/how-to-create-video-editing-project' 
+    },        
     { label: 'Tutorials', path: '/', sectionId: 'tutorials-section' },
   ];
 

@@ -85,26 +85,28 @@ const BackgroundRemoval = () => {
       // Poll for status
       const pollStatus = async () => {
         try {
+          const token = localStorage.getItem('token');
           const pollResponse = await axios.get(
             `${API_BASE_URL}/api/standalone-images/user-images`,
             {
               headers: { Authorization: `Bearer ${token}` },
             }
           );
-          const image = pollResponse.data.find((img) => img.id === response.data.id);
-          console.log('Poll response:', image); // Debug poll result
+          const image = pollResponse.data.find((img) => img.id === imageId);
+          console.log('Poll response:', image);
           if (image) {
             if (image.status === 'SUCCESS') {
-              setPreviewUrl(
-                `${CDN_URL}/image/standalone/${userId}/original/${image.originalFileName}`
-              );
-              setProcessedImage(image); // Store full StandaloneImage object
+              setPreviewUrl(image.originalPresignedUrl); // Use pre-signed URL for preview
+              setProcessedImage({
+                ...image,
+                downloadUrl: image.processedPresignedUrl, // Use pre-signed URL for download
+              });
               setStatus('success');
             } else if (image.status === 'FAILED') {
               setStatus('error');
               setErrorMessage(image.errorMessage || 'Background removal failed.');
             } else {
-              setTimeout(pollStatus, 2000); // Poll every 2 seconds
+              setTimeout(pollStatus, 2000);
             }
           } else {
             setStatus('error');
@@ -130,25 +132,21 @@ const BackgroundRemoval = () => {
   };
 
   const handleDownload = async () => {
-    if (!processedImage || !processedImage.processedCdnUrl) {
+    if (!processedImage || !processedImage.processedPresignedUrl) {
       setErrorMessage('No processed image available for download.');
       setStatus('error');
       return;
     }
 
     try {
-      // Fetch the image as a blob
-      const response = await fetch(processedImage.processedCdnUrl, {
+      const response = await fetch(processedImage.processedPresignedUrl, {
         method: 'GET',
-        headers: {
-          // No Authorization header needed for cdnUrl
-        },
       });
-
+  
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
       }
-
+  
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -157,8 +155,8 @@ const BackgroundRemoval = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url); // Clean up the temporary URL
-
+      window.URL.revokeObjectURL(url);
+  
       console.log('Image downloaded successfully:', processedImage.processedFileName);
     } catch (error) {
       console.error('Error downloading image:', error);
@@ -241,7 +239,7 @@ const BackgroundRemoval = () => {
               <div className="image-card">
                 <h3>Background Removed</h3>
                 <img
-                  src={processedImage.processedCdnUrl}
+                  src={processedImage.processedPresignedUrl || processedImage.processedCdnUrl}
                   alt="Processed"
                   className="preview-image"
                 />

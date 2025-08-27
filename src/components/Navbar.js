@@ -38,8 +38,14 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
       { label: 'Background Remover', path: '/background-removal' },
       { label: 'Blogs', href: 'https:scenith.in/blogs' },
       { label: 'About Us', sectionId: 'about-us-section' },
-      { label: 'Contact Us', sectionId: 'contact-us-section' },
+      { label: 'Contact Us', sectionId: 'footer-section' },
     ],
+    'background-removal': [
+      { label: 'Home', path: '/' },
+      { label: 'Blogs', href: 'https://scenith.in/blogs' },
+      { label: 'Dashboard', path: '/dashboard' },
+      { label: 'Contact Us', sectionId: 'footer-section' },
+    ],  
   };
 
   const links = navLinks[pageType] || navLinks.landing;
@@ -69,11 +75,15 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
               type="button"
               className="nav-link"
               onClick={() => {
-                if (link.path) {
-                  navigate(link.path);
+                if (link.href) {
+                  window.location.href = link.href; // Handle external URLs
                   setIsNavMenuOpen(false);
-                } else if (scrollToSection) {
-                  scrollToSection(link.sectionId);
+                } else if (link.path) {
+                  navigate(link.path); // Handle internal navigation
+                  setIsNavMenuOpen(false);
+                } else if (scrollToSection && link.sectionId) {
+                  scrollToSection(link.sectionId); // Handle section scrolling
+                  setIsNavMenuOpen(false);
                 }
               }}
             >

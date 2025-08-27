@@ -24,7 +24,13 @@
     <loc>https://scenith.in/dashboard</loc>
     <priority>0.9</priority>
     <changefreq>monthly</changefreq>
-  </url>  
+  </url>
+
+   <url>
+    <loc>https://scenith.in/background-removal</loc>
+    <priority>0.9</priority>
+    <changefreq>weekly</changefreq>
+  </url>    
 
   <!-- Blog Listing Page -->
   <url>

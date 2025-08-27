@@ -76,18 +76,24 @@ const RemoveBackground = () => {
 
   // Handle smooth scrolling for section links
   const scrollToSection = (sectionId) => {
-    setTimeout(() => {
-      const section = document.getElementById(sectionId);
-      if (!section) return;
-
-      const navBar = document.querySelector('.nav-bar');
-      const navHeight = navBar ? navBar.offsetHeight : 80;
-
-      window.scrollTo({
-        top: section.offsetTop - navHeight - 20,
-        behavior: 'smooth',
-      });
-    }, 150);
+    const section = document.getElementById(sectionId);
+    if (!section) {
+      console.error(`Section with ID ${sectionId} not found.`);
+      if (sectionId === 'footer-section') {
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+      return;
+    }
+    const navBar = document.querySelector('.nav-bar');
+    const navHeight = navBar ? navBar.offsetHeight : 80;
+    const offsetPosition = section.offsetTop - navHeight - 20;
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: 'smooth'
+    });
   };
 
   if (isLoading) {

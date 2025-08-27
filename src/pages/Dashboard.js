@@ -7,6 +7,7 @@ import '../CSS/Dashboard.css';
 import { FaTrash, FaSignOutAlt, FaBars } from 'react-icons/fa';
 import { API_BASE_URL, CDN_URL } from '../Config';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, projectName }) => {
   if (!isOpen) return null;
@@ -593,7 +594,7 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const sections = ['dashboard-section', 'about-us-section', 'contact-us-section'];
+    const sections = ['dashboard-section', 'about-us-section', 'footer-section'];
     sections.forEach(id => {
       const element = document.getElementById(id);
       if (!element) {
@@ -849,53 +850,7 @@ const Dashboard = () => {
         </motion.div>
       </section>
 
-      <section className="contact-us-section" id="contact-us-section">
-        <div className="section-header">
-          <h2>
-            <span className="letter">C</span>
-            <span className="letter">o</span>
-            <span className="letter">n</span>
-            <span className="letter">t</span>
-            <span className="letter">a</span>
-            <span className="letter">c</span>
-            <span className="letter">t</span>
-            <span className="letter space"> </span>
-            <span className="letter">U</span>
-            <span className="letter">s</span>
-          </h2>
-          <div className="logo-element"></div>
-        </div>
-        {/* Changed from motion.div to regular div to prevent re-render on scroll */}
-        <div
-          className="contact-us-content"
-          // Removed Framer Motion props to avoid re-triggering animation
-        >
-          <p className="contact-us-intro">
-            We're here to support your creative journey. Reach out with questions, feedback, or just to say hello!
-          </p>
-          <div className="contact-us-info">
-            <div className="contact-us-card">
-              <h3 className="contact-us-subtitle">Get in Touch</h3>
-              <p>Email: scenith.spprt@gmail.com</p>
-              <p>Follow us on social media for updates and tips!</p>
-              <div className="social-links">
-                <a href="https://x.com/scenith_1902/" target="_blank" rel="noopener noreferrer" className="social-link">
-                  <img src="/images/X_logo.png" alt="X" className="social-icon" />
-                </a>
-                <a href="https://www.instagram.com/scenith.labs/" target="_blank" rel="noopener noreferrer" className="social-link">
-                  <img src="/images/Instagram_logo.png" alt="Instagram" className="social-icon" />
-                </a>
-                <a href="https://linkedin.com/company/scenith/" target="_blank" rel="noopener noreferrer" className="social-link">
-                  <img src="/images/LinkedIn_logo.png" alt="LinkedIn" className="social-icon" />
-                </a>
-                <a href="https://www.youtube.com/@Scenith-f4n" target="_blank" rel="noopener noreferrer" className="social-link">
-                  <img src="/images/Youtube_logo.png" alt="YouTube" className="social-icon" />
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Footer />
     </div>
   );
 };

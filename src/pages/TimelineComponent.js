@@ -254,6 +254,19 @@ const TimelineComponent = ({
     // console.log(`Waveform updated for segment ${segmentId} with barWidth=${barWidth}, barGap=${barGap}, pixelWidth=${pixelWidth}`);
   }, [timeScale, projectId]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const activeElement = document.activeElement;
+      const isTextInput = activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA';
+      if (e.key.toLowerCase() === 's' && !isTextInput && isTimelineSelected) {
+        e.preventDefault();
+        toggleSplitMode();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isTimelineSelected]);  
+
 const handleCopySegment = async () => {
   if (!selectedSegment) return;
 

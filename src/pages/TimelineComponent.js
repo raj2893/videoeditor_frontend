@@ -51,7 +51,8 @@ const TimelineComponent = ({
   setMultiSelectedSegments,
   setCurrentTime,
   updateTimeoutRef,
-  autoSaveProject
+  autoSaveProject,
+  isTimelineSelected
 }) => {
   const [timelineVideos, setTimelineVideos] = useState([]);
   const [draggingItem, setDraggingItem] = useState(null);

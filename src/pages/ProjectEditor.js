@@ -15,6 +15,10 @@ import VideoSegmentHandler from './VideoSegmentHandler.js';
 import AiSubtitlesPanel from './AiSubtitlesPanel';
 import TextStyles from './TextStyles';
 import AIVoicesPanel from './AIVoicesPanel';
+import VideosPanel from '../components/VideosPanel.js';
+import PhotosPanel from '../components/PhotosPanel.js';
+import AudiosPanel from '../components/AudiosPanel.js';
+import ElementsPanel from '../components/ElementsPanel.js';
 
 const ProjectEditor = () => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -120,7 +124,6 @@ const ProjectEditor = () => {
 
   const MIN_TIME_SCALE = 2;
   const MAX_TIME_SCALE = 250;
-  const baseFontSize = 24;
   let timelineSetPlayhead = null;
 
   useEffect(() => {
@@ -177,7 +180,6 @@ const ProjectEditor = () => {
         }
         const styles = await response.json();
         setAiSubtitleStyles(styles);
-        // Optionally set a default style
         setSelectedAiStyle(styles[0] || null);
       } catch (error) {
         console.error('Error fetching AI subtitle styles:', error);
@@ -1427,7 +1429,7 @@ const handleMultiTextUpdate = async (newSettings) => {
       console.error('Error adding text to timeline:', error);
       alert('Failed to add text to timeline. Please try again.');
     } finally {
-      setIsAddingToTimeline(false); // Clear loading state
+      setIsAddingToTimeline(false);
     }
   };
 
@@ -1440,10 +1442,8 @@ const initializeProject = async () => {
       return;
     }
 
-    // Step 1: Fetch project resources and timeline state
     const project = await fetchProjectResources();
 
-    // Step 2: Create session
     const sessionResponse = await axios.post(
       `${API_BASE_URL}/projects/${projectId}/session`,
       {},
@@ -1451,10 +1451,8 @@ const initializeProject = async () => {
     );
     setSessionId(sessionResponse.data);
 
-    // Step 3: Fetch transitions
     await fetchTransitions();
 
-    // Step 4: Set project settings
     if (project.width && project.height) {
       setCanvasDimensions({ width: project.width, height: project.height });
     }
@@ -1462,7 +1460,6 @@ const initializeProject = async () => {
       setProjectFps(project.fps);
     }
 
-    // Step 5: Populate video and audio layers from timeline state
     if (project && project.timelineState) {
       let timelineState =
         typeof project.timelineState === 'string' ? JSON.parse(project.timelineState) : project.timelineState;
@@ -1477,7 +1474,6 @@ const initializeProject = async () => {
         filterMap[filter.segmentId].push(filter);
       });
 
-      // Process video segments
       if (timelineState.segments && timelineState.segments.length > 0) {
         for (const segment of timelineState.segments) {
           const layerIndex = segment.layer || 0;
@@ -1520,7 +1516,6 @@ const initializeProject = async () => {
         }
       }
 
-      // Process image segments
       if (timelineState.imageSegments && timelineState.imageSegments.length > 0) {
         for (const imageSegment of timelineState.imageSegments) {
           const layerIndex = imageSegment.layer || 0;
@@ -1565,7 +1560,6 @@ const initializeProject = async () => {
         }
       }
 
-      // Process text segments
       if (timelineState.textSegments && timelineState.textSegments.length > 0) {
         for (const textSegment of timelineState.textSegments) {
           const layerIndex = textSegment.layer || 0;
@@ -1607,7 +1601,6 @@ const initializeProject = async () => {
         }
       }
 
-      // Process audio segments
       if (timelineState.audioSegments && timelineState.audioSegments.length > 0) {
         for (const audioSegment of timelineState.audioSegments) {
           const backendLayer = audioSegment.layer || -1;
@@ -1645,7 +1638,6 @@ const initializeProject = async () => {
         }
       }
 
-      // Set layers and total duration
       setVideoLayers(newVideoLayers);
       setAudioLayers(newAudioLayers);
       let maxEndTime = 0;
@@ -1657,7 +1649,6 @@ const initializeProject = async () => {
       });
       setTotalDuration(maxEndTime > 0 ? maxEndTime : 0);
 
-      // Auto-save if there are empty text segments
       if (timelineState.textSegments?.some((s) => !s.text?.trim())) {
         autoSaveProject(newVideoLayers, newAudioLayers);
       }
@@ -1690,14 +1681,9 @@ useEffect(() => {
   }
 
   initializeProject();
-
-  const handleBeforeUnload = () => {};
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  return () => window.removeEventListener('beforeunload', handleBeforeUnload);
 }, [projectId, navigate]);
 
   useEffect(() => {
-    // Only proceed if projectId and sessionId are available
     if (!projectId || !sessionId) {
       console.warn('Auto-save skipped: Missing projectId or sessionId');
       return;
@@ -1709,15 +1695,12 @@ useEffect(() => {
         console.log('Auto-save completed successfully');
       } catch (error) {
         console.error('Auto-save failed:', error);
-        // Notify user of failure (e.g., toast notification)
         alert('Failed to auto-save project. Please try saving manually.');
       }
     }, 1000);
   
-    // Trigger auto-save
     debouncedAutoSave();
   
-    // Cleanup on unmount or dependency change
     return () => {
       debouncedAutoSave.cancel();
     };
@@ -1726,7 +1709,7 @@ useEffect(() => {
   useEffect(() => {
     if (location.state?.error) {
       const timer = setTimeout(() => {
-        navigate('/dashboard', { state: {}, replace: true }); // Clear error after 5 seconds
+        navigate('/dashboard', { state: {}, replace: true });
       }, 5000);
       return () => clearTimeout(timer);
     }
@@ -1782,11 +1765,9 @@ useEffect(() => {
       await fetchTransitions();
       saveHistory();
 
-      // Schedule auto-save with updated transitions
       if (transitionSaveTimeoutRef.current) clearTimeout(transitionSaveTimeoutRef.current);
       transitionSaveTimeoutRef.current = setTimeout(() => {
         autoSaveProject(videoLayers, audioLayers);
-        // console.log('Auto-saved project after transition drop:', newTransition);
       }, 1000);
 
     } catch (error) {
@@ -1795,21 +1776,10 @@ useEffect(() => {
     }
   };
 
-    useEffect(() => {
-      if (videoLayers.some((layer) => layer.length > 0) || audioLayers.some((layer) => layer.length > 0)) {
-      }
-    }, [videoLayers, audioLayers]);
-
-  useEffect(() => {
-    if (videoLayers.some((layer) => layer.length > 0) || audioLayers.some((layer) => layer.length > 0)) {
-    }
-  }, [videoLayers, audioLayers]);
-
 const handleVideoUpload = async (event) => {
   const files = Array.from(event.target.files);
   if (files.length === 0) return;
 
-  // Check user role and video limit for Basic users
   if (userRole === 'BASIC') {
     if (videos.length >= 15) {
       setVideoUploadError('Basic users are limited to uploading a maximum of 15 videos. Upgrade to a premium plan to upload more.');
@@ -1858,10 +1828,8 @@ const handleVideoUpload = async (event) => {
       }
     );
 
-    // Refresh all resources using fetchProjectResources
     await fetchProjectResources();
 
-    // Thumbnails are generated within fetchProjectResources, so no need to regenerate here
     setThumbnailsGenerated(true);
   } catch (error) {
     console.error('Error uploading video:', error.response?.data || error.message);
@@ -2555,6 +2523,77 @@ const handleVideoClick = debounce(async (video, isDragEvent = false) => {
       setIsAddingToTimeline(false); // Clear loading state
     }
   };
+
+const handleRemoveBackground = async (imageSegment) => {
+  if (!imageSegment || !projectId) {
+    console.error('Missing imageSegment or projectId');
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+    const token = localStorage.getItem('token');
+    const response = await axios.post(
+      `${API_BASE_URL}/projects/${projectId}/remove-image-background`,
+      { imageFileName: imageSegment.fileName },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const processedImage = response.data;
+    if (!processedImage.imagePath) {
+      throw new Error('No processed image path returned from the server');
+    }
+
+    const newFileName = processedImage.imagePath.split('/').pop();
+    const newFilePath = `${CDN_URL}/image/projects/${projectId}/${encodeURIComponent(newFileName)}`;
+
+    // Generate thumbnail for the new image
+    const thumbnail = await generateImageThumbnail(newFileName, imageSegment.isElement);
+
+    // Update photos state by fetching the latest project resources
+    await fetchProjectResources();
+
+    // Update videoLayers with the new image details and thumbnail
+    let updatedVideoLayers = videoLayers;
+    setVideoLayers((prevLayers) => {
+      const newLayers = [...prevLayers];
+      if (!newLayers[imageSegment.layer]) {
+        console.warn(`Layer ${imageSegment.layer} does not exist in videoLayers`);
+        newLayers[imageSegment.layer] = [];
+      }
+      newLayers[imageSegment.layer] = newLayers[imageSegment.layer].map((item) =>
+        item.id === imageSegment.id
+          ? {
+              ...item,
+              fileName: newFileName,
+              filePath: newFilePath,
+              thumbnail,
+            }
+          : item
+      );
+      updatedVideoLayers = newLayers;
+      return newLayers;
+    });
+
+    // Update selectedSegment if it matches the processed image
+    if (selectedSegment?.id === imageSegment.id) {
+      setSelectedSegment((prev) => ({
+        ...prev,
+        fileName: newFileName,
+        filePath: newFilePath,
+        thumbnail,
+      }));
+    }
+
+    saveHistory();
+    await autoSaveProject(updatedVideoLayers, audioLayers);
+  } catch (error) {
+    console.error('Error removing image background:', error.response?.data || error.message);
+    alert('Failed to remove background. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
 const handleTimeUpdate = (newTime, updatePlayhead = true) => {
   const clampedTime = Math.max(0, Math.min(totalDuration, newTime));
@@ -3291,17 +3330,14 @@ const addKeyframe = async (property, value) => {
 const removeKeyframe = async (property, time) => {
   if (!selectedSegment) return;
 
-  // Store the current keyframes for potential rollback
   const previousKeyframes = { ...keyframes };
 
-  // Optimistically update the keyframes state
   const updatedKeyframes = {
     ...keyframes,
     [property]: (keyframes[property] || []).filter((kf) => !areTimesEqual(kf.time, time)),
   };
   setKeyframes(updatedKeyframes);
 
-  // Update layers with the optimistic keyframes
   let updatedVideoLayers = videoLayers;
   let updatedAudioLayers = audioLayers;
   if (selectedSegment.type === 'audio') {
@@ -3867,7 +3903,6 @@ const navigateKeyframes = (property, direction) => {
             return newLayers;
           });
   
-          // Update selectedSegment
           setSelectedSegment({
             ...currentSegment,
             volume: audioPayload.volume !== undefined ? audioPayload.volume : currentSegment.volume || 1,
@@ -3880,13 +3915,10 @@ const navigateKeyframes = (property, direction) => {
           return;
       }
   
-      // Update history after successful save
       saveHistory();
   
-      // Refresh keyframes after saving
       await fetchKeyframes(selectedSegment.id, selectedSegment.type);
         
-      // Trigger auto-save of the project with updated layers
       // if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       // updateTimeoutRef.current = setTimeout(() => {
       //   autoSaveProject(updatedVideoLayers, updatedAudioLayers);
@@ -3936,7 +3968,6 @@ const handlePhotoUpload = async (event) => {
       }
     );
 
-    // Refresh all resources using fetchProjectResources
     await fetchProjectResources();
   } catch (error) {
     console.error('Error uploading images:', error);
@@ -4081,7 +4112,6 @@ const updateFilterSetting = (filterName, filterValue) => {
         return { ...prev, filters: newFilters };
       });
 
-      // Save to backend
       if (
         filterValue === '' ||
         filterValue === null ||
@@ -4090,7 +4120,6 @@ const updateFilterSetting = (filterName, filterValue) => {
       ) {
         const filterToRemove = latestFilters.find((f) => f.filterName === filterName);
         if (filterToRemove) {
-          // console.log(`Sending DELETE request to remove filter ${filterName} (filterId: ${filterToRemove.filterId}) for segment ${segmentId}`);
           await axios.delete(`${API_BASE_URL}/projects/${projectId}/remove-filter`, {
             params: {
               sessionId,
@@ -4099,9 +4128,7 @@ const updateFilterSetting = (filterName, filterValue) => {
             },
             headers: { Authorization: `Bearer ${token}` },
           });
-          // console.log(`Successfully removed filter ${filterName} from backend`);
         } else {
-          // console.log(`Filter ${filterName} not found in backend data, skipping DELETE request`);
         }
       } else {
         const existingFilter = latestFilters.find((f) => f.filterName === filterName);
@@ -4112,7 +4139,6 @@ const updateFilterSetting = (filterName, filterValue) => {
           filterName,
           filterValue: filterValue.toString(),
         };
-        // console.log(`Sending POST request to apply filter ${filterName}=${filterValue} (filterId: ${filterId}) for segment ${segmentId}`);
         const response = await axios.post(
           `${API_BASE_URL}/projects/${projectId}/apply-filter`,
           requestBody,
@@ -4121,25 +4147,19 @@ const updateFilterSetting = (filterName, filterValue) => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        // Update appliedFilters with the backend response
         setAppliedFilters((prev) => [
           ...prev.filter((f) => f.filterName !== filterName),
           response.data,
         ]);
-        // console.log(`Successfully applied filter ${filterName} to backend`);
       }
 
-      // Trigger auto-save
       await autoSaveProject(updatedVideoLayers, audioLayers);
       saveHistory();
 
-      // Force VideoPreview to re-render
       setCurrentTime((prev) => prev + 0);
     } catch (error) {
       console.error('Error saving filter to backend:', error.response?.data || error.message);
       if (error.response?.status === 404 && error.response?.data?.includes('Filter not found')) {
-        // console.log(`Filter ${filterName} not found on backend, syncing frontend state`);
-        // Remove the filter from appliedFilters to prevent further errors
         setAppliedFilters((prev) => prev.filter((f) => f.filterName !== filterName));
         setVideoLayers((prevLayers) => {
           const newLayers = prevLayers.map((layer, layerIndex) =>
@@ -4183,7 +4203,6 @@ const resetFilters = async () => {
 
   try {
     const token = localStorage.getItem('token');
-    // Send a single DELETE request to remove all filters for the segment
     await axios.delete(`${API_BASE_URL}/projects/${projectId}/remove-all-filters`, {
       params: {
         sessionId,
@@ -4216,10 +4235,8 @@ const resetFilters = async () => {
     });
     setSelectedSegment((prev) => ({ ...prev, filters: [] }));
 
-    // Save history to capture the reset state
     saveHistory();
 
-    // Trigger auto-save immediately with updated layers
     if (filterUpdateTimeoutRef.current) clearTimeout(filterUpdateTimeoutRef.current);
     await autoSaveProject(updatedVideoLayers, audioLayers);
   } catch (error) {
@@ -4228,12 +4245,10 @@ const resetFilters = async () => {
   }
 };
 
-// Add this before the return statement
 const filteredElements = elements.filter((element) =>
   element.displayName.toLowerCase().includes(elementSearchQuery.toLowerCase())
 );
 
-  // In ProjectEditor.js, add the updateKeyframe function
   const updateKeyframe = (property, newValue) => {
     const time = currentTimeInSegment;
     const currentKeyframes = keyframes || {};
@@ -4246,10 +4261,8 @@ const filteredElements = elements.filter((element) =>
       [property]: updatedPropertyKeyframes,
     };
 
-    // Update keyframes state
     setKeyframes(updatedKeyframes);
 
-    // Update segment in layers
     if (selectedSegment.type === 'audio') {
       setAudioLayers((prevLayers) => {
         const newLayers = [...prevLayers];
@@ -4269,13 +4282,11 @@ const filteredElements = elements.filter((element) =>
       });
     }
 
-    // Update tempSegmentValues
     setTempSegmentValues((prev) => ({
       ...prev,
       [property]: newValue,
     }));
 
-    // Save to backend
     const token = localStorage.getItem('token');
     axios
       .post(
@@ -4291,7 +4302,6 @@ const filteredElements = elements.filter((element) =>
         { params: { sessionId }, headers: { Authorization: `Bearer ${token}` } }
       )
       .then(() => {
-//         Schedule auto-save
          if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
          updateTimeoutRef.current = setTimeout(() => {
            autoSaveProject(videoLayers, audioLayers);
@@ -4305,22 +4315,17 @@ const filteredElements = elements.filter((element) =>
   const handleSegmentPositionUpdate = (segment, { positionX, positionY }) => {
     if (!segment) return;
 
-    // Round position values to integers for backend compatibility
     const roundedPositionX = Math.round(Number(positionX));
     const roundedPositionY = Math.round(Number(positionY));
 
-    // Get current keyframes for the segment
     const segmentKeyframes = segment.keyframes || {};
 
-    // Determine if we should update keyframes or static values
     const hasPositionXKeyframes = segmentKeyframes.positionX && segmentKeyframes.positionX.length > 0;
     const hasPositionYKeyframes = segmentKeyframes.positionY && segmentKeyframes.positionY.length > 0;
 
-    // Calculate current time within segment
     const relativeTime = currentTime - segment.startTime;
     const timeInSegment = Math.max(0, Math.min(segment.duration, relativeTime));
 
-    // Update state based on keyframe presence
     setTempSegmentValues((prev) => {
       const newValues = { ...prev };
       if (!hasPositionXKeyframes) newValues.positionX = roundedPositionX;
@@ -4328,7 +4333,6 @@ const filteredElements = elements.filter((element) =>
       return newValues;
     });
 
-    // Update videoLayers for static values (if no keyframes)
     let updatedVideoLayers = videoLayers;
     setVideoLayers((prevLayers) => {
       const newLayers = [...prevLayers];
@@ -4345,7 +4349,6 @@ const filteredElements = elements.filter((element) =>
       return newLayers;
     });
 
-    // Update textSettings if segment is text (for static values)
     if (segment.type === 'text' && (!hasPositionXKeyframes || !hasPositionYKeyframes)) {
       setTextSettings((prev) => ({
         ...prev,
@@ -4354,7 +4357,6 @@ const filteredElements = elements.filter((element) =>
       }));
     }
 
-    // Handle keyframe addition or update for positionX
     if (hasPositionXKeyframes) {
       const existingKeyframe = segmentKeyframes.positionX.find((kf) =>
         areTimesEqual(kf.time, timeInSegment)
@@ -4366,7 +4368,6 @@ const filteredElements = elements.filter((element) =>
       }
     }
 
-    // Handle keyframe addition or update for positionY
     if (hasPositionYKeyframes) {
       const existingKeyframe = segmentKeyframes.positionY.find((kf) =>
         areTimesEqual(kf.time, timeInSegment)
@@ -4378,7 +4379,6 @@ const filteredElements = elements.filter((element) =>
       }
     }
 
-    // Debounce save to backend for static value changes
     if (!hasPositionXKeyframes || !hasPositionYKeyframes) {
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
@@ -4442,8 +4442,8 @@ const handleGenerateAiAudio = async () => {
     });
     startTime = Math.max(startTime, maxEndTime);
 
-    const layer = findAvailableLayer(startTime, startTime + 5, audioLayers); // Assume 5s duration as placeholder
-    const negativeLayer = -(layer + 1); // Convert to negative layer as required by backend
+    const layer = findAvailableLayer(startTime, startTime + 5, audioLayers);
+    const negativeLayer = -(layer + 1);
 
     const response = await axios.post(
       `${API_BASE_URL}/projects/${projectId}/generate-ai-audio`,
@@ -4462,12 +4462,10 @@ const handleGenerateAiAudio = async () => {
 
     const audioSegment = response.data;
 
-    // Validate response
     if (!audioSegment.audioSegmentId) {
       throw new Error('Backend did not return audioSegmentId');
     }
 
-    // Add audio segment to audioLayers
     const newAudioSegment = {
       id: audioSegment.audioSegmentId,
       type: 'audio',
@@ -4501,11 +4499,9 @@ const handleGenerateAiAudio = async () => {
     setTotalDuration((prev) => Math.max(prev, startTime + newAudioSegment.duration));
     saveHistory();
 
-    // Clear inputs after successful generation
     setAiVoiceText('');
     setSelectedVoice(null);
 
-    // Trigger auto-save
     await autoSaveProject(videoLayers, updatedAudioLayers);
   } catch (error) {
     console.error('Error generating AI audio:', error.response?.data || error.message);
@@ -4667,14 +4663,12 @@ return (
       )}
     </aside>
 
-    {/* Content Panel */}
     {isContentPanelOpen && (
       <aside className="content-panel open">
         <div className="panel-header">
           <button className="toggle-button" onClick={() => {
             setIsContentPanelOpen(false);
             setExpandedSection(null);
-            // Reset tool panel states when closing
             setIsTransformOpen(false);
             setIsFiltersOpen(false);
             setIsTextToolOpen(false);
@@ -4685,243 +4679,43 @@ return (
         </div>
         <div className="panel-content">
           {expandedSection === 'videos' && (
-            <div className="section-content">
-              <input
-                type="file"
-                accept="video/*"
-                onChange={handleVideoUpload}
-                id="upload-video"
-                className="hidden-input"
-                multiple
-              />
-              <label htmlFor="upload-video" className="upload-icon-button">
-                <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </label>
-              {videos.length === 0 ? (
-                <div className="empty-state">Pour it in, I am waiting!</div>
-              ) : (
-                <div className="video-list">
-                  {videos.map((video) => (
-                    <div
-                      key={video.id || video.filePath || video.filename}
-                      className={`video-item ${
-                        selectedVideo && (selectedVideo.id === video.id || selectedVideo.filePath === video.filePath)
-                          ? 'selected'
-                          : ''
-                      }`}
-                      draggable={true}
-                      onDragStart={(e) => handleMediaDragStart(e, video, 'media')}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleVideoClick(video);
-                      }}
-                      onDragEnd={(e) => e.stopPropagation()}
-                    >
-                      {typeof uploadProgress[video.displayName] === 'number' ? (
-                        <div className="video-thumbnail uploading">
-                          <div
-                            className="video-thumbnail-image"
-                            style={{
-                              backgroundImage: `url(${tempThumbnails[video.displayName] || video.thumbnail || ''})`,
-                              height: '130px',
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                              borderRadius: '4px',
-                              filter: tempThumbnails[video.displayName] ? 'blur(5px)' : 'none',
-                            }}
-                          ></div>
-                          <div className="upload-progress-overlay">
-                            <div className="upload-progress-bar">
-                              <div
-                                className="upload-progress-fill"
-                                style={{ width: `${uploadProgress[video.displayName]}%` }}
-                              ></div>
-                            </div>
-                            <div className="upload-progress-text">
-                              Uploading video: {uploadProgress[video.displayName]}%
-                            </div>
-                          </div>
-                        </div>
-                      ) : video.thumbnail ? (
-                        <div
-                          className="video-thumbnail"
-                          style={{
-                            backgroundImage: `url(${video.thumbnail})`,
-                            height: '130px',
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            borderRadius: '4px',
-                          }}
-                        ></div>
-                      ) : (
-                        <div className="video-thumbnail-placeholder"></div>
-                      )}
-                      <div className="video-title">
-                        {video.title || (video.displayName ? video.displayName.split('/').pop().replace(/^\d+_/, '') : 'Untitled Video')}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <VideosPanel
+              videos={videos}
+              uploadProgress={uploadProgress}
+              tempThumbnails={tempThumbnails}
+              selectedVideo={selectedVideo}
+              handleVideoUpload={handleVideoUpload}
+              handleVideoClick={handleVideoClick}
+              handleMediaDragStart={handleMediaDragStart}
+            />
           )}
           {expandedSection === 'photos' && (
-            <div className="section-content">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={handlePhotoUpload}
-                id="upload-photo"
-                className="hidden-input"
-                multiple
-              />
-              <label htmlFor="upload-photo" className="upload-icon-button">
-                <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </label>
-              {photos.length === 0 ? (
-                <div className="empty-state">Pour it in, I am waiting!</div>
-              ) : (
-                <div className="photo-list">
-                  {photos.map((photo) => (
-                    <div
-                      key={photo.id}
-                      className="photo-item"
-                      draggable={true}
-                      onDragStart={(e) => handleMediaDragStart(e, photo, 'photo')}
-                      onClick={() => handlePhotoClick(photo)}
-                    >
-                      {uploadProgress[photo.displayName] !== undefined && (
-                        <div className="upload-progress-overlay">
-                          <div className="upload-progress-bar">
-                            <div
-                              className="upload-progress-fill"
-                              style={{ width: `${uploadProgress[photo.displayName]}%` }}
-                            ></div>
-                          </div>
-                          <div className="upload-progress-text">
-                            Uploading photo: {uploadProgress[photo.displayName]}%
-                          </div>
-                        </div>
-                      )}
-                      <img src={photo.filePath} alt={photo.displayName} className="photo-thumbnail" />
-                      <div className="photo-title">{photo.displayName}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <PhotosPanel
+              photos={photos}
+              uploadProgress={uploadProgress}
+              handlePhotoUpload={handlePhotoUpload}
+              handlePhotoClick={handlePhotoClick}
+              handleMediaDragStart={handleMediaDragStart}
+              handleRemoveBackground={handleRemoveBackground}
+            />
           )}
           {expandedSection === 'audios' && (
-            <div className="section-content">
-              <input
-                type="file"
-                accept="audio/*"
-                onChange={handleAudioUpload}
-                id="upload-audio"
-                className="hidden-input"
-                multiple
-              />
-              <label htmlFor="upload-audio" className="upload-icon-button">
-                <svg className="upload-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L12 14M12 2L8 6M12 2L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M4 12V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </label>
-              {audios.length === 0 ? (
-                <div className="empty-state">Pour it in, I am waiting!</div>
-              ) : (
-                <div className="audio-list">
-                  {audios.map((audio) => (
-                    <div
-                      key={audio.id}
-                      className="audio-item"
-                      draggable={true}
-                      onDragStart={(e) => handleMediaDragStart(e, audio, 'audio')}
-                      onClick={() => handleAudioClick(audio)}
-                    >
-                      {uploadProgress[audio.displayName] !== undefined ? (
-                        <div className="upload-progress-overlay">
-                          <div className="upload-progress-bar">
-                            <div
-                              className="upload-progress-fill"
-                              style={{ width: `${uploadProgress[audio.displayName]}%` }}
-                            ></div>
-                          </div>
-                          <div className="upload-progress-text">
-                            Uploading audio: {uploadProgress[audio.displayName]}%
-                          </div>
-                        </div>
-                      ) : (
-                        <img
-                          src="/images/audio.jpeg" // Adjust the path based on where you place audio.jpeg
-                          alt={audio.displayName}
-                          className="audio-thumbnail"
-                          style={{
-                            width: '90%',
-                            height: '65px', // Match video/photo thumbnail height
-                            objectFit: 'cover',
-                            borderRadius: '4px',
-                          }}
-                        />
-                      )}
-                      <div className="audio-title">{audio.displayName}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <AudiosPanel
+              audios={audios}
+              uploadProgress={uploadProgress}
+              handleAudioUpload={handleAudioUpload}
+              handleAudioClick={handleAudioClick}
+              handleMediaDragStart={handleMediaDragStart}
+            />
           )}
           {expandedSection === 'elements' && (
-            <div className="section-content">
-              <input
-                type="text"
-                placeholder="Search elements..."
-                value={elementSearchQuery}
-                onChange={(e) => setElementSearchQuery(e.target.value)}
-                className="search-input"
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  marginBottom: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ccc',
-                  boxSizing: 'border-box',
-                  fontSize: '14px',
-                }}
-              />
-              {filteredElements.length === 0 ? (
-                <div className="empty-state">
-                  {elementSearchQuery ? 'No elements match your search.' : 'No elements available!'}
-                </div>
-              ) : (
-                <div className="element-list">
-                  {filteredElements.map((element) => (
-                    <div
-                      key={element.id}
-                      className="element-item"
-                      draggable={true}
-                      onDragStart={(e) => handleMediaDragStart(e, element, 'element')}
-                      onClick={() => handleElementClick(element)}
-                    >
-                      <img
-                        src={element.thumbnail || element.filePath}
-                        alt={element.displayName}
-                        className="element-thumbnail"
-                      />
-                      <div className="element-title">{element.displayName}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* <div className="empty-state">Coming soon...</div> */}
-            </div>
+            <ElementsPanel
+              elements={elements}
+              elementSearchQuery={elementSearchQuery}
+              setElementSearchQuery={setElementSearchQuery}
+              handleElementClick={handleElementClick}
+              handleMediaDragStart={handleMediaDragStart}
+            />
           )}
           {expandedSection === 'textStyles' && (
             <TextStyles
@@ -5130,6 +4924,7 @@ return (
               multiSelectedSegments={multiSelectedSegments}   
               setMultiSelectedSegments={setMultiSelectedSegments}  
               setCurrentTime={setCurrentTime}
+              isTimelineSelected={isTimelineSelected}
             />
           ) : (
             <div className="loading-container">

@@ -22,25 +22,37 @@ const Footer = () => {
       href: 'https://scenith.in/blogs'
     },
     { 
-      label: 'How to Add Subtitles', 
-      href: 'https://scenith.in/blogs/how-to-add-subtitles-to-video' 
-    },
-    { 
-      label: 'How to reach 4000 Hours of Watch Time on YouTube', 
-      href: 'https://scenith.in/blogs/how-to-reach-4000-hours-watch-time' 
-    },
-    { 
-      label: 'How to use LAYERS in Video Editing', 
-      href: 'https://scenith.in/blogs/how-to-use-layers-in-video-editing' 
-    },
-    { 
       label: 'How to Create a Video Editing Project in Scenith', 
       href: 'https://scenith.in/blogs/how-to-create-video-editing-project' 
     }, 
     { 
       label: 'How to Upload and Organize Media in Scenith', 
       href: 'https://scenith.in/blogs/how-to-upload-media-for-editing' 
-    },            
+    },
+    { 
+      label: 'How to use LAYERS in Video Editing', 
+      href: 'https://scenith.in/blogs/how-to-use-layers-in-video-editing' 
+    },    
+    { 
+      label: 'How to Add Subtitles', 
+      href: 'https://scenith.in/blogs/how-to-add-subtitles-to-video' 
+    },
+    {
+      label: 'Remove Background from Images for FREE!',
+      href: 'https://scenith.in/blogs/ai-background-remover'
+    },
+    {
+      label: 'Generate 45+ AI Voices for FREE!',
+      href: 'https://scenith.in/blogs/how-to-generate-ai-voices'
+    },    
+    { 
+      label: 'How to reach 4000 Hours of Watch Time on YouTube', 
+      href: 'https://scenith.in/blogs/how-to-reach-4000-hours-watch-time' 
+    },
+    { 
+      label: 'How to reach 4000 Hours of Watch Time on YouTube', 
+      href: 'https://scenith.in/blogs/3-video-editing-hacks' 
+    },    
     { label: 'Tutorials', path: '/', sectionId: 'tutorials-section' },
   ];
 

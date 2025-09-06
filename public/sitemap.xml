@@ -68,5 +68,23 @@
     <loc>https://scenith.in/blogs/how-to-upload-media-for-editing</loc>
     <priority>0.8</priority>
     <changefreq>weekly</changefreq>
-  </url>    
+  </url>
+
+  <url>
+    <loc>https://scenith.in/blogs/how-to-generate-ai-voices</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>  
+
+  <url>
+    <loc>https://scenith.in/blogs/ai-background-remover</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url> 
+
+  <url>
+    <loc>https://scenith.in/blogs/3-video-editing-hacks</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>          
 </urlset>

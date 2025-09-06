@@ -50,7 +50,7 @@ const Footer = () => {
       href: 'https://scenith.in/blogs/how-to-reach-4000-hours-watch-time' 
     },
     { 
-      label: 'How to reach 4000 Hours of Watch Time on YouTube', 
+      label: '3 Video Editing Hacks to create Viral Content', 
       href: 'https://scenith.in/blogs/3-video-editing-hacks' 
     },    
     { label: 'Tutorials', path: '/', sectionId: 'tutorials-section' },

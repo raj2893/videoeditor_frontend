@@ -15,8 +15,8 @@
 }
 
 .background-removal-section {
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: 800px;
+  margin: 0 auto 40px;
   padding: 60px 20px;
   text-align: center;
   background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 50%, #EFF6FF 100%);

@@ -15,34 +15,53 @@ const BackgroundRemoval = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [imageId, setImageId] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(false); // New: For auth check UX
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-    } else {
-      axios
-        .get(`${API_BASE_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) => {
-          setUserId(res.data.id);
-        })
-        .catch(() => {
-          navigate('/login');
-        });
-    }
-  }, [navigate]);
+  // Removed the useEffect for auto-auth check and redirect
 
   // Debug status changes
   useEffect(() => {
     console.log('Current status:', status);
   }, [status]);
 
-  const handleFileChange = (event) => {
+  // New function to check auth (called only on file selection)
+  const checkAuthentication = async () => {
+    setCheckingAuth(true);
+    setErrorMessage(''); // Clear any previous errors
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setCheckingAuth(false);
+      navigate('/login');
+      return false;
+    }
+    try {
+      const res = await axios.get(`${API_BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserId(res.data.id);
+      setCheckingAuth(false);
+      return true; // Auth successful
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('token'); // Clear invalid token
+      setCheckingAuth(false);
+      navigate('/login');
+      return false;
+    }
+  };
+
+  const handleFileChange = async (event) => {
     const file = event.target.files[0];
     console.log('File selected:', file); // Debug file selection
     if (file && ['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+      // Check auth only when file is selected
+      const isAuthenticated = await checkAuthentication();
+      if (!isAuthenticated) {
+        // navigate() already called in checkAuthentication; clean up file
+        event.target.value = ''; // Reset input
+        return;
+      }
+
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
       setProcessedImage(null);
@@ -196,7 +215,7 @@ const BackgroundRemoval = () => {
             onChange={handleFileChange}
             className="file-input"
             id="image-upload"
-            disabled={status === 'uploading' || status === 'processing'}
+            disabled={status === 'uploading' || status === 'processing' || checkingAuth}
           />
           <label htmlFor="image-upload" className="upload-button">
             <FaUpload className="upload-icon" />
@@ -206,10 +225,16 @@ const BackgroundRemoval = () => {
           <button
             className="process-button"
             onClick={handleRemoveBackground}
-            disabled={status === 'uploading' || status === 'processing' || !selectedFile}
+            disabled={status === 'uploading' || status === 'processing' || !selectedFile || checkingAuth}
           >
             Remove Background
           </button>
+          {checkingAuth && (
+            <div className="status-message">
+              <FaSpinner className="spinner" />
+              Checking authentication...
+            </div>
+          )}
           {status === 'uploading' && (
             <div className="status-message">
               <FaSpinner className="spinner" />

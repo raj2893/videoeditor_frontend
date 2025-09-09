@@ -22,14 +22,14 @@ function TitleAndFaviconManager() {
 
       switch (location.pathname) {
         case '/login':
-          document.title = 'Scenith | Login';
+          document.title = 'Start your Content Creation Journey with Scenith | Login';
           break;
         case '/signup':
-          document.title = 'Scenith | Signup';
+          document.title = 'Start your Content Creation Journey with Scenith | Signup';
           break;
         case '/':
         case '/dashboard':
-          document.title = 'Scenith';
+          document.title = 'Start Creating Content for FREE - Grow your Social Media | Scenith Dashboard';
           break;
         case '/verify-email':
           document.title = 'Scenith | Verify Email';
@@ -39,6 +39,9 @@ function TitleAndFaviconManager() {
           break;
         case '/developer-dashboard':
           document.title = 'Scenith | Developer Dashboard';
+          break;
+        case '/background-removal':
+          document.title = 'FREE AI Background Removal - Remove BG with a Single Click | SCENITH';
           break;
         default:
           if (location.pathname.startsWith('/projecteditor/')) {

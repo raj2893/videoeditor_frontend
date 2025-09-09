@@ -341,7 +341,7 @@ const RemoveBackground = () => {
         >
           <h1>Free AI Background Remover - Remove Photo Backgrounds Online in Seconds</h1>
           <p className="hero-description">
-            Transform your images instantly with our advanced AI background remover. Upload any JPG or PNG photo and get a professional transparent background in under 5 seconds. Perfect for e-commerce product photos, social media graphics, and professional designs. No signup required, completely free, no watermarks!
+            Transform your images instantly with our advanced AI background remover. Upload any JPG or PNG photo and get a professional transparent background in under 5 seconds. Perfect for e-commerce product photos, social media graphics, and professional designs. Completely free, no watermarks!
           </p>
           
           {/* Enhanced CTA section */}
@@ -567,7 +567,6 @@ const RemoveBackground = () => {
             Remove Backgrounds Now - Free!
           </button>
           <div className="cta-features">
-            <span>✅ No signup required</span>
             <span>⚡ 5-second processing</span>
             <span>🔒 100% secure & private</span>
           </div>

@@ -265,7 +265,7 @@ const LandingPage = () => {
               <button 
                 className="blog-preview-cta"
                 onClick={() => {
-                  window.location.href = '/blogs/how-to-reach-4000-hours-of-watch-time';
+                  window.location.href = '/blogs/how-to-reach-4000-hours-watch-time';
                   window.scrollTo(0, 0);
                 }}
               >

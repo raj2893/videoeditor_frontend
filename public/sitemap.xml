@@ -104,6 +104,54 @@
     <loc>https://scenith.in/blogs/three-second-rule</loc>
     <priority>0.8</priority>
     <changefreq>weekly</changefreq>
-  </url>         
+  </url> 
+
+  <url>
+    <loc>https://scenith.in/blogs/why-90%-of-viewers-watch-videos-without-sound</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>    
+
+  <url>
+    <loc>https://scenith.in/blogs/ai-subtitles-vs-manual-subtitles-accuracy-test</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>   
+
+  <url>
+    <loc>https://scenith.in/blogs/subtitle-styling-mistakes-that-kill-engagement</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>  
+
+  <url>
+    <loc>https://scenith.in/blogs/how-to-make-videos-accessible-for-the-deaf-community</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>   
+
+  <url>
+    <loc>https://scenith.in/blogs/ai-voice-vs-human-narrator-blind-test</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+
+  <url>
+    <loc>https://scenith.in/blogs/creating-multilingual-content-with-ai-voices</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+
+  <url>
+    <loc>https://scenith.in/blogs/podcast-to-video-conversion-using-ai-voices</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+
+  <url>
+    <loc>https://scenith.in/blogs/voiceover-mistakes-beginners-make</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>                      
        
 </urlset>

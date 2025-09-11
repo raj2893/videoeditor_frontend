@@ -16,6 +16,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/background-removal"
+  to = "https://scenithblog.netlify.app/background-removal"
+  status = 200
+  force = true  
+
 # Catch-all for your main React app (keep this last)
 [[redirects]]
   from = "/*"

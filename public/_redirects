@@ -2,4 +2,6 @@
 /favicon.ico https://scenithblog.netlify.app/favicon.ico 200
 /blogs https://scenithblog.netlify.app/blogs 200
 /blogs/* https://scenithblog.netlify.app/blogs/:splat 200
+/background-removal https://scenithblog.netlify.app/background-removal 200
+/background-removal/* https://scenithblog.netlify.app/background-removal/:splat 200
 /* /index.html 200

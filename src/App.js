@@ -74,7 +74,7 @@ function App() {
         <Route path="/developer-login" element={<DeveloperLogin />} />
         <Route path="/developer-dashboard" element={<DeveloperDashboard />} />
         <Route path="/export/:projectId" element={<ExportPage />} />
-        <Route path="/background-removal" element={<RemoveBackground />} />
+        {/* <Route path="/background-removal" element={<RemoveBackground />} /> */}
         <Route path="*" element={<NotFound />} /> {/* Catch-all for undefined routes */}
       </Routes>
     </Router>

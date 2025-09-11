@@ -152,6 +152,30 @@
     <loc>https://scenith.in/blogs/voiceover-mistakes-beginners-make</loc>
     <priority>0.8</priority>
     <changefreq>weekly</changefreq>
-  </url>                      
+  </url>       
+
+  <url>
+    <loc>https://scenith.in/blogs/why-laptop-editing-beats-phone-editing</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+
+  <url>
+    <loc>https://scenith.in/blogs/keyboard-shortcuts-every-video-editor-needs</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+
+  <url>
+    <loc>https://scenith.in/blogs/timeline-editing-tricks-mobile-apps-cant-do</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+
+  <url>
+    <loc>https://scenith.in/blogs/multi-track-editing-for-professional-results</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>                        
        
 </urlset>

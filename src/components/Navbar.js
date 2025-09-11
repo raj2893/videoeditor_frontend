@@ -26,7 +26,7 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
   const navLinks = {
     landing: [
       { label: 'Home', sectionId: 'hero-section' },
-      { label: 'Background Remover', path: '/background-removal' },
+      { label: 'Background Remover', href: 'https://scenith.in/background-removal' },
       { label: 'Features', sectionId: 'features-section' },
       { label: 'Tutorials', sectionId: 'tutorials-section' },
       { label: 'Blogs', sectionId: 'blog-section' },
@@ -35,17 +35,17 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
     ],
     dashboard: [
       { label: 'My Projects', sectionId: 'dashboard-section' },
-      { label: 'Background Remover', path: '/background-removal' },
+      { label: 'Background Remover', href: 'https://scenith.in/background-removal' },
       { label: 'Blogs', href: 'https:scenith.in/blogs' },
       { label: 'About Us', sectionId: 'about-us-section' },
       { label: 'Contact Us', sectionId: 'footer-section' },
     ],
-    'background-removal': [
-      { label: 'Home', path: '/' },
-      { label: 'Blogs', href: 'https://scenith.in/blogs' },
-      { label: 'Dashboard', path: '/dashboard' },
-      { label: 'Contact Us', sectionId: 'footer-section' },
-    ],  
+    // 'background-removal': [
+    //   { label: 'Home', path: '/' },
+    //   { label: 'Blogs', path: 'https://scenith.in/blogs' },
+    //   { label: 'Dashboard', path: '/dashboard' },
+    //   { label: 'Contact Us', sectionId: 'footer-section' },
+    // ],  
   };
 
   const links = navLinks[pageType] || navLinks.landing;

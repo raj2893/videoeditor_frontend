@@ -12,7 +12,8 @@ const Footer = () => {
   const navigationLinks = [
     { label: 'Home', path: '/' },
     { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Background Removal', href: 'https:scenith.in/background-removal' }
+    { label: 'Background Removal', href: 'https:scenith.in/background-removal' },
+    { label: 'Privacy Policy', path: '/privacy-policy' },
   ];
 
   // Resource links (specific blog posts and tutorials)

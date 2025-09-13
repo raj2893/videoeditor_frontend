@@ -10,6 +10,7 @@ import DeveloperDashboard from "./pages/DeveloperDashboard";
 import ExportPage from "./pages/ExportPage";
 import LandingPage from './pages/LandingPage';
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import RemoveBackground from "./pages/RemoveBackground";
 
 function TitleAndFaviconManager() {
@@ -43,6 +44,9 @@ function TitleAndFaviconManager() {
         case '/background-removal':
           document.title = 'FREE AI Background Removal - Remove BG with a Single Click | SCENITH';
           break;
+        case '/privacy-policy':
+          document.title = 'Privacy Policy | SCENITH';
+          break;          
         default:
           if (location.pathname.startsWith('/projecteditor/')) {
             document.title = 'Scenith | Project Editor';
@@ -76,6 +80,7 @@ function App() {
         <Route path="/export/:projectId" element={<ExportPage />} />
         {/* <Route path="/background-removal" element={<RemoveBackground />} /> */}
         <Route path="*" element={<NotFound />} /> {/* Catch-all for undefined routes */}
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       </Routes>
     </Router>
   );

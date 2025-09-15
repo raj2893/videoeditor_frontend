@@ -22,6 +22,12 @@
   status = 200
   force = true  
 
+[[redirects]]
+  from = "/ai-voice-generation"
+  to = "https://scenithblog.netlify.app/ai-voice-generation"
+  status = 200
+  force = true    
+
 # Catch-all for your main React app (keep this last)
 [[redirects]]
   from = "/*"

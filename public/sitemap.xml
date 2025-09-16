@@ -231,4 +231,58 @@
     <priority>0.8</priority>
     <changefreq>weekly</changefreq>
   </url>
+
+  <url>
+    <loc>https://scenith.in/blogs/how-to-edit-all-subtitles-at-once-mass-subtitle-styling</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  
+  <url>
+    <loc>https://scenith.in/blogs/subtitle-consistency-across-entire-video-one-click-solution</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  
+  <url>
+    <loc>https://scenith.in/blogs/batch-subtitle-formatting-save-hours-of-editing-time</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  
+  <url>
+    <loc>https://scenith.in/blogs/global-subtitle-changes-font-color-background-in-seconds</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  
+  <url>
+    <loc>https://scenith.in/blogs/subtitle-border-effects-make-text-pop-any-background</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  
+  <url>
+    <loc>https://scenith.in/blogs/background-color-vs-transparent-subtitles-readability-test</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  
+  <url>
+    <loc>https://scenith.in/blogs/subtitle-font-psychology-which-fonts-increase-retention</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  
+  <url>
+    <loc>https://scenith.in/blogs/border-width-science-optimal-subtitle-visibility</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  
+  <url>
+    <loc>https://scenith.in/blogs/subtitle-placement-rules-never-cover-important-visuals</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>  
 </urlset>

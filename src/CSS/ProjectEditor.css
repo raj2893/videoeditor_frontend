@@ -1238,20 +1238,6 @@
   --nav-h: 68px;
 }
 
-/* Bouncing ball (logo element) */
-.branding-container .logo-element {
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  border: 2px solid #FFD700;
-  border-radius: 50%;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  animation: bounce 0.5s infinite, moveOverLetters 7s infinite;
-  z-index: 15;
-}
-
 .branding-container .logo-element::before {
   content: '';
   position: absolute;

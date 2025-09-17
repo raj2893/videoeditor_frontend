@@ -722,91 +722,15 @@ html, body {
   20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
-  :root {
-    --nav-s: -61px;
-    --nav-c: -41px;
-    --nav-e: -20px;
-    --nav-n: 0px;
-    --nav-i: 20px;
-    --nav-t: 41px;
-    --nav-h: 56px;
-  }
 
   .dashboard {
     padding: 15px;
     padding-top: 90px;
   }
 
-  .hamburger-menu {
-    display: block;
-  }
-
-  .nav-links {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-    position: absolute;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 400px;
-    background: rgba(255, 255, 255, 0.98);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    padding: 15px 0;
-    border-radius: 20px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(226, 232, 240, 0.8);
-  }
-
-  .nav-links.open {
-    display: flex;
-  }
-
-  .nav-link {
-    font-size: 0.9rem;
-    padding: 8px 16px;
-  }
-
   .project-grid {
     grid-template-columns: repeat(2, minmax(160px, 1fr));
-  }
-
-  .dropdown-menu {
-    position: fixed;
-    top: 140px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90vw;
-    max-width: 320px;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-    z-index: 100;
-  }
-
-  .dropdown-title {
-    font-size: 1rem;
-    text-align: center;
-    padding-bottom: 10px;
-    margin-bottom: 12px;
-  }
-
-  .dropdown-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .dropdown-input {
-    padding: 10px;
-    font-size: 0.9rem;
-    border-radius: 10px;
-    border: 1px solid rgba(226, 232, 240, 0.8);
   }
 
   .dimension-inputs {
@@ -844,10 +768,6 @@ html, body {
     font-size: 0.95rem;
     border-radius: 10px;
     margin-top: 10px;
-  }
-
-  .branding-container h1 {
-    font-size: 22px;
   }
 
   .thumbnail-container {
@@ -929,89 +849,17 @@ html, body {
   .nav-bar {
     width: 90%;
   }
-
-  .dropdown-menu {
-    width: 300px;
-  }
 }
 
 @media (max-width: 480px) {
-  :root {
-    --nav-s: -55px;
-    --nav-c: -36.5px;
-    --nav-e: -18px;
-    --nav-n: 0px;
-    --nav-i: 18px;
-    --nav-t: 36.5px;
-    --nav-h: 50px;
-  }
 
   .dashboard {
     padding: 15px;
     padding-top: 80px;
   }
 
-  .nav-bar {
-    padding: 8px 15px;
-    width: 95%;
-    max-width: 350px;
-  }
-
-  .nav-links {
-    top: 50px;
-    width: 90%;
-    max-width: 300px;
-  }
-
   .project-grid {
     grid-template-columns: repeat(1, minmax(140px, 1fr));
-  }
-
-  .dropdown-menu {
-    position: fixed;
-    top: 130px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 95vw;
-    max-width: 280px;
-    padding: 15px;
-  }
-
-  .dropdown-title {
-    font-size: 0.95rem;
-  }
-
-  .dropdown-input {
-    padding: 8px;
-    font-size: 0.85rem;
-  }
-
-  .dropdown-presets {
-    max-height: 180px;
-  }
-
-  .dropdown-item {
-    padding: 8px;
-    font-size: 0.8rem;
-  }
-
-  .dropdown-create-button {
-    padding: 10px;
-    font-size: 0.9rem;
-  }
-
-  .branding-container h1 {
-    font-size: 20px;
-  }
-
-  .branding-container .logo-element {
-    width: 20px;
-    height: 20px;
-  }
-
-  .branding-container .logo-element::before {
-    width: 6px;
-    height: 6px;
   }
 
   .create-button {
@@ -1019,18 +867,8 @@ html, body {
     font-size: 0.9rem;
   }
 
-  .profile-icon {
-    width: 36px;
-    height: 36px;
-  }
-
   .thumbnail-container {
     height: 160px;
-  }
-
-  .profile-dropdown {
-    top: 40px;
-    width: 220px;
   }
 
   .projects-section,

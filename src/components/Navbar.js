@@ -2,15 +2,21 @@
 import React, { useState } from 'react';
 import { href, useNavigate } from 'react-router-dom';
 import { FaBars, FaSignOutAlt } from 'react-icons/fa';
+import '../CSS/Navbar.css';
 
 const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSection, pageType }) => {
   const navigate = useNavigate();
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isToolsDropdownOpen, setIsToolsDropdownOpen] = useState(false);
 
   const toggleNavMenu = () => {
     setIsNavMenuOpen(!isNavMenuOpen);
   };
+
+  const toggleToolsDropdown = () => {
+    setIsToolsDropdownOpen(!isToolsDropdownOpen);
+  };  
 
   const toggleProfileDropdown = () => {
     setIsProfileDropdownOpen(!isProfileDropdownOpen);
@@ -22,11 +28,17 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
     e.target.nextSibling.style.display = 'flex';
   };
 
-  // Define nav links for LandingPage and Dashboard
   const navLinks = {
     landing: [
       { label: 'Home', sectionId: 'hero-section' },
-      { label: 'Background Remover', href: 'https://scenith.in/background-removal' },
+      { 
+        label: 'Tools', 
+        isDropdown: true,
+        dropdownItems: [
+          { label: 'AI Voices', href: 'https://scenith.in/ai-voice-generation' },
+          { label: 'Background Remover', href: 'https://scenith.in/background-removal' }
+        ]
+      },
       { label: 'Features', sectionId: 'features-section' },
       { label: 'Tutorials', sectionId: 'tutorials-section' },
       { label: 'Blogs', sectionId: 'blog-section' },
@@ -35,17 +47,18 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
     ],
     dashboard: [
       { label: 'My Projects', sectionId: 'dashboard-section' },
-      { label: 'Background Remover', href: 'https://scenith.in/background-removal' },
+      { 
+        label: 'Tools', 
+        isDropdown: true,
+        dropdownItems: [
+          { label: 'AI Voices', href: 'https://scenith.in/ai-voice-generation' },
+          { label: 'Background Remover', href: 'https://scenith.in/background-removal' }
+        ]
+      },
       { label: 'Blogs', href: 'https:scenith.in/blogs' },
       { label: 'About Us', sectionId: 'about-us-section' },
       { label: 'Contact Us', sectionId: 'footer-section' },
     ],
-    // 'background-removal': [
-    //   { label: 'Home', path: '/' },
-    //   { label: 'Blogs', path: 'https://scenith.in/blogs' },
-    //   { label: 'Dashboard', path: '/dashboard' },
-    //   { label: 'Contact Us', sectionId: 'footer-section' },
-    // ],  
   };
 
   const links = navLinks[pageType] || navLinks.landing;
@@ -70,25 +83,68 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
         </button>
         <div className={`nav-links ${isNavMenuOpen ? 'open' : ''}`}>
           {links.map((link) => (
-            <button
-              key={link.label}
-              type="button"
-              className="nav-link"
-              onClick={() => {
-                if (link.href) {
-                  window.location.href = link.href; // Handle external URLs
-                  setIsNavMenuOpen(false);
-                } else if (link.path) {
-                  navigate(link.path); // Handle internal navigation
-                  setIsNavMenuOpen(false);
-                } else if (scrollToSection && link.sectionId) {
-                  scrollToSection(link.sectionId); // Handle section scrolling
-                  setIsNavMenuOpen(false);
-                }
-              }}
-            >
-              {link.label}
-            </button>
+            <div key={link.label} className="nav-item">
+              {link.isDropdown ? (
+                <>
+                  <button
+                    type="button"
+                    className="nav-link dropdown-trigger"
+                    onMouseEnter={() => setIsToolsDropdownOpen(true)}
+                    onMouseLeave={() => setIsToolsDropdownOpen(false)}
+                    onClick={toggleToolsDropdown}
+                  >
+                    {link.label}
+                  </button>
+                  {isToolsDropdownOpen && (
+                    <div 
+                      className="tools-dropdown"
+                      onMouseEnter={() => setIsToolsDropdownOpen(true)}
+                      onMouseLeave={() => setIsToolsDropdownOpen(false)}
+                    >
+                      {link.dropdownItems.map((item) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          className="tools-dropdown-item"
+                          onClick={() => {
+                            if (item.href) {
+                              window.location.href = item.href;
+                            } else if (item.path) {
+                              navigate(item.path);
+                            } else if (scrollToSection && item.sectionId) {
+                              scrollToSection(item.sectionId);
+                            }
+                            setIsToolsDropdownOpen(false);
+                            setIsNavMenuOpen(false);
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="nav-link"
+                  onClick={() => {
+                    if (link.href) {
+                      window.location.href = link.href;
+                      setIsNavMenuOpen(false);
+                    } else if (link.path) {
+                      navigate(link.path);
+                      setIsNavMenuOpen(false);
+                    } else if (scrollToSection && link.sectionId) {
+                      scrollToSection(link.sectionId);
+                      setIsNavMenuOpen(false);
+                    }
+                  }}
+                >
+                  {link.label}
+                </button>
+              )}
+            </div>
           ))}
         </div>
         <div className="header-container profile-section">

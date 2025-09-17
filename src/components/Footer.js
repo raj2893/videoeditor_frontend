@@ -11,8 +11,9 @@ const Footer = () => {
   // Navigation links for the footer
   const navigationLinks = [
     { label: 'Home', path: '/' },
-    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'AI Voice Generation', href: 'https:scenith.in/ai-voice-generation' },
     { label: 'Background Removal', href: 'https:scenith.in/background-removal' },
+    { label: 'Dashboard', path: '/dashboard' },
     { label: 'Privacy Policy', path: '/privacy-policy' },
   ];
 

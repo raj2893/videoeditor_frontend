@@ -6,6 +6,6 @@
 /background-removal/* https://scenithblog.netlify.app/background-removal/:splat 200
 /ai-voice-generation https://scenithblog.netlify.app/ai-voice-generation 200
 /ai-voice-generation/* https://scenithblog.netlify.app/ai-voice-generation/:splat 200
-/video-speed-modifier https://scenithblog.netlify.app/ai-voice-generation 200
-/video-speed-modifier/* https://scenithblog.netlify.app/ai-voice-generation/:splat 200
+/video-speed-modifier https://scenithblog.netlify.app/video-speed-modifier 200
+/video-speed-modifier/* https://scenithblog.netlify.app/video-speed-modifier/:splat 200
 /* /index.html 200

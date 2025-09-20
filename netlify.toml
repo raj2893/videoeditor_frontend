@@ -26,7 +26,13 @@
   from = "/ai-voice-generation"
   to = "https://scenithblog.netlify.app/ai-voice-generation"
   status = 200
-  force = true    
+  force = true  
+
+[[redirects]]
+  from = "/video-speed-modifier"
+  to = "https://scenithblog.netlify.app/video-speed-modifier"
+  status = 200
+  force = true      
 
 # Catch-all for your main React app (keep this last)
 [[redirects]]

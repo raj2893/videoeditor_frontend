@@ -10,4 +10,6 @@
 /video-speed-modifier/* https://scenithblog.netlify.app/video-speed-modifier/:splat 200
 /apply-filters-to-videos https://scenithblog.netlify.app/apply-filters-to-videos 200
 /apply-filters-to-videos/* https://scenithblog.netlify.app/apply-filters-to-videos/:splat 200
+/compress-media https://scenithblog.netlify.app/compress-media 200
+/compress-media/* https://scenithblog.netlify.app/compress-media/:splat 200
 /* /index.html 200

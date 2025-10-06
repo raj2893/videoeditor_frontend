@@ -17,28 +17,40 @@
   force = true
 
 [[redirects]]
-  from = "/background-removal"
-  to = "https://scenithblog.netlify.app/background-removal"
+  from = "/tools/background-removal"
+  to = "https://scenithblog.netlify.app/tools/background-removal"
   status = 200
   force = true  
 
 [[redirects]]
-  from = "/ai-voice-generation"
-  to = "https://scenithblog.netlify.app/ai-voice-generation"
+  from = "/tools/ai-voice-generation"
+  to = "https://scenithblog.netlify.app/tools/ai-voice-generation"
   status = 200
   force = true  
 
 [[redirects]]
-  from = "/video-speed-modifier"
-  to = "https://scenithblog.netlify.app/video-speed-modifier"
+  from = "/tools/video-speed-modifier"
+  to = "https://scenithblog.netlify.app/tools/video-speed-modifier"
   status = 200
   force = true 
 
 [[redirects]]
-  from = "/apply-filters-to-videos"
-  to = "https://scenithblog.netlify.app/apply-filters-to-videos"
+  from = "/tools/apply-filters-to-videos"
+  to = "https://scenithblog.netlify.app/tools/apply-filters-to-videos"
   status = 200
   force = true        
+
+[[redirects]]
+  from = "/tools/compress-media"
+  to = "https://scenithblog.netlify.app/tools/compress-media"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/tools/add-subtitles-to-videos"
+  to = "https://scenithblog.netlify.app/tools/add-subtitles-to-videos"
+  status = 200
+  force = true    
 
 # Catch-all for your main React app (keep this last)
 [[redirects]]

@@ -30,17 +30,18 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
 
   const navLinks = {
     landing: [
-      { label: 'Home', sectionId: 'hero-section' },
       { 
         label: 'Tools', 
         isDropdown: true,
         dropdownItems: [
-          { label: 'AI Voices', href: 'https://scenith.in/ai-voice-generation' },
-          { label: 'Background Remover', href: 'https://scenith.in/background-removal' }
+          { label: 'AI Voices', href: 'https://scenith.in/tools/ai-voice-generation' },
+          { label: 'AI Subtitle Generator', href: 'https://scenith.in/tools/video-speed-modifier' },
+          { label: 'Background Remover', href: 'https://scenith.in/tools/background-removal' },
+          { label: 'Video Speed Modifier', href: 'https://scenith.in/tools/video-speed-modifier' },
+          { label: 'Video Color Grading', href: 'https://scenith.in/tools/apply-filters-to-videos' },
+          { label: 'Media Compression', href: 'https://scenith.in/tools/compress-media' }
         ]
       },
-      { label: 'Features', sectionId: 'features-section' },
-      { label: 'Tutorials', sectionId: 'tutorials-section' },
       { label: 'Blogs', sectionId: 'blog-section' },
       { label: 'Contact Us', sectionId: 'footer-section' },
       { label: 'Dashboard', path: '/dashboard' },
@@ -51,12 +52,15 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
         label: 'Tools', 
         isDropdown: true,
         dropdownItems: [
-          { label: 'AI Voices', href: 'https://scenith.in/ai-voice-generation' },
-          { label: 'Background Remover', href: 'https://scenith.in/background-removal' }
+          { label: 'AI Voices', href: 'https://scenith.in/tools/ai-voice-generation' },
+          { label: 'AI Subtitle Generator', href: 'https://scenith.in/tools/video-speed-modifier' },
+          { label: 'Background Remover', href: 'https://scenith.in/tools/background-removal' },
+          { label: 'Video Speed Modifier', href: 'https://scenith.in/tools/video-speed-modifier' },
+          { label: 'Video Color Grading', href: 'https://scenith.in/tools/apply-filters-to-videos' },
+          { label: 'Media Compression', href: 'https://scenith.in/tools/compress-media' }
         ]
       },
       { label: 'Blogs', href: 'https:scenith.in/blogs' },
-      { label: 'About Us', sectionId: 'about-us-section' },
       { label: 'Contact Us', sectionId: 'footer-section' },
     ],
   };

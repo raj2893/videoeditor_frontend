@@ -53,14 +53,14 @@ const Navbar = ({ isScrolled, userProfile, isLoggedIn, handleLogout, scrollToSec
         isDropdown: true,
         dropdownItems: [
           { label: 'AI Voices', href: 'https://scenith.in/tools/ai-voice-generation' },
-          { label: 'AI Subtitle Generator', href: 'https://scenith.in/tools/video-speed-modifier' },
+          { label: 'AI Subtitle Generator', href: 'https://scenith.in/tools/add-subtitles-to-videos' },
           { label: 'Background Remover', href: 'https://scenith.in/tools/background-removal' },
           { label: 'Video Speed Modifier', href: 'https://scenith.in/tools/video-speed-modifier' },
           { label: 'Video Color Grading', href: 'https://scenith.in/tools/apply-filters-to-videos' },
           { label: 'Media Compression', href: 'https://scenith.in/tools/compress-media' }
         ]
       },
-      { label: 'Blogs', href: 'https:scenith.in/blogs' },
+      { label: 'Blogs', href: 'https://scenith.in/blogs' },
       { label: 'Contact Us', sectionId: 'footer-section' },
     ],
   };

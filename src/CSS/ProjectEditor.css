@@ -1227,17 +1227,6 @@
   color: inherit;
 }
 
-/* Define CSS custom properties for letter positions */
-:root {
-  --nav-s: -74px;
-  --nav-c: -49.5px;
-  --nav-e: -24.5px;
-  --nav-n: 0px;
-  --nav-i: 24.5px;
-  --nav-t: 49.5px;
-  --nav-h: 68px;
-}
-
 .branding-container .logo-element::before {
   content: '';
   position: absolute;
@@ -1259,24 +1248,6 @@
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
-}
-
-@keyframes moveOverLetters {
-  0% { left: calc(50% + var(--nav-s)); }
-  7.14% { left: calc(50% + var(--nav-c)); }
-  14.28% { left: calc(50% + var(--nav-e)); }
-  21.42% { left: calc(50% + var(--nav-n)); }
-  28.56% { left: calc(50% + var(--nav-i)); }
-  35.7% { left: calc(50% + var(--nav-t)); }
-  42.84% { left: calc(50% + var(--nav-h)); }
-  50% { left: calc(50% + var(--nav-h)); }
-  57.14% { left: calc(50% + var(--nav-t)); }
-  64.28% { left: calc(50% + var(--nav-i)); }
-  71.42% { left: calc(50% + var(--nav-n)); }
-  78.56% { left: calc(50% + var(--nav-e)); }
-  85.7% { left: calc(50% + var(--nav-c)); }
-  92.84% { left: calc(50% + var(--nav-s)); }
-  100% { left: calc(50% + var(--nav-s)); }
 }
 
 /* Existing lock-icon styles (retained for consistency) */
@@ -1587,17 +1558,6 @@
     justify-content: center; /* Ensure horizontal centering */
   }
 
-  /* Branding Container */
-  :root {
-    --nav-s: -61px;
-    --nav-c: -41px;
-    --nav-e: -20px;
-    --nav-n: 0px;
-    --nav-i: 20px;
-    --nav-t: 41px;
-    --nav-h: 56px;
-  }
-
   .branding-container h1 {
     font-size: 20px;
   }
@@ -1746,17 +1706,6 @@
   .tools-panel.closed .toggle-button {
     padding: 6px 0; /* Consistent padding in closed state */
     justify-content: center; /* Ensure horizontal centering */
-  }
-
-  /* Branding Container */
-  :root {
-    --nav-s: -55px;
-    --nav-c: -36.5px;
-    --nav-e: -18px;
-    --nav-n: 0px;
-    --nav-i: 18px;
-    --nav-t: 36.5px;
-    --nav-h: 50px;
   }
 
   .branding-container h1 {

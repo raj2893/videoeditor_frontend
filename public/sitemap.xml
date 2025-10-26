@@ -70,7 +70,14 @@
     <priority>0.9</priority>
     <changefreq>weekly</changefreq>
     <lastmod>2025-10-03</lastmod>
-  </url>              
+  </url>  
+
+  <url>
+    <loc>https://scenith.in/tools/media-conversion-tool</loc>
+    <priority>0.9</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-03</lastmod>
+  </url>                
 
   <!-- Blog Listing Page -->
   <url>
@@ -80,7 +87,7 @@
     <lastmod>2025-09-15</lastmod>
   </url>
 
-  <!-- Example Blog Pages -->
+  <!-- Blog Pages -->
   <url>
     <loc>https://scenith.in/blogs/how-to-add-subtitles-to-video</loc>
     <priority>0.8</priority>
@@ -730,4 +737,70 @@
     <changefreq>weekly</changefreq>
     <lastmod>2025-10-07</lastmod>
   </url>  
+  <url>
+    <loc>https://scenith.in/blogs/how-to-beat-instagram-algorithm-2025-reels-strategy</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-11</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/ai-voice-generation-free-studio-quality-voiceovers</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-12</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/auto-add-subtitles-to-video-ai-captioning</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-13</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/compress-video-without-losing-quality-free-tool</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-14</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/convert-video-to-any-format-free-one-click</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-15</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/remove-video-background-free-ai-green-screen</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-16</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/change-video-speed-online-free-slow-motion-tool</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-17</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/zero-to-10k-followers-content-strategy-2025</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-18</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/why-your-content-isnt-going-viral-7-mistakes</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-19</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/quit-job-content-creation-realistic-timeline-2025</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-20</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/psychology-of-viral-videos-click-share-study-2025</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-21</lastmod>
+  </url>
 </urlset>

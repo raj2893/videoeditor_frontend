@@ -1,0 +1,59 @@
+# Build settings for your main app
+[build]
+  publish = "build"
+  command = "npm run build"
+
+# Proxy blog routes to your secondary app
+[[redirects]]
+  from = "/blogs"
+  to = "https://scenithblog.netlify.app/blogs"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/blogs/*"
+  to = "https://scenithblog.netlify.app/blogs/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/tools/background-removal"
+  to = "https://scenithblog.netlify.app/tools/background-removal"
+  status = 200
+  force = true  
+
+[[redirects]]
+  from = "/tools/ai-voice-generation"
+  to = "https://scenithblog.netlify.app/tools/ai-voice-generation"
+  status = 200
+  force = true  
+
+[[redirects]]
+  from = "/tools/video-speed-modifier"
+  to = "https://scenithblog.netlify.app/tools/video-speed-modifier"
+  status = 200
+  force = true 
+
+[[redirects]]
+  from = "/tools/apply-filters-to-videos"
+  to = "https://scenithblog.netlify.app/tools/apply-filters-to-videos"
+  status = 200
+  force = true        
+
+[[redirects]]
+  from = "/tools/compress-media"
+  to = "https://scenithblog.netlify.app/tools/compress-media"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/tools/add-subtitles-to-videos"
+  to = "https://scenithblog.netlify.app/tools/add-subtitles-to-videos"
+  status = 200
+  force = true    
+
+# Catch-all for your main React app (keep this last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

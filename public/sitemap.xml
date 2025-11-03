@@ -77,7 +77,14 @@
     <priority>0.9</priority>
     <changefreq>weekly</changefreq>
     <lastmod>2025-10-03</lastmod>
-  </url>                
+  </url> 
+
+  <url>
+    <loc>https://scenith.in/tools/image-editing</loc>
+    <priority>0.9</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-03</lastmod>
+  </url>                  
 
   <!-- Blog Listing Page -->
   <url>
@@ -802,5 +809,47 @@
     <priority>0.8</priority>
     <changefreq>weekly</changefreq>
     <lastmod>2025-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/how-to-edit-hormozi-style-videos-with-ai</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-31</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/ai-workflow-youtube-to-reels</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-31</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/how-to-make-talking-head-videos-engaging</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-31</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/how-to-fix-bad-audio-with-ai</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-31</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/ecommerce-product-video-formula</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-31</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/ultimate-guide-to-video-editing-for-beginners</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-31</lastmod>
+  </url>
+  <url>
+    <loc>https://scenith.in/blogs/how-to-create-faceless-videos-with-ai</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+    <lastmod>2025-10-31</lastmod>
   </url>
 </urlset>

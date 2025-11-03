@@ -16,4 +16,6 @@
 /tools/add-subtitles-to-videos/* https://scenithblog.netlify.app/tools/add-subtitles-to-videos/:splat 200
 /tools/media-conversion-tool https://scenithblog.netlify.app/tools/media-conversion-tool 200
 /tools/media-conversion-tool/* https://scenithblog.netlify.app/tools/media-conversion-tool/:splat 200
+/tools/image-editing https://scenithblog.netlify.app/tools/image-editing 200
+/tools/image-editing/* https://scenithblog.netlify.app/tools/image-editing/:splat 200
 /* /index.html 200

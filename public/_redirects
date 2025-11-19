@@ -2,6 +2,8 @@
 /favicon.ico https://scenithblog.netlify.app/favicon.ico 200
 /blogs https://scenithblog.netlify.app/blogs 200
 /blogs/* https://scenithblog.netlify.app/blogs/:splat 200
+/tools https://scenithblog.netlify.app/tools 200
+/tools/* https://scenithblog.netlify.app/tools/:splat 200
 /tools/background-removal https://scenithblog.netlify.app/tools/background-removal 200
 /tools/background-removal/* https://scenithblog.netlify.app/tools/background-removal/:splat 200
 /tools/ai-voice-generation https://scenithblog.netlify.app/tools/ai-voice-generation 200

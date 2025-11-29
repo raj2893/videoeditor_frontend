@@ -105,7 +105,7 @@ const Login = () => {
     const initializeGoogleSignIn = () => {
       if (window.google && window.google.accounts) {
         window.google.accounts.id.initialize({
-          client_id: "475177334034-ufjdi8pebqvbgf9ogv0gs85nq9588a8m.apps.googleusercontent.com",
+          client_id: "397321320139-tpd310sq9j8rdngqd9kdmhgegco52b3g.apps.googleusercontent.com",
           callback: handleGoogleLogin,
         });
         window.google.accounts.id.renderButton(

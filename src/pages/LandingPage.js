@@ -1,12 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaPlay, FaCut, FaMusic, FaFont, FaFilm, FaRobot } from 'react-icons/fa';
+import { FaPlay, FaCut, FaMusic, FaFont, FaFilm, FaRobot, FaMicrophone, FaClosedCaptioning, FaExchangeAlt, FaEraser, FaTachometerAlt, FaPaintBrush, FaCompressArrowsAlt } from 'react-icons/fa';
 import axios from 'axios';
 import { API_BASE_URL } from '../Config';
 import '../CSS/LandingPage.css';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+
+const toolsShowcase = [
+  { 
+    id: 'ai-voice', 
+    title: 'AI Voice Generation', 
+    icon: FaMicrophone,
+    description: 'Transform text into natural-sounding speech',
+    link: 'https://scenith.in/tools/ai-voice-generation',
+    color: '#FF6B6B',
+    badge: 'Popular'
+  },
+  { 
+    id: 'ai-subtitle', 
+    title: 'AI Subtitle Generation', 
+    icon: FaClosedCaptioning,
+    description: 'Auto-generate accurate subtitles instantly',
+    link: 'https://scenith.in/tools/add-subtitles-to-videos',
+    color: '#4ECDC4',
+    badge: 'New'
+  },
+  { 
+    id: 'media-conversion', 
+    title: 'Media Conversion', 
+    icon: FaExchangeAlt,
+    description: 'Convert between any media format',
+    link: 'https://scenith.in/tools/media-conversion-tool',
+    color: '#45B7D1',
+    badge: null
+  },
+  { 
+    id: 'media-compression', 
+    title: 'Media Compression', 
+    icon: FaCompressArrowsAlt,
+    description: 'Reduce file size without losing quality',
+    link: 'https://scenith.in/tools/compress-media',
+    color: '#96CEB4',
+    badge: null
+  },
+  { 
+    id: 'bg-remover', 
+    title: 'Background Remover', 
+    icon: FaEraser,
+    description: 'Remove image backgrounds in seconds',
+    link: 'https://scenith.in/tools/background-removal',
+    color: '#FFEAA7',
+    badge: 'Popular'
+  },
+  { 
+    id: 'speed-modifier', 
+    title: 'Video Speed Modifier', 
+    icon: FaTachometerAlt,
+    description: 'Speed up or slow down your videos',
+    link: 'https://scenith.in/tools/video-speed-modifier',
+    color: '#DFE6E9',
+    badge: null
+  },
+  { 
+    id: 'image-editing', 
+    title: 'Image Editing', 
+    icon: FaPaintBrush,
+    description: 'A Friendly Image Editor for all your Social Requirements.',
+    link: 'https://scenith.in/tools/image-editing',
+    color: '#A29BFE',
+    badge: null
+  }
+];
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -137,7 +203,7 @@ const LandingPage = () => {
             Create Stunning Videos with <span className="highlight">Scenith</span>
           </h1>
           <p>
-            Unleash your creativity with our powerful, user-friendly video editing platform. From AI subtitles to dynamic transitions, Scenith has everything you need to tell your story.
+            Unleash your creativity with our powerful, AI-driven video editing platform. From AI voice generation to subtitle creation, Scenith provides <span className="stats-highlight">6+ professional tools</span> that save you hours of work. Join <span className="stats-highlight">10,000+ creators</span> who trust Scenith.
           </p>
           <div className="hero-cta">
             <button
@@ -156,46 +222,85 @@ const LandingPage = () => {
         </motion.div>
       </section>
 
-      <section className="features-section" id="features-section">
+      <section className="tools-showcase-section" id="tools-section">
         <div className="section-header">
-          <h2>Powerful Features for Every Creator</h2>
+          <h2>Powerful Tools at Your Fingertips</h2>
+          <p className="section-subtitle">Everything you need to create professional content, all in one place</p>
         </div>
         <motion.div
-          className="features-grid"
+          className="tools-showcase-grid"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <div className="feature-card">
-            <FaCut className="feature-icon" />
-            <h3>Cut, Trim & Merge</h3>
-            <p>Precisely edit your videos with intuitive tools to cut, trim, and merge clips seamlessly.</p>
+          {toolsShowcase.map((tool, index) => {
+            const IconComponent = tool.icon;
+            return (
+              <motion.div
+                key={tool.id}
+                className="tool-showcase-card"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+                onClick={() => window.location.href = tool.link}
+                style={{ '--tool-color': tool.color }}
+              >
+                {tool.badge && (
+                  <div className={`tool-badge ${tool.badge === 'Coming Soon' ? 'coming-soon' : ''}`}>
+                    {tool.badge}
+                  </div>
+                )}
+                <div className="tool-icon-wrapper">
+                  <IconComponent className="tool-showcase-icon" />
+                </div>
+                <h3>{tool.title}</h3>
+                <p>{tool.description}</p>
+                <button className="tool-try-button">
+                  Try Now <span className="arrow">→</span>
+                </button>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+        <div className="tools-cta-wrapper">
+          <p className="tools-cta-text">Can't decide? Start with our most popular tool</p>
+          <button 
+            className="tools-main-cta"
+            onClick={() => window.location.href = 'https:scenith.in/tools/ai-voice-generation'}
+          >
+            Try AI Voice Generator
+          </button>
+        </div>
+      </section>
+        
+      <section className="social-proof-section">
+        <motion.div
+          className="social-proof-container"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="stat-item">
+            <div className="stat-number">10,000+</div>
+            <div className="stat-label">Active Users</div>
           </div>
-          <div className="feature-card">
-            <FaFilm className="feature-icon" />
-            <h3>Dynamic Transitions</h3>
-            <p>Add professional transitions to enhance the flow and impact of your videos.</p>
+          <div className="stat-divider"></div>
+          <div className="stat-item">
+            <div className="stat-number">500K+</div>
+            <div className="stat-label">Videos Created</div>
           </div>
-          <div className="feature-card">
-            <FaFont className="feature-icon" />
-            <h3>Customizable Text</h3>
-            <p>Enhance your videos with stylish text, customizable fonts, colors, and borders.</p>
+          <div className="stat-divider"></div>
+          <div className="stat-item">
+            <div className="stat-number">6+</div>
+            <div className="stat-label">AI-Powered Tools</div>
           </div>
-          <div className="feature-card">
-            <FaMusic className="feature-icon" />
-            <h3>Add Music & Images</h3>
-            <p>Incorporate music and images into your timeline for a richer storytelling experience.</p>
-          </div>
-          <div className="feature-card">
-            <FaRobot className="feature-icon" />
-            <h3>AI Subtitles</h3>
-            <p>Generate accurate, customizable subtitles automatically with our AI-powered tool.</p>
-          </div>
-          <div className="feature-card">
-            <FaFilm className="feature-icon" />
-            <h3>Apply Filters</h3>
-            <p>Enhance your videos with a variety of filters to achieve the perfect look.</p>
+          <div className="stat-divider"></div>
+          <div className="stat-item">
+            <div className="stat-number">4.9/5</div>
+            <div className="stat-label">User Rating</div>
           </div>
         </motion.div>
       </section>
@@ -297,13 +402,18 @@ const LandingPage = () => {
           transition={{ duration: 0.5 }}
         >
           <p>
-            Scenith is more than just a video editor—it's a platform designed to empower creators like you. Whether you're crafting content for YouTube, Instagram, TikTok, or personal projects, Scenith provides professional-grade tools in an intuitive interface. Our mission is to make video editing accessible, efficient, and fun, so you can focus on telling stories that captivate and inspire. Join thousands of creators who trust Scenith to bring their visions to life.
+            Scenith is more than just a video editor—it's a complete content creation platform designed to empower creators like you. Whether you're crafting content for YouTube, Instagram, TikTok, or personal projects, Scenith provides professional-grade AI tools in an intuitive interface. Our mission is to make content creation accessible, efficient, and fun, so you can focus on telling stories that captivate and inspire.
           </p>
+          <div className="motivation-features-quick">
+            <div className="quick-feature">✓ No watermarks</div>
+            <div className="quick-feature">✓ Fast processing</div>
+            <div className="quick-feature">✓ Free tier available</div>
+          </div>
           <button
             className="motivation-cta"
             onClick={() => navigate(isLoggedIn ? '/dashboard' : '/signup')}
           >
-            Start Your Creative Journey
+            Start Creating for Free
           </button>
         </motion.div>
       </section>

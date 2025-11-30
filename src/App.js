@@ -11,7 +11,6 @@ import ExportPage from "./pages/ExportPage";
 import LandingPage from './pages/LandingPage';
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-import RemoveBackground from "./pages/RemoveBackground";
 
 function TitleAndFaviconManager() {
   const location = useLocation();
@@ -69,7 +68,7 @@ function App() {
     <Router>
       <TitleAndFaviconManager />
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        {/* <Route path="/" element={<LandingPage />} /> */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />

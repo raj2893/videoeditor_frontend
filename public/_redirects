@@ -1,5 +1,6 @@
 /_next/* https://scenithblog.netlify.app/_next/:splat 200
 /favicon.ico https://scenithblog.netlify.app/favicon.ico 200
+/ https://scenithblog.netlify.app/ 200
 /blogs https://scenithblog.netlify.app/blogs 200
 /blogs/* https://scenithblog.netlify.app/blogs/:splat 200
 /tools https://scenithblog.netlify.app/tools 200

@@ -8,7 +8,6 @@ import ProjectEditor from "./pages/ProjectEditor";
 import DeveloperLogin from "./pages/DeveloperLogin";
 import DeveloperDashboard from "./pages/DeveloperDashboard";
 import ExportPage from "./pages/ExportPage";
-import LandingPage from './pages/LandingPage';
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 
@@ -27,7 +26,6 @@ function TitleAndFaviconManager() {
         case '/signup':
           document.title = 'Start your Content Creation Journey with Scenith | Signup';
           break;
-        case '/':
         case '/dashboard':
           document.title = 'Start Creating Content for FREE - Grow your Social Media | Scenith Dashboard';
           break;
@@ -39,9 +37,6 @@ function TitleAndFaviconManager() {
           break;
         case '/developer-dashboard':
           document.title = 'Scenith | Developer Dashboard';
-          break;
-        case '/background-removal':
-          document.title = 'FREE AI Background Removal - Remove BG with a Single Click | SCENITH';
           break;
         case '/privacy-policy':
           document.title = 'Privacy Policy | SCENITH';
@@ -60,7 +55,7 @@ function TitleAndFaviconManager() {
     setTitleAndFavicon();
   }, [location]);
 
-  return null; // This component doesn't render anything
+  return null;
 }
 
 function App() {
@@ -68,7 +63,6 @@ function App() {
     <Router>
       <TitleAndFaviconManager />
       <Routes>
-        {/* <Route path="/" element={<LandingPage />} /> */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
@@ -77,9 +71,8 @@ function App() {
         <Route path="/developer-login" element={<DeveloperLogin />} />
         <Route path="/developer-dashboard" element={<DeveloperDashboard />} />
         <Route path="/export/:projectId" element={<ExportPage />} />
-        {/* <Route path="/background-removal" element={<RemoveBackground />} /> */}
-        <Route path="*" element={<NotFound />} /> {/* Catch-all for undefined routes */}
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />        
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );

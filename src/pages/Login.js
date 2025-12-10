@@ -60,7 +60,7 @@ const Login = () => {
         setSuccess("Login successful! Redirecting to dashboard...");
         setTimeout(() => {
           setIsLoading(false);
-          navigate("/dashboard");
+          window.location.href = "https://scenith.in/tools";
         }, 1000);
       } else {
         setIsLoading(false);
@@ -92,7 +92,7 @@ const Login = () => {
       setSuccess("Google login successful! Redirecting to dashboard...");
       setTimeout(() => {
         setIsLoading(false);
-        navigate("/dashboard");
+        window.location.href = "https://scenith.in/tools";
       }, 1000);
     } catch (error) {
       setIsLoading(false);

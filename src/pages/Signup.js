@@ -107,7 +107,7 @@ const Signup = () => {
         picture: null,
         googleAuth: true,
       }));
-      navigate("/dashboard");
+      window.location.href = "https://scenith.in/tools";
     } catch (error) {
       setServerError(error.response?.data?.message || "Google signup failed. Please try again.");
     }

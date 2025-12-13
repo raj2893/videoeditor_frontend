@@ -12,7 +12,10 @@ const PrivacyPolicy = () => {
       <ul>
         <li><strong>Personal Information:</strong> When you sign up, contact us, or submit forms, we may collect your name, email address, or other details you provide.</li>
         <li><strong>Usage Data:</strong> We collect data about how you use our website/app, including IP address, device information, and browsing activity.</li>
-        <li><strong>Cookies & Tracking Technologies:</strong> We use cookies, Google Analytics, and Meta (Facebook) Pixel to analyze traffic and deliver personalized ads.</li>
+        <li>
+          <strong>Cookies & Tracking Technologies:</strong> We use cookies, Google Analytics, Meta (Facebook) Pixel, and Google AdSense to analyze traffic, measure performance, and deliver personalized or non-personalized ads.
+        </li>
+
       </ul>
 
       <h2>2. How We Use Your Information</h2>
@@ -31,6 +34,18 @@ const PrivacyPolicy = () => {
         <li><strong>Service Providers:</strong> Who help us operate and improve our services.</li>
       </ul>
 
+      <h2>Google AdSense & Advertising Cookies</h2>
+      <p>
+        Google, as a third-party vendor, uses cookies (including the DoubleClick cookie) to serve ads to users based on their visits to this website and other websites on the internet. These cookies enable the display of advertisements relevant to users’ interests.
+      </p>
+      <p>
+        Users may opt out of personalized advertising by visiting Google Ad Settings. Alternatively, users can opt out of a third-party vendor’s use of cookies for personalized advertising by visiting www.aboutads.info.
+      </p>
+      <p>
+        Third-party ad servers or ad networks use technologies like cookies, JavaScript, or Web Beacons in their respective ads and links that may appear on SCENITH. These technologies are used to measure the effectiveness of advertising campaigns and/or to personalize the advertising content that you see.
+      </p>
+
+
       <h2>4. Your Choices</h2>
       <ul>
         <li>You can disable cookies through your browser settings.</li>
@@ -43,6 +58,11 @@ const PrivacyPolicy = () => {
 
       <h2>6. Third-Party Links</h2>
       <p>Our website may contain links to third-party sites. We are not responsible for the privacy practices of those sites.</p>
+
+      <h2>Children’s Information</h2>
+      <p>
+        SCENITH does not knowingly collect any personal information from children under the age of 13. If you believe that your child has provided personal information on our website, please contact us immediately and we will do our best to promptly remove such information from our records.
+      </p>
 
       <h2>7. Updates to this Policy</h2>
       <p>We may update this Privacy Policy from time to time. Any changes will be posted on this page with the updated date.</p>

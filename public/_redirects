@@ -2,6 +2,8 @@
 /favicon.ico https://scenithblog.netlify.app/favicon.ico 200!
 / https://scenithblog.netlify.app/ 200!
 /about-us https://scenithblog.netlify.app/about-us 200!
+/pricing https://scenithblog.netlify.app/pricing 200!
+/pricing/* https://scenithblog.netlify.app/pricing/:splat 200!
 /contact-us https://scenithblog.netlify.app/contact-us 200!
 /terms-and-conditions https://scenithblog.netlify.app/terms-and-conditions 200!
 /blogs https://scenithblog.netlify.app/blogs 200!

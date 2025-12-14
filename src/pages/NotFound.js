@@ -10,7 +10,7 @@ const NotFound = () => {
       <h1>404 - Page Not Found</h1>
       <p>Sorry, the page you're looking for doesn't exist.</p>
       <button
-        onClick={() => navigate('/')}
+        onClick={() => window.location.href = 'https://scenith.in'}
         style={{
           padding: '10px 20px',
           background: 'linear-gradient(90deg, #3B82F6, #8B5CF6)',

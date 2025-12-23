@@ -8,6 +8,7 @@
 /terms-and-conditions https://scenithblog.netlify.app/terms-and-conditions 200!
 /blogs https://scenithblog.netlify.app/blogs 200!
 /blogs/* https://scenithblog.netlify.app/blogs/:splat 200!
+/tools/ai-voice-generator-guide https://scenithblog.netlify.app/tools/ai-voice-generator-guide 200!
 /tools https://scenithblog.netlify.app/tools 200!
 /tools/background-removal https://scenithblog.netlify.app/tools/background-removal 200!
 /tools/background-removal/* https://scenithblog.netlify.app/tools/background-removal/:splat 200!

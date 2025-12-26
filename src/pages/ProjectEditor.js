@@ -1660,13 +1660,9 @@ const initializeProject = async () => {
       localStorage.removeItem('userProfile');
       navigate('/', { state: { error: 'Session expired. Please log in again.' } });
     } else if (error.response?.status === 403 || error.response?.status === 404) {
-      navigate('/dashboard', {
-        state: { error: 'This Project does not belong to you.' },
-      });
+      window.location.href = 'https://scenith.in/dashboard';
     } else {
-      navigate('/dashboard', {
-        state: { error: 'Failed to load project.' },
-      });
+      window.location.href = 'https://scenith.in/dashboard';
     }
   } finally {
     setLoading(false);
@@ -1675,7 +1671,7 @@ const initializeProject = async () => {
 
 useEffect(() => {
   if (!projectId) {
-    navigate('/dashboard');
+    window.location.href = 'https://scenith.in/dashboard';
     setLoading(false);
     return;
   }
@@ -1709,7 +1705,7 @@ useEffect(() => {
   useEffect(() => {
     if (location.state?.error) {
       const timer = setTimeout(() => {
-        navigate('/dashboard', { state: {}, replace: true });
+        window.location.href = 'https://scenith.in/dashboard';
       }, 5000);
       return () => clearTimeout(timer);
     }
@@ -1968,7 +1964,7 @@ const fetchProjectResources = async () => {
       localStorage.removeItem('userProfile');
       navigate('/', { state: { error: 'Session expired. Please log in again.' } });
     } else if (error.response?.status === 403 || error.response?.status === 404) {
-      navigate('/dashboard', { state: { error: 'This Project does not belong to you.' } });
+      window.location.href = 'https://scenith.in/dashboard';
     } else {
       setVideos([]);
       setPhotos([]);
@@ -4840,7 +4836,7 @@ return (
         <div className="controls-panel">
           <button
             className="control-button dashboard-button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => window.location.href = 'https://scenith.in/dashboard'}
             title="Back to Dashboard"
           >
             ← DASHBOARD

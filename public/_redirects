@@ -2,6 +2,11 @@
 /favicon.ico https://scenithblog.netlify.app/favicon.ico 200!
 / https://scenithblog.netlify.app/ 200!
 /about-us https://scenithblog.netlify.app/about-us 200!
+/dashboard https://scenithblog.netlify.app/dashboard 200!
+/login https://scenithblog.netlify.app/login 200!
+/signup https://scenithblog.netlify.app/signup 200!
+/verify-email https://scenithblog.netlify.app/verify-email 200!
+/privacy-policy https://scenithblog.netlify.app/privacy-policy 200!
 /pricing https://scenithblog.netlify.app/pricing 200!
 /pricing/* https://scenithblog.netlify.app/pricing/:splat 200!
 /contact-us https://scenithblog.netlify.app/contact-us 200!

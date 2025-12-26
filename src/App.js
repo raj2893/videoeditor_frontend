@@ -20,27 +20,27 @@ function TitleAndFaviconManager() {
       if (favicon) favicon.href = '/scenith.ico';
 
       switch (location.pathname) {
-        case '/login':
-          document.title = 'Start your Content Creation Journey with Scenith | Login';
-          break;
-        case '/signup':
-          document.title = 'Start your Content Creation Journey with Scenith | Signup';
-          break;
-        case '/dashboard':
-          document.title = 'Start Creating Content for FREE - Grow your Social Media | Scenith Dashboard';
-          break;
-        case '/verify-email':
-          document.title = 'Scenith | Verify Email';
-          break;
+        // case '/login':
+        //   document.title = 'Start your Content Creation Journey with Scenith | Login';
+        //   break;
+        // case '/signup':
+        //   document.title = 'Start your Content Creation Journey with Scenith | Signup';
+        //   break;
+        // case '/dashboard':
+        //   document.title = 'Start Creating Content for FREE - Grow your Social Media | Scenith Dashboard';
+        //   break;
+        // case '/verify-email':
+        //   document.title = 'Scenith | Verify Email';
+        //   break;
         case '/developer-login':
           document.title = 'Scenith | Developer Login';
           break;
         case '/developer-dashboard':
           document.title = 'Scenith | Developer Dashboard';
           break;
-        case '/privacy-policy':
-          document.title = 'Privacy Policy | SCENITH';
-          break;          
+        // case '/privacy-policy':
+        //   document.title = 'Privacy Policy | SCENITH';
+        //   break;          
         default:
           if (location.pathname.startsWith('/projecteditor/')) {
             document.title = 'Scenith | Project Editor';
@@ -63,15 +63,15 @@ function App() {
     <Router>
       <TitleAndFaviconManager />
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        {/* <Route path="/login" element={<Login />} /> */}
+        {/* <Route path="/signup" element={<Signup />} /> */}
+        {/* <Route path="/verify-email" element={<VerifyEmail />} /> */}
+        {/* <Route path="/dashboard" element={<Dashboard />} /> */}
         <Route path="/projecteditor/:projectId" element={<ProjectEditor />} />
         <Route path="/developer-login" element={<DeveloperLogin />} />
         <Route path="/developer-dashboard" element={<DeveloperDashboard />} />
         <Route path="/export/:projectId" element={<ExportPage />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />        
+        {/* <Route path="/privacy-policy" element={<PrivacyPolicy />} />         */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
